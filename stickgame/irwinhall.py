@@ -14,6 +14,8 @@ class IrwinHall:
         elif x > self.numvars*self.upper:
             return 1.0
         else:
+            # Transform x to compute cdf of standard Irwin-Hall distribution
+            # where 'standard' means lower = 0.0, upper = 1.0
             x_transform = (x - self.numvars*self.lower) / (self.upper - self.lower)
             sum = 0.0
             for ii in range(int(x_transform)+1):
