@@ -1,0 +1,55 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\DeclareUnicodeCharacter{FB01}{fi}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+
+\title{A Rational Analysis of Persuasion}
+\author{S. A. Barnett}
+\date{}
+
+\usepackage[
+backend=biber,
+style=numeric,
+sorting=ynt
+]{biblatex}
+\addbibresource{proposal.bib}
+
+\begin{document}
+
+\maketitle
+
+\section{Background}
+\textit{Identify the topic your project will explore, and briefly provide some of the context for your project, describing what previous research has found in this area.}
+
+\begin{itemize}
+	\item Topic to explore: Models of debate - specifically, involving two (or more) debaters competing in an adversarial context, and one judge who must make a decision on the strength of the debates.
+	\item Context for project: 
+		\begin{itemize}
+			\item The RSA model for incorporating theory of mind.
+			\item Work on self-play in games.
+			\item The weak evidence effect.
+			\item `Debate' as an approach for iterative, aligned improvement in AI systems.
+		\end{itemize}	
+	\item Previous research: The Gricean pragmatic explanation for the weak evidence effect.	 Order statistics and sticks?
+\end{itemize}
+
+\section{Question}
+\textit{State the specific question you are going to examine in your final project.}
+Does the weak evidence effect improve judgment?
+
+\section{Method}
+\textit{Briefly describe the method you are going to use to try to answer this question. Give some of the details behind your experimental procedure, your approach to modeling or analyzing the data, your plans for analyzing the model, or the position you will take in your review.}
+
+\begin{itemize}
+	\item Experiment 1: Testing humans for the weak evidence effect in the MNIST game, using OpenAI code.
+
+	\item Experiment 2: Testing for the weak evidence effect in the judge for the MNIST debate game. Namely: Does weak but supportive evidence in one direction cause a shift in probability mass in the other direction?
+	
+	\item Experiment 3: Allow the judge in the MNIST debate game to accommodate for the weak evidence effect by modifying the judge to be an RSA-style `pragmatic listener'. Contrast the difference in overall performance accuracy with that of the original judge.
+
+\end{itemize}
+
+\printbibliography
+\end{document}
