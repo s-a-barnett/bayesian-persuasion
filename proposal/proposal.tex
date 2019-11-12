@@ -9,6 +9,10 @@
 \author{S. A. Barnett}
 \date{}
 
+
+
+\usepackage[a4paper, total={6in, 8in}]{geometry}
+
 \usepackage[
 backend=biber,
 style=numeric,
@@ -21,35 +25,30 @@ sorting=ynt
 \maketitle
 
 \section{Background}
-\textit{Identify the topic your project will explore, and briefly provide some of the context for your project, describing what previous research has found in this area.}
+%\textit{Identify the topic your project will explore, and briefly provide some of the context for your project, describing what previous research has found in this area.}
 
-\begin{itemize}
-	\item Topic to explore: Models of debate - specifically, involving two (or more) debaters competing in an adversarial context, and one judge who must make a decision on the strength of the debates.
-	\item Context for project: 
-		\begin{itemize}
-			\item The RSA model for incorporating theory of mind.
-			\item Work on self-play in games.
-			\item The weak evidence effect.
-			\item `Debate' as an approach for iterative, aligned improvement in AI systems.
-		\end{itemize}	
-	\item Previous research: The Gricean pragmatic explanation for the weak evidence effect.	 Order statistics and sticks?
-\end{itemize}
+This project will investigate the project of inference within a social context: namely, given that the evidence that an individual receives originates from human communication, how do the inferences drawn from that inference differ from our normative expectations about how such inferences ought to be drawn? In particular, I will focus on the context in which a person hears two different sides of a debate, and must update their beliefs based on the evidence provided each side. 
+
+My aim is to provide a computational model of inference over a debate based upon Bayesian principles. This is inspired by the Rational Speech Act model of communication \cite{goodman_pragmatic_2016}, in which language understanding is viewed as a form of Bayesian inference whose sampling procedure is influenced by a theory of mind for the speaker. However, rather than the cooperative principle underpinning the inference model \cite{grice_logic_1975}, the debate context requires that a pragmatic listener instead models each speaker as aiming to be maximally \textit{persuasive}: I call the principle that can capture this as the \textit{rhetorical principle.} Hence, my project will provide a model that can respect the rhetorical principle in certain contexts.
+
+Previous research has found that listeners in a debate context display two patterns of inference: the \textit{weak evidence effect} \cite{mckenzie_when_2002, fernbach_when_2011, harris_james_2013}, and the \textit{strong evidence effect} \cite{perfors_stronger_2018}. The \textit{weak evidence effect} occurs when receiving weak evidence makes people less likely to believe a conclusion relative to the marginal belief. This effect may arise from receivers expecting debaters to produce the strongest evidence for their case. The \textit{strong evidence effect}, on the other hand, occurs when strong evidence does not always lead to stronger inferences. This effect may arise from the possibility that stronger evidence makes the listener believe that the debater was overly biased, causing the listener to discount the evidence.
 
 \section{Question}
-\textit{State the specific question you are going to examine in your final project.}
-Does the weak evidence effect improve judgment?
+%\textit{State the specific question you are going to examine in your final project.}
+Can weak and strong evidence effects be accounted for by a rhetorical principle?
 
 \section{Method}
-\textit{Briefly describe the method you are going to use to try to answer this question. Give some of the details behind your experimental procedure, your approach to modeling or analyzing the data, your plans for analyzing the model, or the position you will take in your review.}
+%\textit{Briefly describe the method you are going to use to try to answer this question. Give some of the details behind your experimental procedure, your approach to modeling or analyzing the data, your plans for analyzing the model, or the position you will take in your review.}
 
-\begin{itemize}
-	\item Experiment 1: Testing humans for the weak evidence effect in the MNIST game, using OpenAI code.
+The experiments are run with the \textit{sticks game}. In this game, a sample of $N$ sticks is drawn, with the stick length being modelled as i.i.d. draws from a standard uniform distribution: \[ \{ U_n\}_{n=1}^N \sim \mathcal{U}[0, 1] .\] Two agents, $A_1$ and $A_2$ observe all of the sticks in the sample, and at each time step the agents take it in turn to show a stick to the judge $J$. The judge must decide whether the sample is `long': that is, whether \[ \bar{U} := \frac{1}{N} \sum_{n=1}^N U_n \ge 0.5 .\]
 
-	\item Experiment 2: Testing for the weak evidence effect in the judge for the MNIST debate game. Namely: Does weak but supportive evidence in one direction cause a shift in probability mass in the other direction?
-	
-	\item Experiment 3: Allow the judge in the MNIST debate game to accommodate for the weak evidence effect by modifying the judge to be an RSA-style `pragmatic listener'. Contrast the difference in overall performance accuracy with that of the original judge.
+\begin{description}
+\item[Experiment 1] The human plays the judge, and observes two time steps of the game for different values of $N$. At each step, the human is asked to report her confidence that the sample is `long'. These confidence ratings are contrasted with the conditional probability evaluations (where the data is assumed to be drawn i.i.d.) to test for the weak and strong evidence effects.
 
-\end{itemize}
+\item[Experiment 2] Two different models of the judge are evaluated on the same task: one in which the judge \textit{assumes} that each agent is sampling the longest and shortest sticks (respectively), and one in which the agent has uncertainty over how the agents are biased, or whether they are biased at all. The plot of the posterior belief in the sample length is used to test for the weak and strong evidence effects.
+
+ \item[Experiment 3] The agents are biased, and modelled in order to be maximally persuasive to a judge with uncertainty over the bias of the speaker. Concretely, at each step they select the stick that minimizes the KL divergence between having full confidence in the view consistent with the agent's bias, and the posterior determined by the judge in the above model. The intention of this experiment is to model the strong evidence effect in the speakers.
+\end{description}
 
 \printbibliography
 \end{document}
