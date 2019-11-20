@@ -1,0 +1,53 @@
+// Agent randomly picks a stick
+var randomAgent = function(sticks) {
+  return Categorical({vs: sticks})
+}
+
+// Agent has a (soft-max) bias toward longer or shorter sticks
+// i.e. P(s) \propto e^{bias * length}
+// TODO: we could also derive this bias by having them reason about a judge's decision, 
+// i.e. utility is probability of judge saying 'long' and this would fall out
+var biasedAgent = function(bias, sticks) {
+  return Infer({method: 'enumerate', model: function() {
+    var stick = uniformDraw(sticks)
+    var utility = bias * stick 
+    factor(utility)
+    return stick
+  }})
+}
+
+// Discretized U-shape prior
+var biasPrior = function() {
+  return categorical({vs: [-5, -1, 0, 1, 5], ps: [.25, .2, .1, .2, .25]})
+}
+
+// Discretized uniform prior
+var stickPrior = function(nSticks) {
+  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 1)})
+}
+
+var judge = function(obs) {
+  return Infer({method: 'enumerate', model: function() {
+    // assume 3 latent sticks drawn i.i.d
+    var sticks = stickPrior(3);
+    
+    // assume agents have independent 
+    var biases = {agent0: biasPrior(), agent1: biasPrior()}
+    
+    // Condition on observations coming from biased agent
+    mapData({data: obs}, function(datum) {
+      observe(biasedAgent(biases[datum.agentID], sticks), datum.stickLength)
+    })
+    
+    // return marginal distributions of interest
+    return {
+      isLong: _.mean(sticks) >= .5, bias1: biases['agent0'], bias2: biases['agent1']
+    }
+  }})
+}
+
+var weakEvidence = [{'agentID': 'agent0', stickLength: .1},
+                    {'agentID' : 'agent1', stickLength: .6}]
+var priorEvidence = [{'agentID': 'agent0', stickLength: .1}]
+var pureEvidence = [{'agentID': 'agent0', stickLength: .6}]
+viz.marginals(judge(pureEvidence))
