@@ -54,3 +54,26 @@ var pureEvidence = [{'agentID': 'agent0', stickLength: .6}]
 var numSticks = 3
 
 viz.marginals(judge(numSticks, pureEvidence))
+
+// Agent has a bias towards longer or shorter sticks, depending on what she
+// thinks the judge will infer about the mean stick length
+var pragmaticAgent = function(bias, sticks) {
+  return Infer({method: 'enumerate', model: function() {
+    var stick = uniformDraw(sticks)
+
+    // Counterfactually added evidence
+    var newEvidence = [{'agentID': 'agent0', stickLength: stick}]
+
+    // Probability that the sample is long,
+    // having added the new stick to the observations
+    var p_long = Math.exp(marginalize(judge(numSticks, newEvidence), "isLong").score(true))
+
+    // Maximize (or minimize) probability that the judge infers the sample is long
+    var utility = bias * p_long
+    factor(utility)
+    return stick
+  }})
+}
+
+// viz.marginals won't run, but viz.hist produces desired plot
+viz.hist((pragmaticAgent(-5., [.2, .5, .8])))
