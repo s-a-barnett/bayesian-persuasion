@@ -1,3 +1,5 @@
+// TODO: Let agent and judge inference factor in draws without replacement
+
 // Agent randomly picks a stick
 var randomAgent = function(sticks) {
   return Categorical({vs: sticks})
@@ -5,8 +7,6 @@ var randomAgent = function(sticks) {
 
 // Agent has a (soft-max) bias toward longer or shorter sticks
 // i.e. P(s) \propto e^{bias * length}
-// TODO: we could also derive this bias by having them reason about a judge's decision,
-// i.e. utility is probability of judge saying 'long' and this would fall out
 var biasedAgent = function(bias, sticks) {
   return Infer({method: 'enumerate', model: function() {
     var stick = uniformDraw(sticks)
@@ -26,10 +26,10 @@ var stickPrior = function(nSticks) {
   return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 1)})
 }
 
-var judge = function(totalSticks, obs) {
+var judge = function(nSticks, obs) {
   return Infer({method: 'enumerate', model: function() {
     // assume 3 latent sticks drawn i.i.d
-    var sticks = stickPrior(totalSticks);
+    var sticks = stickPrior(nSticks);
 
     // assume agents have independent
     var biases = {agent0: biasPrior(), agent1: biasPrior()}
@@ -51,9 +51,9 @@ var weakEvidence = [{'agentID': 'agent0', stickLength: .1},
 var priorEvidence = [{'agentID': 'agent0', stickLength: .1}]
 var pureEvidence = [{'agentID': 'agent0', stickLength: .6}]
 
-var numSticks = 3
+var nSticks = 3
 
-viz.marginals(judge(numSticks, pureEvidence))
+viz.marginals(judge(nSticks, pureEvidence))
 
 // Agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
