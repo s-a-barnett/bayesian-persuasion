@@ -1,4 +1,8 @@
-// TODO: Let agent and judge inference factor in draws without replacement
+// remove first instance of element found in l
+var removeSingleElement = function(element, l) {
+  var i = _.indexOf(l, element)
+  return l.slice(0, i).concat(l.slice(i+1))
+}
 
 // Agent randomly picks a stick
 var randomAgent = function(sticks) {
@@ -26,6 +30,17 @@ var stickPrior = function(nSticks) {
   return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.05, .05)), 2)})
 }
 
+// Recursively observe, accounting for earlier choices
+var observeDatum = function(observations, sticks, biases) {
+  if(observations.length > 0) {
+    var datum = first(observations)
+    var agent = biasedAgent(biases[datum.agentID], sticks)
+    var agentStickChoice = sample(agent)
+    condition(agentStickChoice == datum.stickLength)
+    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks), biases)
+  }
+}
+
 var judge = function(nSticks, obs) {
   return Infer({method: 'enumerate', model: function() {
     // assume 3 latent sticks drawn i.i.d
@@ -35,9 +50,7 @@ var judge = function(nSticks, obs) {
     var biases = {agent0: biasPrior(), agent1: biasPrior()}
 
     // Condition on observations coming from biased agent
-    mapData({data: obs}, function(datum) {
-      observe(biasedAgent(biases[datum.agentID], sticks), datum.stickLength)
-    })
+    observeDatum(obs, sticks, biases);
 
     // return marginal distributions of interest
     return {
@@ -72,11 +85,7 @@ var priorEvidence = [{'agentID': 'agent0', stickLength: .7}]
 
 var nSticks = 3
 
-viz.marginals(judge(nSticks, priorEvidence))
-viz.marginals(judge(nSticks, weakEvidence))
-
-viz.marginals(judgeNoBias(nSticks, priorEvidence))
-viz.marginals(judgeNoBias(nSticks, weakEvidence))
+viz.marginals(judge(nSticks, pureEvidence))
 
 // Agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
