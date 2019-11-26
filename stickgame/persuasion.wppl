@@ -1,3 +1,9 @@
+// remove first instance of element found in l
+var removeSingleElement = function(element, l) {
+  var i = _.indexOf(l, element)
+  return l.slice(0, i).concat(l.slice(i+1))
+}
+
 // Agent randomly picks a stick
 var randomAgent = function(sticks) {
   return Categorical({vs: sticks})
@@ -5,8 +11,6 @@ var randomAgent = function(sticks) {
 
 // Agent has a (soft-max) bias toward longer or shorter sticks
 // i.e. P(s) \propto e^{bias * length}
-// TODO: we could also derive this bias by having them reason about a judge's decision,
-// i.e. utility is probability of judge saying 'long' and this would fall out
 var biasedAgent = function(bias, sticks) {
   return Infer({method: 'enumerate', model: function() {
     var stick = uniformDraw(sticks)
@@ -26,6 +30,17 @@ var stickPrior = function(nSticks) {
   return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 1)})
 }
 
+// Recursively observe, accounting for earlier choices
+var observeDatum = function(observations, sticks, biases) {
+  if(observations.length > 0) {
+    var datum = first(observations)
+    var agent = biasedAgent(biases[datum.agentID], sticks)
+    var agentStickChoice = sample(agent)
+    condition(agentStickChoice == datum.stickLength)
+    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks), biases)
+  }
+}
+
 var judge = function(nSticks, obs) {
   return Infer({method: 'enumerate', model: function() {
     // assume 3 latent sticks drawn i.i.d
@@ -35,9 +50,7 @@ var judge = function(nSticks, obs) {
     var biases = {agent0: biasPrior(), agent1: biasPrior()}
 
     // Condition on observations coming from biased agent
-    mapData({data: obs}, function(datum) {
-      observe(biasedAgent(biases[datum.agentID], sticks), datum.stickLength)
-    })
+    observeDatum(obs, sticks, biases);
 
     // return marginal distributions of interest
     return {
