@@ -41,13 +41,17 @@ var observeDatum = function(observations, sticks, biases) {
   }
 }
 
-var judge = function(nSticks, obs) {
+var judge = function(nSticks, obs, agentsBiased) {
   return Infer({method: 'enumerate', model: function() {
     // assume 3 latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
     // assume agents have independent
-    var biases = {agent0: biasPrior(), agent1: biasPrior()}
+    if (agentsBiased == true) {
+      var biases = {agent0: biasPrior(), agent1: biasPrior()}
+    } else {
+      var biases = {agent0: 0, agent1: 0}
+    }
 
     // Condition on observations coming from biased agent
     observeDatum(obs, sticks, biases);
@@ -59,33 +63,13 @@ var judge = function(nSticks, obs) {
   }})
 }
 
-var judgeNoBias = function(nSticks, obs) {
-  return Infer({method: 'enumerate', model: function() {
-    // assume 3 latent sticks drawn i.i.d
-    var sticks = stickPrior(nSticks);
-
-    // assume agents have neutral bias (i.e. distribution is categorical)
-    var biases = {agent0: 0, agent1: 0}
-
-    // Condition on observations coming from biased agent
-    mapData({data: obs}, function(datum) {
-      observe(biasedAgent(biases[datum.agentID], sticks), datum.stickLength)
-    })
-
-    // return marginal distributions of interest
-    return {
-      isLong: _.mean(sticks) >= .5
-    }
-  }})
-}
-
 var weakEvidence = [{'agentID': 'agent0', stickLength: .45},
                     {'agentID' : 'agent1', stickLength: .7}]
 var priorEvidence = [{'agentID': 'agent0', stickLength: .7}]
 
 var nSticks = 3
 
-viz.marginals(judge(nSticks, pureEvidence))
+viz.marginals(judge(nSticks, pureEvidence, true))
 
 // Agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
@@ -98,7 +82,7 @@ var pragmaticAgent = function(bias, sticks) {
 
     // Probability that the sample is long,
     // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(judge(nSticks, newEvidence), "isLong").score(true))
+    var p_long = Math.exp(marginalize(judge(nSticks, newEvidence, agentsBiased), "isLong").score(true))
 
     // Maximize (or minimize) probability that the judge infers the sample is long
     var utility = bias * p_long
