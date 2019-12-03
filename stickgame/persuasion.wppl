@@ -47,11 +47,9 @@ var judge = function(nSticks, obs, agentsBiased) {
     var sticks = stickPrior(nSticks);
 
     // assume agents have independent
-    if (agentsBiased == true) {
-      var biases = {agent0: biasPrior(), agent1: biasPrior()}
-    } else {
-      var biases = {agent0: 0, agent1: 0}
-    }
+    var biases = (agentsBiased == true) ?
+        {agent0: biasPrior(), agent1: biasPrior()} :
+        {agent0: 0, agent1: 0}
 
     // Condition on observations coming from biased agent
     observeDatum(obs, sticks, biases);
