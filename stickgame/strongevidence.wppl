@@ -1,5 +1,10 @@
 // Run experiments for strong evidence effect with pragmatic agent
 
+// Parameters to vary during the simulation
+// Read from the command line
+var nSticks = argv.nSticks
+var agentBias = argv.agentBias
+
 // remove first instance of element found in l
 var removeSingleElement = function(element, l) {
   var i = _.indexOf(l, element)
@@ -63,8 +68,6 @@ var judge = function(nSticks, obs, agentsBiased) {
   }})
 }
 
-var nSticks = 3
-
 // Agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
 var pragmaticAgent = function(bias, sticks) {
@@ -76,7 +79,7 @@ var pragmaticAgent = function(bias, sticks) {
 
     // Probability that the sample is long,
     // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(judge(nSticks, newEvidence, agentsBiased), "isLong").score(true))
+    var p_long = Math.exp(marginalize(judge(nSticks, newEvidence, true), "isLong").score(true))
 
     // Maximize (or minimize) probability that the judge infers the sample is long
     var utility = bias * p_long
@@ -85,5 +88,5 @@ var pragmaticAgent = function(bias, sticks) {
   }})
 }
 
-// viz.marginals won't run, but viz.hist produces desired plot
-viz.hist((pragmaticAgent(-5., [.2, .5, .8])))
+// Record simulation values
+csv.writeJoint(pragmaticAgent(agentBias, sample(stickPrior(nSticks))), 'data/test_joint.csv')
