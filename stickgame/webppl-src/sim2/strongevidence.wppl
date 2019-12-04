@@ -89,4 +89,4 @@ var pragmaticAgent = function(bias, sticks) {
 }
 
 // Record simulation values
-csv.writeJoint(pragmaticAgent(agentBias, sample(stickPrior(nSticks))), 'data/test_joint.csv')
+csv.writeJoint(pragmaticAgent(agentBias, stickPrior(nSticks)), 'data/test_joint.csv')
