@@ -15,7 +15,7 @@ agent1stick = [0.3+0.05*i for i in range(5)]
 # Create iterator to loop through
 iterator = product(nSticks, agent0stick, agent1stick)
 
-num_max = 3
+num_max = 5
 
 ind = 0
 for x in iterator:

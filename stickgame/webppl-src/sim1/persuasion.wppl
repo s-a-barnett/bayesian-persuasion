@@ -5,6 +5,7 @@
 var nSticks = argv.nSticks
 var agent0stick = argv.agent0stick
 var agent1stick = argv.agent1stick
+var numExp = argv.numExp
 
 // remove first instance of element found in l
 var removeSingleElement = function(element, l) {
@@ -69,4 +70,5 @@ var weakEvidence = [{'agentID': 'agent0', stickLength: agent0stick},
                     {'agentID' : 'agent1', stickLength: agent1stick}]
 
 // Record simulation values
-csv.writeJoint(judge(nSticks, weakEvidence, true), 'data/test_joint.csv')
+csv.writeJoint(judge(nSticks, priorEvidence, true), 'results/exp' + numExp + 'prior.csv')
+csv.writeJoint(judge(nSticks, weakEvidence, true), 'results/exp' + numExp + 'weak.csv')
