@@ -69,6 +69,9 @@ var priorEvidence = [{'agentID': 'agent0', stickLength: agent0stick}]
 var weakEvidence = [{'agentID': 'agent0', stickLength: agent0stick},
                     {'agentID' : 'agent1', stickLength: agent1stick}]
 
-// Record simulation values
-csv.writeJoint(judge(nSticks, priorEvidence, true), 'results/exp' + numExp + 'prior.csv')
-csv.writeJoint(judge(nSticks, weakEvidence, true), 'results/exp' + numExp + 'weak.csv')
+// Record simulation values for model with bias factor
+csv.writeJoint(judge(nSticks, priorEvidence, true), 'results/exp' + numExp + 'priorbias.csv')
+csv.writeJoint(judge(nSticks, weakEvidence, true), 'results/exp' + numExp + 'weakbias.csv')
+// Record simulation values for model without bias factor
+csv.writeJoint(judge(nSticks, priorEvidence, false), 'results/exp' + numExp + 'priornobias.csv')
+csv.writeJoint(judge(nSticks, weakEvidence, false), 'results/exp' + numExp + 'weaknobias.csv')
