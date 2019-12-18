@@ -11,31 +11,20 @@ var removeSingleElement = function(element, l) {
   return l.slice(0, i).concat(l.slice(i+1))
 }
 
-// Agent has a (soft-max) bias toward longer or shorter sticks
-// i.e. P(s) \propto e^{bias * length}
-var biasedAgent = function(bias, sticks) {
-  return Infer({method: 'enumerate', model: function() {
-    var stick = uniformDraw(sticks)
-    var utility = bias * stick
-    factor(utility)
-    return stick
-  }})
-}
-
-// Recursively observe, accounting for earlier choices
-var observeDatum = function(observations, sticks, biases) {
-  if(observations.length > 0) {
-    var datum = first(observations)
-    var agent = biasedAgent(biases[datum.agentID], sticks)
-    var agentStickChoice = sample(agent)
-    condition(agentStickChoice == datum.stickLength)
-    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks), biases)
-  }
-}
-
 // Agent randomly picks a stick
 var randomAgent = function(sticks) {
   return Categorical({vs: sticks})
+}
+
+// Recursively observe, accounting for earlier choices
+var observeDatum = function(observations, sticks) {
+  if(observations.length > 0) {
+    var datum = first(observations)
+    var agent = randomAgent(sticks)
+    var agentStickChoice = sample(agent)
+    condition(agentStickChoice == datum.stickLength)
+    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
+  }
 }
 
 // Discretized uniform prior
@@ -49,10 +38,8 @@ var literalJudge = function(nSticks, obs) {
     // assume 3 latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
-    var biases = {agent0: 0}
-
     // Condition on observations coming from biased agent
-    observeDatum(obs, sticks, biases);
+    observeDatum(obs, sticks);
 
     // return marginal distributions of interest
     return {
@@ -96,8 +83,7 @@ var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
     var agent = pragmaticAgent(biases[datum.agentID], sticks, prevObs)
     var agentStickChoice = sample(agent)
     condition(agentStickChoice == datum.stickLength)
-    prevObs.concat(datum)
-    observeDatum(rest(observations), prevObs, removeSingleElement(agentStickChoice, sticks), biases)
+    observeDatum(rest(observations), prevObs.concat(datum), removeSingleElement(agentStickChoice, sticks), biases)
   }
 }
 
