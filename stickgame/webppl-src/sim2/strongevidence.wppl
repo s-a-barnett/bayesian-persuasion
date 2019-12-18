@@ -122,7 +122,7 @@ var pragmaticJudge = function(nSticks, obs) {
 
 // S2 agent is aware that judge is modeling bias
 var pragmatic2Agent = function(bias, sticks, prevEvidence) {
-  return Infer({method: 'rejection', model: function() {
+  return Infer({method: 'enumerate', model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
