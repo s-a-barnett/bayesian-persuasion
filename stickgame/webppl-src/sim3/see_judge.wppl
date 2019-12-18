@@ -1,0 +1,141 @@
+// Run experiments for strong evidence effect with pragmatic agent
+
+// Parameters to vary during the simulation
+// Read from the command line
+var nSticks = argv.nSticks
+var agentBias = argv.agentBias
+
+// remove first instance of element found in l
+var removeSingleElement = function(element, l) {
+  var i = _.indexOf(l, element)
+  return l.slice(0, i).concat(l.slice(i+1))
+}
+
+// Agent has a (soft-max) bias toward longer or shorter sticks
+// i.e. P(s) \propto e^{bias * length}
+var biasedAgent = function(bias, sticks) {
+  return Infer({method: 'enumerate', model: function() {
+    var stick = uniformDraw(sticks)
+    var utility = bias * stick
+    factor(utility)
+    return stick
+  }})
+}
+
+// Recursively observe, accounting for earlier choices
+var observeDatum = function(observations, sticks, biases) {
+  if(observations.length > 0) {
+    var datum = first(observations)
+    var agent = biasedAgent(biases[datum.agentID], sticks)
+    var agentStickChoice = sample(agent)
+    condition(agentStickChoice == datum.stickLength)
+    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks), biases)
+  }
+}
+
+// Agent randomly picks a stick
+var randomAgent = function(sticks) {
+  return Categorical({vs: sticks})
+}
+
+// Discretized uniform prior
+var stickPrior = function(nSticks) {
+  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 2)})
+}
+
+// L0 judge: assumes data received are i.i.d.
+var literalJudge = function(nSticks, obs) {
+  return Infer({method: 'enumerate', model: function() {
+    // assume 3 latent sticks drawn i.i.d
+    var sticks = stickPrior(nSticks);
+
+    var biases = {agent0: 0}
+
+    // Condition on observations coming from biased agent
+    observeDatum(obs, sticks, biases);
+
+    // return marginal distributions of interest
+    return {
+      isLong: _.mean(sticks) >= .5
+    }
+  }})
+}
+
+// S1 agent has a bias towards longer or shorter sticks, depending on what she
+// thinks the judge will infer about the mean stick length
+// Note: sticks only involve those currently available to select
+var pragmaticAgent = function(bias, sticks, prevEvidence) {
+  return Infer({method: 'enumerate', model: function() {
+    var stick = uniformDraw(sticks)
+
+    // Counterfactually added evidence
+    var newEvidence = [{'agentID': 'agent0', stickLength: stick}]
+    var totalEvidence = prevEvidence.concat(newEvidence)
+
+    // Probability that the sample is long,
+    // having added the new stick to the observations
+    var p_long = Math.exp(marginalize(literalJudge(nSticks, totalEvidence), "isLong").score(true))
+
+    // Maximize (or minimize) probability that the judge infers the sample is long
+    var utility = bias * p_long
+    factor(utility)
+    return stick
+  }})
+}
+
+// Discretized U-shape prior
+var biasPrior = function() {
+  return categorical({vs: [-5, -1, 0, 1, 5], ps: [.25, .2, .1, .2, .25]})
+}
+
+// Recursively observe, accounting for earlier choices
+// Keeps track of previous observations in prevObs
+var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
+  if(observations.length > 0) {
+    var datum = first(observations)
+    var agent = pragmaticAgent(biases[datum.agentID], sticks, prevObs)
+    var agentStickChoice = sample(agent)
+    condition(agentStickChoice == datum.stickLength)
+    prevObs.concat(datum)
+    observeDatum(rest(observations), prevObs, removeSingleElement(agentStickChoice, sticks), biases)
+  }
+}
+
+// L1 judge models bias of agent
+var pragmaticJudge = function(nSticks, obs) {
+  return Infer({method: 'enumerate', model: function() {
+    // assume 3 latent sticks drawn i.i.d
+    var sticks = stickPrior(nSticks);
+
+    // assume agents have independent
+    var biases = {agent0: biasPrior()}
+
+    // Condition on observations coming from biased agent
+    observeDatumPragmatic(obs, [], sticks, biases);
+
+    // return marginal distributions of interest
+    return {
+      isLong: _.mean(sticks) >= .5, bias: biases['agent0']
+    }
+  }})
+}
+
+// S2 agent is aware that judge is modeling bias
+var pragmatic2Agent = function(bias, sticks, prevEvidence) {
+  return Infer({method: 'enumerate', model: function() {
+    var stick = uniformDraw(sticks)
+
+    // Counterfactually added evidence
+    var newEvidence = [{'agentID': 'agent0', stickLength: stick}]
+    var totalEvidence = prevEvidence.concat(newEvidence)
+
+    // Probability that the sample is long,
+    // having added the new stick to the observations
+    var p_long = Math.exp(marginalize(pragmaticJudge(nSticks, totalEvidence), "isLong").score(true))
+
+    // Maximize (or minimize) probability that the judge infers the sample is long
+    var utility = bias * p_long
+    factor(utility)
+    return stick
+  }})
+}
