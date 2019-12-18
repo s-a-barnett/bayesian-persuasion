@@ -129,7 +129,7 @@ var pragmatic2Agent = function(bias, sticks, prevEvidence) {
 
 var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
   if(stickChoices.length < maxSteps) {
-    var agent = pragmaticAgent(bias, sticks, stickChoices)
+    var agent = pragmatic2Agent(bias, sticks, stickChoices)
     var stick = sample(agent)
     var choice = [{'agentID': 'agent0', stickLength: stick}]
     runAgent(bias, removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceValues.concat(stick), maxSteps)
