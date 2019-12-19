@@ -36,7 +36,7 @@ var stickPrior = function(nSticks) {
 
 // L0 judge: assumes data received are i.i.d.
 var literalJudge = function(nSticks, obs) {
-  return Infer({method: 'enumerate', model: function() {
+  return Infer({method: 'MCMC', model: function() {
     // assume 3 latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
@@ -54,7 +54,7 @@ var literalJudge = function(nSticks, obs) {
 // thinks the judge will infer about the mean stick length
 // Note: sticks only involve those currently available to select
 var pragmaticAgent = function(bias, sticks, prevEvidence, agentID) {
-  return Infer({method: 'enumerate', model: function() {
+  return Infer({method: 'MCMC', model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
@@ -91,7 +91,7 @@ var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
 
 // L1 judge models bias of agent
 var pragmaticJudge = function(nSticks, obs) {
-  return Infer({method: 'enumerate', model: function() {
+  return Infer({method: 'MCMC', model: function() {
     // assume 3 latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
@@ -110,7 +110,7 @@ var pragmaticJudge = function(nSticks, obs) {
 
 // S2 agent is aware that judge is modeling bias
 var pragmatic2Agent = function(bias, sticks, prevEvidence, agentID) {
-  return Infer({method: 'enumerate', model: function() {
+  return Infer({method: 'MCMC', model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence

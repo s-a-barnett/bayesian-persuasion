@@ -4,7 +4,7 @@
 #SBATCH --error=output/job_%a.err
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH --array=13-13
+#SBATCH --array=12-12
 #SBATCH -t 05:59:59
 #SBATCH --mail-type=begin        # send email when job begins
 #SBATCH --mail-type=end          # send email when job ends
