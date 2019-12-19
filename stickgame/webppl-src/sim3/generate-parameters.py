@@ -8,7 +8,7 @@ if os.path.isdir('parameters') is False:
     os.mkdir('parameters')
 
 # Write out lists of hyperparameters
-nSticks = [3, 4, 5]
+nSticks = [5, 6, 7, 8, 9]
 agentBias = [0., 1., 5.]
 
 # Create iterator to loop through
