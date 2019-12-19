@@ -4,6 +4,7 @@
 // Read from the command line
 var nSticks = argv.nSticks
 var agentBias = argv.agentBias
+var numExp = argv.numExp
 
 // remove first instance of element found in l
 var removeSingleElement = function(element, l) {
@@ -125,3 +126,26 @@ var pragmatic2Agent = function(bias, sticks, prevEvidence) {
     return stick
   }})
 }
+
+var runAgent = function(bias, sticks, stickChoices, stickChoiceString, maxSteps) {
+  if(stickChoices.length < maxSteps) {
+    var agent = pragmatic2Agent(bias, sticks, stickChoices)
+    var stick = sample(agent)
+    var choice = [{'agentID': 'agent0', stickLength: stick}]
+
+    // Judge makes inference over choice, joint recorded
+    csv.writeJoint(pragmaticJudge(nSticks, stickChoices.concat(choice)), 'results/exp' + numExp + '_move' + stickChoices.length + '.csv')
+
+    runAgent(bias, removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceString + ',' + stick, maxSteps)
+  } else {
+    // Write a csv listing the choices of the agent, in order
+    var output_handle = csv.open('results/exp' + numExp + '_moves.csv')
+    csv.writeLine(stickChoiceString, output_handle)
+    csv.close(output_handle)
+  }
+}
+
+var maxSteps = 3 // Hard-coded choice for experiments and simulations
+var sticks = stickPrior(nSticks) // Arbitrarily draw sticks for experiment
+
+runAgent(agentBias, sticks, [], [], maxSteps)
