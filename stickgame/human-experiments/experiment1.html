@@ -45,6 +45,15 @@
 
     timeline.push(instructions);
 
+    var pre_first_move = {
+        type: "html-keyboard-response",
+        stimulus: "<p> Player 1 choosing move... </p>",
+        choices: jsPsych.NO_KEYS,
+        trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
+    }
+
+    timeline.push(pre_first_move);
+
     var first_move = {
         type: "html-slider-response",
         stimulus: "<p> Player 1 shows a stick of length " + agent1stick +
@@ -55,6 +64,15 @@
     }
 
     timeline.push(first_move);
+
+    var pre_second_move = {
+        type: "html-keyboard-response",
+        stimulus: "<p> Player 2 choosing move... </p>",
+        choices: jsPsych.NO_KEYS,
+        trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
+    }
+
+    timeline.push(pre_second_move);
 
     var second_move = {
         type: "html-slider-response",
