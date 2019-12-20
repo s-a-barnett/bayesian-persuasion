@@ -24,7 +24,7 @@ var observeDatum = function(observations, sticks) {
     var datum = first(observations)
     var agent = randomAgent(sticks)
     var agentStickChoice = sample(agent)
-    condition(agentStickChoice == datum.stickLength)
+    factor((agentStickChoice == datum.stickLength)?1:0)
     observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
   }
 }
@@ -84,7 +84,7 @@ var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
     var datum = first(observations)
     var agent = pragmaticAgent(biases[datum.agentID], sticks, prevObs)
     var agentStickChoice = sample(agent)
-    condition(agentStickChoice == datum.stickLength)
+    factor((agentStickChoice == datum.stickLength)?1:0)
     observeDatum(rest(observations), prevObs.concat(datum), removeSingleElement(agentStickChoice, sticks), biases)
   }
 }
