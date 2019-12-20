@@ -40,6 +40,8 @@
       "Player 1 will be paid $" + agent1bias + " if your confidence that the " +
       "sample is long is at least 5 after the two turns. Otherwise, Player 2 " +
       "will be paid $" + agent2bias + ".</p>" +
+      "<p> After each move, you must also assess your degree of belief that " +
+      "the player is biased towards showing you longer or shorter sticks. " +
       "<p>Press any key to begin.</p>"
     };
 
@@ -65,6 +67,18 @@
 
     timeline.push(first_move);
 
+    var post_first_move = {
+        type: "html-slider-response",
+        stimulus: "<p> How biased is Player 1? </p>",
+        labels: ['Biased towards showing shorter sticks.',
+                 'Showing sticks at random.',
+                 'Biased towards showing longer sticks.'],
+        min: -10,
+        max: 10
+    }
+
+    timeline.push(post_first_move);
+
     var pre_second_move = {
         type: "html-keyboard-response",
         stimulus: "<p> Player 2 choosing move... </p>",
@@ -85,6 +99,18 @@
     }
 
     timeline.push(second_move);
+
+    var post_second_move = {
+        type: "html-slider-response",
+        stimulus: "<p> How biased is Player 2? </p>",
+        labels: ['Biased towards showing shorter sticks.',
+                 'Showing sticks at random.',
+                 'Biased towards showing longer sticks.'],
+        min: -10,
+        max: 10
+    }
+
+    timeline.push(post_second_move);
 
     var goodbye = {
         type: 'html-keyboard-response',
