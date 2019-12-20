@@ -1,22 +1,85 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>My experiment</title>
+        <title>Experiment 2</title>
         <script src="jspsych-6.1.0/jspsych.js"></script>
         <script src="jspsych-6.1.0/plugins/jspsych-html-keyboard-response.js"></script>
+        <script src="jspsych-6.1.0/plugins/jspsych-survey-text.js"></script>
         <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css"></link>
     </head>
     <body></body>
     <script>
 
-    var hello_trial = {
+    var timeline = [];
+
+    var welcome = {
         type: 'html-keyboard-response',
-        stimulus: 'Hello world!'
+        stimulus: 'Welcome to the experiment. Press any key to begin.'
     }
 
-    jsPsych.init({
-        timeline: [hello_trial]
-    })
+    timeline.push(welcome);
 
+    // Sample stimuli chosen to satisfy two criteria:
+    // (i) The sample is definitely 'long', with mean >= 0.6
+    // (ii) The sample contains at least one stick with length <= 0.4
+    var sample_stimuli = [
+        [.4, 1., .5, .5, 1.],
+        [1., .2, .8, .3, .7],
+        [.3, .9, .9, .6, .4],
+        [.8, .3, .9, .8, .4],
+        [.9, .7, .3, .9, 1.]
+    ];
+
+    // Parameters to vary for each experiment. Is there a better way to do this
+    // with timeline variables?
+    var agent1bias = jsPsych.randomization.sampleWithReplacement([0, 1, 5], 1)[0]
+    var sample     = jsPsych.randomization.sampleWithReplacement(sample_stimuli, 1)[0]
+
+
+    var instructions = {
+      type: "html-keyboard-response",
+      stimulus: "<p> You will see a sample of 5 sticks drawn " +
+      "uniformly between 0 and 1, whose mean value is greater than 0.5.</p>"  +
+      "<p>You can show 3 of these sticks to the other player - the judge - " +
+      "who must decide whether the overall sample mean is greater or less " +
+      "0.5.</p> <p> If the judge decides that the overall sample mean is greater " +
+      "0.5, you win $" + agent1bias + "- otherwise, you do not win any money." +
+      " However, the judge knows that you will receive $" + agent1bias + " if " +
+      "he/she decides that the sample mean is greater than 0.5." +
+      "</p>"
+    };
+
+    timeline.push(instructions);
+
+    var stick_selection = {
+        type: 'survey-text',
+        questions: [
+            {prompt: "Please select three of these sticks (by length) to " +
+            "show to the judge: [" + sample + "]",
+            required: true}
+        ]
+    }
+
+    timeline.push(stick_selection);
+
+    var goodbye = {
+        type: 'html-keyboard-response',
+        stimulus: 'Thank you for participating! Press any key to exit.'
+    }
+
+    timeline.push(goodbye);
+
+    // Store experiment parameter settings in the data.
+    jsPsych.data.addProperties({
+        agent1bias: agent1bias,
+        sample: sample
+    });
+
+    jsPsych.init({
+      timeline: timeline,
+      on_finish: function() {
+        jsPsych.data.displayData();
+      }
+    });
     </script>
 </html>
