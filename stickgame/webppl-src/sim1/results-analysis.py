@@ -46,8 +46,8 @@ for numExp in range(27):
         # Naming issue: 'weak' is referring either to WEE or to a bias of 1.0
         dBias_weak_1   = df_priorL1[df_priorL1.bias0 == 1.].sum()['prob'] - 0.2
         dBias_strong_1 = df_priorL1[df_priorL1.bias0 == 5.].sum()['prob'] - 0.25
-        dBias_weak_2   = df_weakL1[df_weakL1.bias1   == 1.].sum()['prob'] - 0.2
-        dBias_strong_2 = df_weakL1[df_weakL1.bias1   == 5.].sum()['prob'] - 0.25
+        dBias_weak_2   = df_weakL1[df_weakL1.bias1   == -1.].sum()['prob'] - 0.2
+        dBias_strong_2 = df_weakL1[df_weakL1.bias1   == -5.].sum()['prob'] - 0.25
 
         numExp_vals.append(numExp)
         nSticks_vals.append(nSticks)
