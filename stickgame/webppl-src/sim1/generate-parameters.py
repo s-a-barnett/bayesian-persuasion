@@ -9,8 +9,8 @@ if os.path.isdir('parameters') is False:
 
 # Write out lists of hyperparameters
 nSticks = [3, 4, 5]
-agent0stick = [0.8+0.1*i for i in range(3)]
-agent1stick = [0.3+0.1*i for i in range(3)]
+agent0stick = [0.75+0.05*i for i in range(6)]
+agent1stick = [0.25+0.05*i for i in range(6)]
 
 # Create iterator to loop through
 iterator = product(nSticks, agent0stick, agent1stick)

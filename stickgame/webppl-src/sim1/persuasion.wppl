@@ -31,7 +31,7 @@ var observeDatum = function(observations, sticks) {
 
 // Discretized uniform prior
 var stickPrior = function(nSticks) {
-  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 2)})
+  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.05, .05)), 2)})
 }
 
 // L0 judge: assumes data received are i.i.d.

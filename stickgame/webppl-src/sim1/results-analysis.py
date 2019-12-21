@@ -17,8 +17,7 @@ dBias_strong_1_vals = []
 dBias_weak_2_vals   = []
 dBias_strong_2_vals = []
 
-# TODO - Auto-count number of results
-for numExp in range(27):
+for numExp in range(len(next(os.walk('parameters/'))[2])):
     exists = os.path.isfile('results/exp' + str(numExp) + 'priorL0.csv')
     if exists:
         # Read params
