@@ -1,5 +1,5 @@
 #!/bin/bash
-for number in {0..$1}
+for number in {0..107}
 do
 printf -v numExp "%05d" $number
 echo 'running experiment' $numExp'...'
