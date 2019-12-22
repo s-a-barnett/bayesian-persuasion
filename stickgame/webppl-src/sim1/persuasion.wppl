@@ -35,7 +35,7 @@ var stickPrior = function(nSticks) {
 }
 
 // L0 judge: assumes data received are i.i.d.
-var literalJudge = function(nSticks, obs) {
+var literalJudge = cache(function(nSticks, obs) {
   return Infer({method: 'MCMC', model: function() {
     // assume 3 latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
@@ -48,12 +48,12 @@ var literalJudge = function(nSticks, obs) {
       isLong: _.mean(sticks) >= .5
     }
   }})
-}
+})
 
 // S1 agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
 // Note: sticks only involve those currently available to select
-var pragmaticAgent = function(bias, sticks, prevEvidence, agentID) {
+var pragmaticAgent = cache(function(bias, sticks, prevEvidence, agentID) {
   return Infer({method: 'MCMC', model: function() {
     var stick = uniformDraw(sticks)
 
@@ -70,7 +70,7 @@ var pragmaticAgent = function(bias, sticks, prevEvidence, agentID) {
     factor(utility)
     return stick
   }})
-}
+})
 
 // Discretized U-shape prior
 var biasPrior = function() {
@@ -105,26 +105,6 @@ var pragmaticJudge = function(nSticks, obs) {
     return {
       isLong: _.mean(sticks) >= .5, bias0: biases['agent0'], bias1: biases['agent1']
     }
-  }})
-}
-
-// S2 agent is aware that judge is modeling bias
-var pragmatic2Agent = function(bias, sticks, prevEvidence, agentID) {
-  return Infer({method: 'MCMC', model: function() {
-    var stick = uniformDraw(sticks)
-
-    // Counterfactually added evidence
-    var newEvidence = [{'agentID': agentID, stickLength: stick}]
-    var totalEvidence = prevEvidence.concat(newEvidence)
-
-    // Probability that the sample is long,
-    // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(pragmaticJudge(nSticks, totalEvidence), "isLong").score(true))
-
-    // Maximize (or minimize) probability that the judge infers the sample is long
-    var utility = bias * p_long
-    factor(utility)
-    return stick
   }})
 }
 
