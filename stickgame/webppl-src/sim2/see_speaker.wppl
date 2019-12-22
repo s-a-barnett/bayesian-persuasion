@@ -23,6 +23,7 @@ var observeDatum = function(observations, sticks) {
     var datum = first(observations)
     var agent = randomAgent(sticks)
     var agentStickChoice = sample(agent)
+    // condition statement won't work with MCMC
     factor((agentStickChoice == datum.stickLength)?1:0)
     observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
   }
@@ -30,13 +31,13 @@ var observeDatum = function(observations, sticks) {
 
 // Discretized uniform prior
 var stickPrior = function(nSticks) {
-  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.1, .1)), 2)})
+  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.05, .05)), 2)})
 }
 
 // L0 judge: assumes data received are i.i.d.
-var literalJudge = function(nSticks, obs) {
-  return Infer({method: 'MCMC', model: function() {
-    // assume 3 latent sticks drawn i.i.d
+var literalJudge = cache(function(nSticks, obs) {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
+    // assume latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
     // Condition on observations coming from biased agent
@@ -47,13 +48,15 @@ var literalJudge = function(nSticks, obs) {
       isLong: _.mean(sticks) >= .5
     }
   }})
-}
+})
 
 // S1 agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
 // Note: sticks only involve those currently available to select
-var pragmaticAgent = function(bias, sticks, prevEvidence) {
-  return Infer({method: 'MCMC', model: function() {
+// prevEvidence refers to the stick observations already made
+// TODO: Add nSticks as function parameter, rather than a global variable
+var pragmaticAgent = cache(function(bias, sticks, prevEvidence) {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
@@ -69,7 +72,7 @@ var pragmaticAgent = function(bias, sticks, prevEvidence) {
     factor(utility)
     return stick
   }})
-}
+})
 
 // Discretized U-shape prior
 var biasPrior = function() {
@@ -78,6 +81,7 @@ var biasPrior = function() {
 
 // Recursively observe, accounting for earlier choices
 // Keeps track of previous observations in prevObs
+// Models samples as being from pragmaticAgent, not randomAgent
 var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
   if(observations.length > 0) {
     var datum = first(observations)
@@ -89,9 +93,9 @@ var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
 }
 
 // L1 judge models bias of agent
-var pragmaticJudge = function(nSticks, obs) {
-  return Infer({method: 'MCMC', model: function() {
-    // assume 3 latent sticks drawn i.i.d
+var pragmaticJudge = cache(function(nSticks, obs) {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
+    // assume latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
     // assume agents have independent
@@ -105,11 +109,11 @@ var pragmaticJudge = function(nSticks, obs) {
       isLong: _.mean(sticks) >= .5, bias: biases['agent0']
     }
   }})
-}
+})
 
 // S2 agent is aware that judge is modeling bias
-var pragmatic2Agent = function(bias, sticks, prevEvidence) {
-  return Infer({method: 'MCMC', model: function() {
+var pragmatic2Agent = cache(function(bias, sticks, prevEvidence) {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
@@ -125,8 +129,11 @@ var pragmatic2Agent = function(bias, sticks, prevEvidence) {
     factor(utility)
     return stick
   }})
-}
+})
 
+// Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
+// To run from the beginning, set stickChoices and stickChoicesValues to []
+// These variables allow earlier choices to factor into decision-making
 var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
   if(stickChoices.length < maxSteps) {
     var agent = pragmatic2Agent(bias, sticks, stickChoices)
@@ -138,13 +145,16 @@ var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps)
   }
 }
 
+// Performs inference over the distribution of move sequences, given by
+// the runAgent function above.
 var choiceSequence = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
-  return Infer({method: 'MCMC', model: function() {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
     return runAgent(bias, sticks, stickChoices, stickChoiceValues, maxSteps)
   }})
 }
 
-var maxSteps = 3 // Hard-coded choice for experiments and simulations
+var maxSteps = 2 // Hard-coded choice for experiments and simulations
+                 // TODO: Fix error when maxSteps > 2
 var sticks = stickPrior(nSticks) // Arbitrarily draw sticks for experiment
 
 csv.writeJoint(choiceSequence(agentBias, sticks, [], [], maxSteps), 'results/exp' + numExp + '.csv')

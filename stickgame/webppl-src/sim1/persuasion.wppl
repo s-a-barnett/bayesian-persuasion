@@ -24,6 +24,7 @@ var observeDatum = function(observations, sticks) {
     var datum = first(observations)
     var agent = randomAgent(sticks)
     var agentStickChoice = sample(agent)
+    // condition statement won't work with MCMC
     factor((agentStickChoice == datum.stickLength)?1:0)
     observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
   }
@@ -36,8 +37,8 @@ var stickPrior = function(nSticks) {
 
 // L0 judge: assumes data received are i.i.d.
 var literalJudge = cache(function(nSticks, obs) {
-  return Infer({method: 'MCMC', model: function() {
-    // assume 3 latent sticks drawn i.i.d
+  return Infer({method: 'MCMC', samples: 100, model: function() {
+    // assume latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
     // Condition on observations coming from biased agent
@@ -53,8 +54,10 @@ var literalJudge = cache(function(nSticks, obs) {
 // S1 agent has a bias towards longer or shorter sticks, depending on what she
 // thinks the judge will infer about the mean stick length
 // Note: sticks only involve those currently available to select
+// prevEvidence refers to the stick observations already made
+// TODO: Add nSticks as function parameter, rather than a global variable
 var pragmaticAgent = cache(function(bias, sticks, prevEvidence, agentID) {
-  return Infer({method: 'MCMC', model: function() {
+  return Infer({method: 'MCMC', samples: 100, model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
@@ -79,6 +82,7 @@ var biasPrior = function() {
 
 // Recursively observe, accounting for earlier choices
 // Keeps track of previous observations in prevObs
+// Models samples as being from pragmaticAgent, not randomAgent
 var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
   if(observations.length > 0) {
     var datum = first(observations)
@@ -91,8 +95,8 @@ var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
 
 // L1 judge models bias of agent
 var pragmaticJudge = function(nSticks, obs) {
-  return Infer({method: 'MCMC', model: function() {
-    // assume 3 latent sticks drawn i.i.d
+  return Infer({method: 'MCMC', samples: 100, model: function() {
+    // assume latent sticks drawn i.i.d
     var sticks = stickPrior(nSticks);
 
     // assume agents have independent
@@ -108,7 +112,9 @@ var pragmaticJudge = function(nSticks, obs) {
   }})
 }
 
+// Agent 0's first move.
 var priorEvidence = [{'agentID': 'agent0', stickLength: agent0stick}]
+// Agent 1's following move.
 var weakEvidence = [{'agentID': 'agent0', stickLength: agent0stick},
                     {'agentID' : 'agent1', stickLength: agent1stick}]
 
