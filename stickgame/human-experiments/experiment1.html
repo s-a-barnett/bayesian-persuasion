@@ -47,6 +47,7 @@
 
     timeline.push(instructions);
 
+    // Make the choices feel more realistic by adding arbitrary delay.
     var pre_first_move = {
         type: "html-keyboard-response",
         stimulus: "<p> Player 1 choosing move... </p>",
@@ -62,11 +63,12 @@
         " from the sample.</p>" +
         "<p> Assess your confidence that the overall sample is long.</p>",
         labels: ['Definitely short.', 'Definitely long.'],
-        max: 21
+        max: 21 // Number 21 based on McKenzie et al. (2002) experiments.
     }
 
     timeline.push(first_move);
 
+    // Allows us to measure the strong evidence effect for listeners.
     var post_first_move = {
         type: "html-slider-response",
         stimulus: "<p> How biased is Player 1? </p>",
@@ -79,6 +81,7 @@
 
     timeline.push(post_first_move);
 
+    // Make the choices feel more realistic by adding arbitrary delay.
     var pre_second_move = {
         type: "html-keyboard-response",
         stimulus: "<p> Player 2 choosing move... </p>",
@@ -100,6 +103,7 @@
 
     timeline.push(second_move);
 
+    // Allows us to measure the strong evidence effect for listeners.
     var post_second_move = {
         type: "html-slider-response",
         stimulus: "<p> How biased is Player 2? </p>",

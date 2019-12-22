@@ -22,6 +22,13 @@
     // Sample stimuli chosen to satisfy two criteria:
     // (i) The sample is definitely 'long', with mean >= 0.6
     // (ii) The sample contains at least one stick with length <= 0.4
+    // This is meant to match Perfors et al. (2018), where possible evidence
+    // overwhelmingly leans in one direction but there exists a strong dissenting
+    // opinion.
+
+    // QUESTIONS
+    // Is there a way to automatically generate sample stimuli meeting these criteria?
+    // Are 5 possible stimuli enough? Should there be more? Fewer?
     var sample_stimuli = [
         [.4, 1., .5, .5, 1.],
         [1., .2, .8, .3, .7],
@@ -51,6 +58,13 @@
 
     timeline.push(instructions);
 
+    // This is a TERRIBLE way to get the information.
+    // It allows any text response whatsoever!
+    // I need something like an jspsych-html-button-response plugin that
+    // requires you to pick exactly three of the available options (where the
+    // order matters).
+    // This will probably involve modifying one of the built-in plugins (or
+    // building one from scratch.)
     var stick_selection = {
         type: 'survey-text',
         questions: [
