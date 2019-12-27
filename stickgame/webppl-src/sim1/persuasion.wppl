@@ -7,47 +7,49 @@ var agent0stick = argv.agent0stick
 var agent1stick = argv.agent1stick
 var numExp = argv.numExp
 
-// remove first instance of element found in l
+// Remove first instance of element found in l
 var removeSingleElement = function(element, l) {
   var i = _.indexOf(l, element)
   return l.slice(0, i).concat(l.slice(i+1))
 }
 
-// Agent randomly picks a stick
-var randomAgent = function(sticks) {
-  return Categorical({vs: sticks})
+// We don't want the 'order' of the sticks to matter; this gets all combinations
+var possibleStickCombinations = Infer({method: 'enumerate', model :function() {
+  return sort(repeat(nSticks, function() {
+    return _.round(uniformDraw(_.range(.025, 1, .05)), 3)
+  }))
+}}).support()
+
+var stickPrior = function() {
+  return categorical({vs: possibleStickCombinations})
 }
 
-// Recursively observe, accounting for earlier choices
-var observeDatum = function(observations, sticks) {
-  if(observations.length > 0) {
-    var datum = first(observations)
-    var agent = randomAgent(sticks)
-    var agentStickChoice = sample(agent)
-    // condition statement won't work with MCMC
-    factor((agentStickChoice == datum.stickLength)?1:0)
-    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
-  }
-}
-
-// Discretized uniform prior
-var stickPrior = function(nSticks) {
-  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.05, .05)), 2)})
+// Discretized U-shape prior
+var biasPrior = function() {
+  return categorical({vs: [-5, -1, 0, 1, 5], ps: [.25, .2, .1, .2, .25]})
 }
 
 // L0 judge: assumes data received are i.i.d.
-var literalJudge = cache(function(nSticks, obs) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
-    // assume latent sticks drawn i.i.d
-    var sticks = stickPrior(nSticks);
-
-    // Condition on observations coming from biased agent
-    observeDatum(obs, sticks);
-
-    // return marginal distributions of interest
-    return {
-      isLong: _.mean(sticks) >= .5
+// Note: b/c agentIDs are irrelevant, we assume here the observations are just array of lengths to improve caching
+var literalJudge = cache(function(obs) {
+  // recursively condition being in list of sticks
+  var observe_fn = function(observations, sticks) {
+    if(observations.length > 0) {
+      var datum = first(observations)
+      factor(_.includes(sticks, datum)? 0 : -100)
+      observe_fn(rest(observations), removeSingleElement(datum, sticks))
     }
+  };
+  
+  return Infer({method: 'enumerate', model: function() {
+    // assume latent sticks drawn i.i.d
+    var sticks = stickPrior()
+
+    // Condition on observations 
+    observe_fn(obs, sticks)
+    
+    // return marginal distribution of interest
+    return _.mean(sticks) >= .5 ? 'long' : 'short'
   }})
 })
 
@@ -55,55 +57,50 @@ var literalJudge = cache(function(nSticks, obs) {
 // thinks the judge will infer about the mean stick length
 // Note: sticks only involve those currently available to select
 // prevEvidence refers to the stick observations already made
-// TODO: Add nSticks as function parameter, rather than a global variable
-var pragmaticAgent = cache(function(bias, sticks, prevEvidence, agentID) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
+var pragmaticAgent = function(bias, sticks, prevEvidence, agentID) {
+  return Infer({method: 'enumerate', model: function() {
     var stick = uniformDraw(sticks)
 
     // Counterfactually added evidence
-    var newEvidence = [{'agentID': agentID, stickLength: stick}]
-    var totalEvidence = prevEvidence.concat(newEvidence)
+    var evidence = prevEvidence.concat(
+      [{'agentID': agentID, stickLength: stick}]
+    )
 
-    // Probability that the sample is long,
-    // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(literalJudge(nSticks, totalEvidence), "isLong").score(true))
-
-    // Maximize (or minimize) probability that the judge infers the sample is long
-    var utility = bias * p_long
-    factor(utility)
+    // Soft-max utility of showing stick proportional to probability
+    // that judge says 'long' after seeing this stick, weighted by bias
+    factor(bias * literalJudge(_.map(evidence, 'stickLength')).score('long'))
     return stick
   }})
-})
-
-// Discretized U-shape prior
-var biasPrior = function() {
-  return categorical({vs: [-5, -1, 0, 1, 5], ps: [.25, .2, .1, .2, .25]})
-}
-
-// Recursively observe, accounting for earlier choices
-// Keeps track of previous observations in prevObs
-// Models samples as being from pragmaticAgent, not randomAgent
-var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
-  if(observations.length > 0) {
-    var datum = first(observations)
-    var agent = pragmaticAgent(biases[datum.agentID], sticks, prevObs)
-    var agentStickChoice = sample(agent)
-    factor((agentStickChoice == datum.stickLength)?1:0)
-    observeDatum(rest(observations), prevObs.concat(datum), removeSingleElement(agentStickChoice, sticks), biases)
-  }
 }
 
 // L1 judge models bias of agent
-var pragmaticJudge = function(nSticks, obs) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
+var pragmaticJudge = function(obs) {
+
+  // Recursively observe, accounting for earlier choices
+  // Keeps track of previous observations in prevObs
+  // Models samples as being from pragmaticAgent
+  var observe_fn = function(observations, prevObs, sticks, biases) {
+    if(observations.length > 0) {
+      var datum = first(observations)
+      observe(pragmaticAgent(biases[datum.agentID], sticks, prevObs, datum.agentID), datum.stickLength);
+      observe_fn(
+        rest(observations),
+        prevObs.concat(datum),
+        removeSingleElement(datum.stickLength, sticks),
+        biases
+      )
+    }
+  }
+
+  return Infer({method: 'enumerate', model: function() {
     // assume latent sticks drawn i.i.d
-    var sticks = stickPrior(nSticks);
+    var sticks = stickPrior();
 
     // assume agents have independent
     var biases = {agent0: biasPrior(), agent1: biasPrior()}
 
     // Condition on observations coming from biased agent
-    observeDatumPragmatic(obs, [], sticks, biases);
+    observe_fn(obs, [], sticks, biases);
 
     // return marginal distributions of interest
     return {
@@ -119,8 +116,14 @@ var weakEvidence = [{'agentID': 'agent0', stickLength: agent0stick},
                     {'agentID' : 'agent1', stickLength: agent1stick}]
 
 // Record simulation values for model with bias factor
-csv.writeJoint(pragmaticJudge(nSticks, priorEvidence), 'results/exp' + numExp + 'priorL1.csv')
-csv.writeJoint(pragmaticJudge(nSticks, weakEvidence), 'results/exp' + numExp + 'weakL1.csv')
-// Record simulation values for model without bias factor
-csv.writeJoint(literalJudge(nSticks, priorEvidence), 'results/exp' + numExp + 'priorL0.csv')
-csv.writeJoint(literalJudge(nSticks, weakEvidence), 'results/exp' + numExp + 'weakL0.csv')
+console.log(JSON.stringify(literalJudge(_.map(priorEvidence, 'stickLength'))))
+console.log(JSON.stringify(literalJudge(_.map(weakEvidence, 'stickLength'))))
+
+//console.log(pragmaticAgent(1, [0.025, 0.075, 0.975], [], 1))
+console.log(JSON.stringify(marginalize(pragmaticJudge(priorEvidence), function(v) {return v['isLong']})))
+console.log(JSON.stringify(marginalize(pragmaticJudge(weakEvidence), function(v) {return v['isLong']})))
+// csv.writeJoint(pragmaticJudge(priorEvidence), 'results/exp' + numExp + 'priorL1.csv')
+// csv.writeJoint(pragmaticJudge(weakEvidence), 'results/exp' + numExp + 'weakL1.csv')
+// // Record simulation values for model without bias factor
+// csv.writeJoint(literalJudge(priorEvidence), 'results/exp' + numExp + 'priorL0.csv')
+// csv.writeJoint(literalJudge(weakEvidence), 'results/exp' + numExp + 'weakL0.csv')
