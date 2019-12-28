@@ -1,0 +1,13 @@
+{
+  "name": "shared",
+  "main": "shared.js",
+  "webppl": {
+    "wppl": [
+      "agents.wppl"
+    ]
+  },
+  "dependencies": {
+    "babyparse": "*",
+    "lodash": ">=4.17.13"
+  }
+}
