@@ -24,7 +24,7 @@ var runAgent = function(bias, sticks, stickChoices, stickChoiceString, maxSteps)
                    'results/exp' + params.numExp + '_move' + stickChoices.length + '.csv',
                    params)
 
-    runAgent(bias, removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceString + ',' + stick, maxSteps)
+    runAgent(bias, shared.removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceString + ',' + stick, maxSteps)
   } else {
     // Write a csv listing the choices of the agent, in order
     var output_handle = csv.open('results/exp' + params.numExp + '_moves.csv')

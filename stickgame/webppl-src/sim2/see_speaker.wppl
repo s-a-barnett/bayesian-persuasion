@@ -1,160 +1,38 @@
 // Run experiments for strong evidence effect with pragmatic agent
+// webppl see_speaker.wppl --require ../shared --require webppl-csv -- --nSticks=3 --agentBias=1 --numExp=1
 
 // Parameters to vary during the simulation
 // Read from the command line
-var nSticks = argv.nSticks
-var agentBias = argv.agentBias
-var numExp = argv.numExp
-
-// remove first instance of element found in l
-var removeSingleElement = function(element, l) {
-  var i = _.indexOf(l, element)
-  return l.slice(0, i).concat(l.slice(i+1))
-}
-
-// Agent randomly picks a stick
-var randomAgent = function(sticks) {
-  return Categorical({vs: sticks})
-}
-
-// Recursively observe, accounting for earlier choices
-var observeDatum = function(observations, sticks) {
-  if(observations.length > 0) {
-    var datum = first(observations)
-    var agent = randomAgent(sticks)
-    var agentStickChoice = sample(agent)
-    // condition statement won't work with MCMC
-    factor((agentStickChoice == datum.stickLength)?1:0)
-    observeDatum(rest(observations), removeSingleElement(agentStickChoice, sticks))
-  }
-}
-
-// Discretized uniform prior
-var stickPrior = function(nSticks) {
-  return repeat(nSticks, function() {return _.round(uniformDraw(_.range(0, 1.05, .05)), 2)})
-}
-
-// L0 judge: assumes data received are i.i.d.
-var literalJudge = cache(function(nSticks, obs) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
-    // assume latent sticks drawn i.i.d
-    var sticks = stickPrior(nSticks);
-
-    // Condition on observations coming from biased agent
-    observeDatum(obs, sticks);
-
-    // return marginal distributions of interest
-    return {
-      isLong: _.mean(sticks) >= .5
-    }
-  }})
-})
-
-// S1 agent has a bias towards longer or shorter sticks, depending on what she
-// thinks the judge will infer about the mean stick length
-// Note: sticks only involve those currently available to select
-// prevEvidence refers to the stick observations already made
-// TODO: Add nSticks as function parameter, rather than a global variable
-var pragmaticAgent = cache(function(bias, sticks, prevEvidence) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
-    var stick = uniformDraw(sticks)
-
-    // Counterfactually added evidence
-    var newEvidence = [{'agentID': 'agent0', stickLength: stick}]
-    var totalEvidence = prevEvidence.concat(newEvidence)
-
-    // Probability that the sample is long,
-    // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(literalJudge(nSticks, totalEvidence), "isLong").score(true))
-
-    // Maximize (or minimize) probability that the judge infers the sample is long
-    var utility = bias * p_long
-    factor(utility)
-    return stick
-  }})
-})
-
-// Discretized U-shape prior
-var biasPrior = function() {
-  return categorical({vs: [-5, -1, 0, 1, 5], ps: [.25, .2, .1, .2, .25]})
-}
-
-// Recursively observe, accounting for earlier choices
-// Keeps track of previous observations in prevObs
-// Models samples as being from pragmaticAgent, not randomAgent
-var observeDatumPragmatic = function(observations, prevObs, sticks, biases) {
-  if(observations.length > 0) {
-    var datum = first(observations)
-    var agent = pragmaticAgent(biases[datum.agentID], sticks, prevObs)
-    var agentStickChoice = sample(agent)
-    factor((agentStickChoice == datum.stickLength)?1:0)
-    observeDatum(rest(observations), prevObs.concat(datum), removeSingleElement(agentStickChoice, sticks), biases)
-  }
-}
-
-// L1 judge models bias of agent
-var pragmaticJudge = cache(function(nSticks, obs) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
-    // assume latent sticks drawn i.i.d
-    var sticks = stickPrior(nSticks);
-
-    // assume agents have independent
-    var biases = {agent0: biasPrior()}
-
-    // Condition on observations coming from biased agent
-    observeDatumPragmatic(obs, [], sticks, biases);
-
-    // return marginal distributions of interest
-    return {
-      isLong: _.mean(sticks) >= .5, bias: biases['agent0']
-    }
-  }})
-})
-
-// S2 agent is aware that judge is modeling bias
-var pragmatic2Agent = cache(function(bias, sticks, prevEvidence) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
-    var stick = uniformDraw(sticks)
-
-    // Counterfactually added evidence
-    var newEvidence = [{'agentID': 'agent0', stickLength: stick}]
-    var totalEvidence = prevEvidence.concat(newEvidence)
-
-    // Probability that the sample is long,
-    // having added the new stick to the observations
-    var p_long = Math.exp(marginalize(pragmaticJudge(nSticks, totalEvidence), "isLong").score(true))
-
-    // Maximize (or minimize) probability that the judge infers the sample is long
-    var utility = bias * p_long
-    factor(utility)
-    return stick
-  }})
-})
+var params = {
+  nSticks : argv.nSticks,
+  numExp : argv.numExp,
+  agent1bias : 0
+};
 
 // Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
 // To run from the beginning, set stickChoices and stickChoicesValues to []
 // These variables allow earlier choices to factor into decision-making
 var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
   if(stickChoices.length < maxSteps) {
-    var agent = pragmatic2Agent(bias, sticks, stickChoices)
+    var agent = S2(bias, sticks, stickChoices, 'agent0', params)
     var stick = sample(agent)
     var choice = [{'agentID': 'agent0', stickLength: stick}]
-    runAgent(bias, removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceValues.concat(stick), maxSteps)
+    runAgent(bias, shared.removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceValues.concat(stick), maxSteps)
   } else {
     return stickChoiceValues
   }
 }
 
-// Performs inference over the distribution of move sequences, given by
-// the runAgent function above.
+// Simluates the distribution of move sequences given by the runAgent function above.
 var choiceSequence = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
-  return Infer({method: 'MCMC', samples: 100, model: function() {
+  return Infer({method: 'forward', samples: 100, model: function() {
+    console.log('here')
     return runAgent(bias, sticks, stickChoices, stickChoiceValues, maxSteps)
   }})
 }
 
 var maxSteps = 2 // Hard-coded choice for experiments and simulations
                  // TODO: Fix error when maxSteps > 2
-var sticks = stickPrior(nSticks) // Arbitrarily draw sticks for experiment
+var sticks = stickPrior(params.nSticks) // Arbitrarily draw sticks for experiment
 
-csv.writeJoint(choiceSequence(agentBias, sticks, [], [], maxSteps), 'results/exp' + numExp + '.csv')
+csv.writeJoint(choiceSequence(argv.agentBias, sticks, [], [], maxSteps), 'results/exp' + params.numExp + '.csv')
