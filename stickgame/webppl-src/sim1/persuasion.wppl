@@ -22,5 +22,5 @@ csv.writeJoint(J1(priorEvidence, params), 'results/exp' + params.numExp + 'prior
 csv.writeJoint(J1(weakEvidence, params), 'results/exp' + params.numExp + 'weakL1.csv')
 
 // Record simulation values for model without bias factor
-csv.writeJoint(J0(priorEvidence, params), 'results/exp' + params.numExp + 'priorL0.csv')
-csv.writeJoint(J0(weakEvidence, params), 'results/exp' + params.numExp + 'weakL0.csv')
+csv.writeJoint(J0(_.map(priorEvidence, 'stickLength'), params), 'results/exp' + params.numExp + 'priorL0.csv')
+csv.writeJoint(J0(_.map(weakEvidence, 'stickLength'), params), 'results/exp' + params.numExp + 'weakL0.csv')

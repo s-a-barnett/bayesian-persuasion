@@ -8,8 +8,8 @@ if os.path.isdir('parameters') is False:
     os.mkdir('parameters')
 
 # Write out lists of hyperparameters
-nSticks = [5, 6, 7, 8, 9]
-agentBias = [0., 1., 5.]
+nSticks = [5] * 150
+agentBias = [3., 5., 10.]
 
 # Create iterator to loop through
 iterator = product(nSticks, agentBias)
@@ -25,9 +25,5 @@ for x in iterator:
     df = pd.DataFrame.from_dict(settings)
     exp_name = 'exp' + str(ind).zfill(num_max)
     df.to_csv(os.getcwd() + '/parameters/' + exp_name + '.csv', header=False, index=False)
-
-    # Create file to record list of moves the agent makes
-    f = open(os.getcwd() + '/results/' + exp_name + '_moves.csv', 'w+')
-    f.close()
 
     ind += 1

@@ -5,7 +5,7 @@
 var params = {
   nSticks : argv.nSticks,
   numExp : argv.numExp,
-  agent1bias : 0
+  agentBias : argv.agentBias
 };
 
 // Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
@@ -16,7 +16,6 @@ var runAgent = function(bias, sticks, stickChoices, stickChoiceString, maxSteps)
   if(stickChoices.length < maxSteps) {
     var agent = S2(bias, sticks, stickChoices, 'agent0', params)
     var stick = MAP(agent)['val'];
-    console.log('stick', stick)
     var choice = [{'agentID': 'agent0', stickLength: stick}]
 
     // Record judges beliefs about isLong and agent bias, given choice
@@ -34,6 +33,5 @@ var runAgent = function(bias, sticks, stickChoices, stickChoiceString, maxSteps)
 }
 
 var maxSteps = 2 // Hard-coded choice for experiments and simulations
-                 // TODO: Fix error when maxSteps > 2
 var sticks = stickPrior(params.nSticks) // Arbitrarily draw sticks for experiment
-runAgent(argv.agentBias, sticks, [], [], maxSteps)
+runAgent(argv.agentBias, sticks, [], '', maxSteps)

@@ -24,14 +24,14 @@ var J0 = cache(function(obs, params) {
       observe_fn(rest(observations), shared.removeSingleElement(datum, sticks))
     }
   };
-  
+
   return Infer({method: 'enumerate', model: function() {
     // assume latent sticks drawn i.i.d
     var sticks = stickPrior(params.nSticks)
 
-    // Condition on observations 
+    // Condition on observations
     observe_fn(obs, sticks)
-    
+
     // return marginal distribution of interest
     return _.mean(sticks) >= .5 ? 'long' : 'short'
   }})
@@ -70,7 +70,7 @@ var J1 = cache(function(obs, params) {
 
       // Shortcut to avoid evaluating speaker for cases where
       // observation isn't even in list of sticks
-      if(_.includes(sticks, datum))
+      if(_.includes(sticks, datum.stickLength))
         observe(S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params),
                 datum.stickLength);
       else
