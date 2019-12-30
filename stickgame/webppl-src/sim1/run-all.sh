@@ -1,5 +1,6 @@
 #!/bin/bash
-for number in {0..107}
+# Purpose: Run a selection of experiments in sequence
+for number in {0..299}
 do
 printf -v numExp "%05d" $number
 echo 'running experiment' $numExp'...'

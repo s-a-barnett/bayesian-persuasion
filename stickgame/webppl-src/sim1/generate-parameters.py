@@ -9,10 +9,10 @@ if os.path.isdir('parameters') is False:
 
 # Write out lists of hyperparameters
 nSticks         = [3, 4, 5]
-agent0stick     = [round(0.775+0.05*i, 3) for i in range(5)]
-agent1stick     = [round(0.275+0.05*i, 3) for i in range(5)]
-fixedBiasAgent0 = [5., 10., 'unfixed']
-fixedBiasAgent1 = [5., 10., 'unfixed']
+agent0stick     = [round(0.525+0.05*i, 3) for i in range(10)]
+agent1stick     = [round(0.475-0.05*i, 3) for i in range(10)]
+fixedBiasAgent0 = [10.]
+fixedBiasAgent1 = [10.]
 
 # Create iterator to loop through
 iterator = product(nSticks, agent0stick, agent1stick, fixedBiasAgent0, fixedBiasAgent1)
