@@ -12,21 +12,23 @@ var params = {
 // Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
 // To run from the beginning, set stickChoices and stickChoicesValues to []
 // These variables allow earlier choices to factor into decision-making
-var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
+var runAgent = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps, agentType) {
   if(stickChoices.length < maxSteps) {
-    var agent = S2(bias, sticks, stickChoices, 'agent0', params)
+    var agent = agentType=='S1' ? S1(bias, sticks, stickChoices, 'agent0', params) :
+                agentType=='S2' ? S2(bias, sticks, stickChoices, 'agent0', params) :
+                error("Enter 'S1' or 'S2'.")
     var stick = sample(agent)
     var choice = [{'agentID': 'agent0', stickLength: stick}]
-    runAgent(bias, shared.removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceValues.concat(stick), maxSteps)
+    runAgent(bias, shared.removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceValues.concat(stick), maxSteps, agentType)
   } else {
     return stickChoiceValues
   }
 }
 
 // Simluates the distribution of move sequences given by the runAgent function above.
-var choiceSequence = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps) {
+var choiceSequence = function(bias, sticks, stickChoices, stickChoiceValues, maxSteps, agentType) {
   return Infer({method: 'forward', samples: 100, model: function() {
-    var moveSequence = runAgent(bias, sticks, stickChoices, stickChoiceValues, maxSteps)
+    var moveSequence = runAgent(bias, sticks, stickChoices, stickChoiceValues, maxSteps, agentType)
     return moveSequence
   }})
 }
@@ -38,4 +40,5 @@ var output_handle = csv.open('results/exp' + params.numExp + '_sticks.csv')
 csv.writeLine(sticks, output_handle)
 csv.close(output_handle)
 
-csv.writeJoint(choiceSequence(argv.agentBias, sticks, [], [], maxSteps), 'results/exp' + params.numExp + '.csv')
+csv.writeJoint(choiceSequence(argv.agentBias, sticks, [], [], maxSteps, 'S1'), 'results/exp' + params.numExp + '_S1.csv')
+csv.writeJoint(choiceSequence(argv.agentBias, sticks, [], [], maxSteps, 'S2'), 'results/exp' + params.numExp + '_S2.csv')
