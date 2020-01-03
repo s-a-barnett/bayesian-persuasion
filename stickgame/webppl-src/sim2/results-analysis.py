@@ -5,6 +5,7 @@ import os
 # Initialise lists
 numExp_vals        = []
 agentBias_vals     = []
+biasPrior_vals     = []
 sampleMean_vals    = []
 MAP_stick1_S1_vals = []
 MAP_stick2_S1_vals = []
@@ -48,6 +49,7 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
 
         nSticks    = int(df_params[0])
         agentBias  = float(df_params[1])
+        biasPrior  = np.asarray(df_params[2])[0]
         sampleMean = np.mean(sticks)
 
         # Record MAP value for first two choices for S1
@@ -64,6 +66,7 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
 
         numExp_vals.append(numExp)
         agentBias_vals.append(agentBias)
+        biasPrior_vals.append(biasPrior)
         sampleMean_vals.append(sampleMean)
         MAP_stick1_S1_vals.append(MAP_stick1_S1)
         MAP_stick2_S1_vals.append(MAP_stick2_S1)
@@ -76,6 +79,7 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
 
 results_dict = {'numExp': numExp_vals,
                 'agentBias': agentBias_vals,
+                'biasPrior': biasPrior_vals,
                 'sampleMean': sampleMean_vals,
                 'MAP_stick1_S1': MAP_stick1_S1_vals,
                 'MAP_stick2_S1': MAP_stick2_S1_vals,

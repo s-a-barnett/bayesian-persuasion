@@ -6,7 +6,9 @@
 var params = {
   nSticks : argv.nSticks,
   numExp : argv.numExp,
-  agentBias : argv.agentBias
+  agentBias : argv.agentBias,
+  biasPrior : argv.biasPrior,
+  fixedBiasAgent1 : 0 // Shortcuts spurious inference about agent1
 };
 
 // Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
