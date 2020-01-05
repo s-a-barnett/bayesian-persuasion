@@ -5,7 +5,7 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH --array=0-59
-#SBATCH -t 5:59:59
+#SBATCH -t 0:59:59
 #SBATCH --mail-type=begin        # send email when job begins
 #SBATCH --mail-type=end          # send email when job ends
 #SBATCH --mail-user=samuelab@princeton.edu
