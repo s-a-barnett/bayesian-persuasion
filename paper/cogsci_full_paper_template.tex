@@ -81,7 +81,15 @@ AI; quantum; bitcoin; Elon Musk
 \end{abstract}
 
 \section{Introduction}
-% Motivate the problem. Describe the strong and weak evidence effect. Say how you'll model these.
+% Motivate the problem. 
+
+% Describe the strong and weak evidence effect. Talk about relevant papers.
+
+% Say how you'll model these. 
+
+% Describe weak, strong, and pedagogical sampling as related work.
+
+% Briefly summarise results.
 
 \section{Modeling Evidence Effects}
 \subsection{World Model: The Stick Task}
@@ -186,7 +194,7 @@ marginalizing over the possible bias settings using the sum rule.
 The final layer, the pragmatic speaker $S_2$, is nearly identical to the na\"ive speaker $S_1$, except for the fact that
 the pragmatic speaker performs soft-maximization based on $J_1$'s judgment, as opposed to $J_0$'s judgment:
 \begin{equation}
-p_{S_2} (a_t \ | \ \mathcal{A}_{t-1},\ \mathcal{S}_N) \propto \exp \bigl(\beta \cdot a_t \cdot p_{J_1} (\bar{S}_N \ge 0.5 \ | \ \mathcal{A}_{t-1} \cup \{a_t\} \bigr).
+	p_{S_2} (a_t \ | \ \mathcal{A}_{t-1},\ \mathcal{S}_N) \propto \exp \bigl(\beta \cdot a_t \cdot p_{J_1} (\bar{S}_N \ge 0.5 \ | \ \mathcal{A}_{t-1} \cup \{a_t\} \bigr).
 \end{equation}
 
 This layer is only required to capture the strong evidence effects.
@@ -220,10 +228,19 @@ This layer is only required to capture the strong evidence effects.
 \subsubsection{Set-Up}
 In the first simulation, we captured the pragmatic judge's ability to capture the \textit{weak evidence effect}. We 
 present the judge with one stick in turn from two speakers, whose biases are known to the judge and fixed at
-$\beta_1 = 10, \beta_2 = -10$. We then contrast the na\"ive and pragmatic judge's posteriors over whether the
+$\beta_1 \in \{2, 5, 10\}, \beta_2 = -\beta_1$. We then contrast the na\"ive and pragmatic judge's posteriors over whether the
 sample is long, having seen both sticks.
 
-In this context, the weak evidence effect occurs when 
+In this context, the weak evidence effect occurs when the na\"ive judge \textit{decreases} his belief that the sample is
+long between observing the first and the second stick, while the pragmatic judge \textit{increases} his belief. To see
+why this is the case, recall that the weak evidence effect is a result of a conditional probability being judged lower than the 
+marginal, while the cause is probability-raising. In the stick task, we evaluate whether the cause is probability-raising with
+respect to a na\"ive judge, who effectively regards the sticks as being sampled i.i.d., whereas the `conditional' and `marginal' in question
+(that is, the conditional probabilities after the first and second stick observation) are evaluated with respect to the pragmatic 
+judge with a more nuanced sampling assumption.
+
+For this simulation, we vary the total sample size $N$ between 3 and 5, and we consider the full range of possible stick pairs to
+be presented.
 
 \subsubsection{Results}
 
@@ -237,7 +254,50 @@ In this context, the weak evidence effect occurs when
 
 \subsection{Simulation 2: Strong Evidence Effect for Speakers}
 \subsubsection{Set-Up}
+In the second simulation, we investigate the strong evidence effect for \textit{speakers}, and in particular, whether adding the 
+pragmatic speaker is truly necessary to capture this effect. We consider a simple speaker with a bias $\beta\in\{2, 5, 10\}$.
+The stick task is then run for $T=2$ steps, with $N=5$ available sticks. In contrast to Simulation 1, the pragmatic judge 
+(as modelled by the pragmatic speaker) no longer knows the speaker bias, and instead has either a flat or a V-shaped prior over possible bias values.
+
+For each setting of bias value and bias prior shape, we consider 150 draws of initial stick samples (recording the true sample mean)
+for the speaker to choose from.
+We then look at the distribution over possible ordered pairs of sticks that the speaker chooses to show the judge, 
+which we refer to as `strategies'. For computational reasons, this distribution is inferred via a Monte Carlo estimate with 100 samples,
+as opposed to using the enumeration method that governs the lower-order inferences.
+
+To study the effect, we compare this distribution of strategies to what we call the `optimal strategy': to show the sticks in descending order.
+Given only a na\"ive judge, this is the strategy that maximizes the judge's posterior probability that the sample is long. Hence, as 
+$\beta\to\infty$ we would expect the probability mass of this strategy to tend to 1 for the na\"ive speaker. We therefore compare the probability mass of this 
+strategy for the na\"ive speaker to the pragmatic speaker, to see if the taking into account that the judge is modeling the speaker bias reduces the 
+likelihood that the speaker will adopt this strategy, and instead leads to a different Maximum A Posteriori (MAP) strategy. Such
+a reduction would show that the pragmatic speaker demonstrates a strong evidence effect.
+
 \subsubsection{Results}
+Plotting the probability mass on the optimal probability for the na\"ive speaker against the pragmatic speaker, we see that,
+in the majority of cases (\textbf{give a proportion}), the na\"ive speaker has a higher probability of choosing the optimal 
+strategy than the pragmatic speaker. In particular, the probability of choosing the optimal strategy for the pragmatic speaker never
+exceeds $\varepsilon$ higher than the probability for the na\"ive speaker, and can (and often is) much lower. This shows that the 
+pragmatic speaker is able to capture the strong evidence effect.
+
+% Remarks about flat vs. V-shaped bias
+Interestingly, we see little difference in whether the judge is modeled to have a flat prior or a V-shaped prior over speaker biases,
+although the strong evidence effect is slightly more prevalent for flat priors. This may be because, if the speaker believes the judge 
+to already be disposed towards believing that the speaker is biased, then it may be true for the speaker that choosing her sticks 
+non-optimally has less of an impact on the judge's belief about her bias, and so the optimal strategy may look slightly more 
+favorable.
+
+% Remarks about sampleMean and agentBias
+We also see that, for both the na\"ive and pragmatic speaker, the probability of choosing the optimal strategy \textit{increases} as
+agent bias increases and \textit{decreases} as sample mean increases. The former phenomenon is clearly true for the na\"ive speaker,
+whereas for the pragmatic speaker we can argue that increasing the bias begins to crowd out considerations about how the judge perceives
+that bias. The latter phenomenon can be explained as follows: in the domain in which the sample mean is high, the speaker
+can afford to choose a sub-optimal strategy and still get her desired outcome, though if the sample mean is low it becomes 
+increasingly important to just show the longest sticks.
+
+The strong evidence effect also appears by looking at the MAP strategies in Table~\ref{seeSpeakerTable}, which shows that (with one exception),
+the number of inferred distributions for which the optimal strategy was the MAP strategy decreases as we move from a 
+na\"ive to a pragmatic speaker. Moreover, this gap increases as we increase the bias of the agent.
+
 
 \begin{figure}[H]
 \begin{center}
@@ -267,7 +327,19 @@ Always borrow~~~~   &   96 - 42 = 34 \\
 
 \subsection{Simulation 3: Strong Evidence Effect for Judges}
 \subsubsection{Set-Up}
+In this simulation, we investigate the strong evidence effect for \textit{judges}, which predicts a relationship between 
+the strength of the evidence presented by a speaker, and the judge's perception of the speaker's bias.
+We again consider one speaker, and look at the judge's posterior probability of the speaker's bias value after 
+observing one stick, where this distribution is computed exactly via enumeration.\footnote{Clearly, the judge does 
+not know \textit{a priori} what the speaker's bias value is in this context, in contrast to Simulation 1.} We also vary 
+whether the judge begins with a flat prior over bias values, or a V-shaped prior.
+
 \subsubsection{Results}
+Figure~\ref{seeJudge} shows, predictably, that an increase stick length leads to an increased posterior probability in
+higher bias values, whereas for lower bias values this increase eventually plateaus or slightly decreases. This is clearer 
+in the case of a flat bias prior than a V-shaped prior, where the initial skew in belief towards greater bias values suppresses
+the belief that the speaker is positively biased for lower stick values. However, in both cases the overall shape and trend 
+of the curves are the same.
 
 \begin{figure}[H]
 \begin{center}
@@ -278,6 +350,7 @@ Always borrow~~~~   &   96 - 42 = 34 \\
 \end{figure}
 
 \section{Discussion and Future Work}
+% Future work: Higher dimensional problems (climate change). AI Safety via Debate. Reasoning specifically about other agent's biases.
 
 
 %\section{General Formatting Instructions}
