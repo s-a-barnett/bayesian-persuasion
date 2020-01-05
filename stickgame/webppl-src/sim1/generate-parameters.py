@@ -7,15 +7,18 @@ import pandas as pd
 if os.path.isdir('parameters') is False:
     os.mkdir('parameters')
 
+# Create folder in working directory to store results
+if os.path.isdir('results') is False:
+    os.mkdir('results')
+
 # Write out lists of hyperparameters
-nSticks         = [3, 4, 5]
-agent0stick     = [round(0.525+0.05*i, 3) for i in range(10)]
-agent1stick     = [round(0.475-0.05*i, 3) for i in range(10)]
-fixedBiasAgent0 = [10.]
-fixedBiasAgent1 = [10.]
+nSticks        = [3, 4, 5]
+agent0stick    = [round(0.025+0.05*i, 3) for i in range(20)]
+agent1stick    = agent0stick
+fixedBiasAgent = [2., 5., 10.]
 
 # Create iterator to loop through
-iterator = product(nSticks, agent0stick, agent1stick, fixedBiasAgent0, fixedBiasAgent1)
+iterator = product(nSticks, agent0stick, agent1stick, fixedBiasAgent)
 
 num_max = 5
 
@@ -25,8 +28,7 @@ for x in iterator:
     settings = {'nSticks': [x[0]],
                 'agent0stick': [x[1]],
                 'agent1stick': [x[2]],
-                'fixedBiasAgent0': [x[3]],
-                'fixedBiasAgent1': [x[4]]}
+                'fixedBiasAgent': [x[3]]}
 
     df = pd.DataFrame.from_dict(settings)
     exp_name = 'exp' + str(ind).zfill(num_max)

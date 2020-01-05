@@ -35,9 +35,10 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
 
         # Weak Evidence Effect if the second stick increases the probability that
         # the sample is long for the pragmatic judge, but not the literal judge.
-        is_WEE = (p_isLong_1_L0 >= p_isLong_2_L0) & (p_isLong_2_L1 >= p_isLong_1_L1)
+        is_WEE = ((p_isLong_1_L0 >= p_isLong_2_L0) & (p_isLong_2_L1 >= p_isLong_1_L1)) or \
+                 ((p_isLong_1_L0 <= p_isLong_2_L0) & (p_isLong_2_L1 <= p_isLong_1_L1))
         # WEE represents strength of effect, given by sum of the two deltas
-        WEE    = is_WEE * ((p_isLong_1_L0 - p_isLong_2_L0) + (p_isLong_2_L1 - p_isLong_1_L1))
+        WEE    = is_WEE * (np.abs(p_isLong_1_L0 - p_isLong_2_L0) + np.abs(p_isLong_2_L1 - p_isLong_1_L1))
 
         numExp_vals.append(numExp)
         nSticks_vals.append(nSticks)
