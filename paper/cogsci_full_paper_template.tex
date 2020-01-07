@@ -28,6 +28,9 @@
 \usepackage{graphicx}
 \usepackage{subcaption}
 
+\usepackage{epigraph}
+\setlength\epigraphrule{0pt}
+
 \cogscifinalcopy % Uncomment this line for the final submission 
 
 
@@ -56,7 +59,7 @@
 \title{The Art of (Recursive Bayesian) Persuasion}
  
 \author{{\large \bf Samuel A. Barnett (samuelab@princeton.edu)} \\
-  Department of Computer Science, 35 Olden Street \\
+  Department of Computer Science, Princeton University \\
   Princeton, NJ 08540 USA}
 
 
@@ -66,30 +69,86 @@
 
 
 \begin{abstract}
-Include no author information in the initial submission, to facilitate
-blind review.  The abstract should be one paragraph, indented 1/8~inch on both sides,
-in 9~point font with single spacing. The heading ``{\bf Abstract}''
-should be 10~point, bold, centered, with one line of space below
-it. This one-paragraph abstract section is required only for standard
-six page proceedings papers. Following the abstract should be a blank
-line, followed by the header ``{\bf Keywords:}'' and a list of
-descriptive keywords separated by semicolons, all in 9~point font, as
-shown below.
+An honest speaker that is attempting to convince you of some fact must balance
+the need to be persuasive with the need to appear as an impartial informer. An effective listener
+will be able to make inferences from a biased speaker if also modeling the fact that
+the speaker has a bias of some nature. Here, we employ a recursive Bayesian model
+of two particular phenomena that arise in this context: the weak and strong evidence effects.
+We show that the model is capable of capturing these effects in an intuitive way, and that the
+higher-order levels of reasoning are \textit{essential} for doing so.
 
 \textbf{Keywords:} 
-AI; quantum; bitcoin; Elon Musk
+communication; computational modeling; persuasion; theory of mind
 \end{abstract}
 
 \section{Introduction}
+\begin{epigraphs}
+\qitem{There are, then, these three means of effecting persuasion [...] (1) to reason logically, 
+(2) to understand human character and goodness in their various forms, and (3) to understand 
+the emotions}{\textit{Aristotle}}
+\qitem{Well he would [say that], wouldn't he?}{\textit{Mandy Rice-Davies}}
+\end{epigraphs}
+
 % Motivate the problem. 
+Much of the information we learn comes through communication with actors 
+in the world with their own desires, and epistemological viewpoint. An honest agent 
+that is attempting to convince you of some fact must balance the need to be persuasive 
+with the need to appear as an impartial informer. An effective listener will be able to 
+make inferences from a biased speaker, provided that he is able to take into account the
+nature of the speaker's biased.
 
 % Describe the strong and weak evidence effect. Talk about relevant papers.
+This paper models two particular phenomena that occur in the context of communication
+with biased agents: the \textit{weak} and \textit{strong evidence effects}. 
+
+The \textit{weak evidence effect} typically occurs in the context in which a listener first
+hears one side of a dispute, followed by the other side \cite{mckenzie_when_2002}.  For example, in a courtroom, jurors first
+hear the plaintiff's case, followed by the defendant's case. If the plaintiff makes a strong case, then
+a subsequently weak case made by the defendant may make the jurors \textit{more} confident in the 
+plaintiff's case. This is intuitive from a pragmatic perspective: the jurors expect both the plaintiff and 
+defendant to present the strongest arguments for their case, and so the weakness of the defendant's
+case suggests an absence of stronger evidence. However, on a na\"ive model in which we do not
+consider how the evidence is selected, it would be inconsistent to reduce one's confidence in the
+defendant's case on hearing her argument, if the argument on its own raises the probability of her
+side being true \cite{fernbach_when_2011}.
+
+The \textit{strong evidence effect}, in contrast, shows how stronger evidence may not always lead
+to stronger inferences \cite{perfors_stronger_2018}. In particular, knowing that a speaker's utterances will be used to make inferences
+about bias can lead to a speaker modulating the evidence she presents to a listener, rather than presenting
+the strongest possible argument for her case. This has been found to occur even when the distribution
+of the underlying evidence leans overwhelmingly towards the speaker's side of the argument.
 
 % Say how you'll model these. 
+This paper shows how both the strong and weak evidence effects can be predicted and explained under
+one unified Bayesian computational model in the toy context of \textit{the stick task}. 
+This is the first computational model to demonstrate the 
+strong evidence effect, and the first model of the weak evidence effect employing an explicit theory of mind
+in its explanation.\footnote{Previous work models the weak evidence effect by evaluating case strength with
+respect to a malleable reference point.}
+
+The core of this model is recursive Bayesian inference about underlying states given utterances by Bayesian
+decision-makers, in the style of Rational Speech Act (RSA) models \cite{goodman_pragmatic_2016}. In particular, we begin at the lowest level
+with a na\"ive judge who assumes the evidence he receives is impartial, and add alternate layers of speakers
+and judges in order to capture higher-order reasoning about the best means of persuasion. The agenda
+of each speaker can then be captured by a simple, scalar bias parameter.
 
 % Describe weak, strong, and pedagogical sampling as related work.
+This work is also related to work about learning from examples showing that different assumptions
+about how the data are sampled can have a large impact on learning. In particular, previous models have 
+looked at \textit{weak}, \textit{strong}, and\textit{pedagogical} sampling 
+\cite{hsu2009differential, shafto_rational_2014, tenenbaum1999bayesian, tenenbaum2001generalization}, each corresponding to different ways
+in which the data are generated, and subsequently corresponding to different likelihood functions assumed by
+the learner. This work can be considered to introduce a fourth sampling assumption, \textit{rhetorical sampling},
+in which the data are generated by a speaker who is trying to convince the learner of her point of view, which
+also appears in the learner's likelihood function.\footnote{A related model in which the agents are allowed to \textit{deceive}
+a listener is considered in \citeA{oey_designing_2019}.	}
 
 % Briefly summarise results.
+The results from this paper show that the recursive Bayesian model of persuasion is able to capture both the
+weak and strong evidence effects. Moreover, the higher-order models of speakers and listeners are shown to
+be \textit{essential} for capturing the effect, thus justifying the framework under which this model is designed. 
+Finally, we show that varying parameters such as the speaker bias, or the way in which this bias is perceived by
+the judge, changes the nature of the weak and strong evidence effects in intuitive ways.
 
 \section{Modeling Evidence Effects}
 \subsection{World Model: The Stick Task}
@@ -106,7 +165,7 @@ by modeling the sticks as being drawn uniformly from the set $\{ 0.025, 0.075, .
 Each speaker observes the full sample before the task, and at each time step $t$ a speaker
 $i$ (one per time step, taking it in turn) chooses one stick from the sample to reveal
 to the judge. The speakers are not permitted to reveal a stick that has previously been shown to 
-the judge. Notationally, the agent chooses action 
+the judge. Notationally, the speaker chooses action 
 \begin{equation}
 a_t^{(i)} \in \{s_1, s_2, ..., s_N\} \setminus \mathcal{A}_{t-1},
 \end{equation}
@@ -126,10 +185,10 @@ either long or short, or the speaker will be indifferent towards the outcome.
 The task runs for a total of $T\le N$ time steps.
 
 \subsection{Agent Models}
-In the manner of Rational Speech Act (RSA) models, we model the agents as performing
+In the manner of Rational Speech Act (RSA) models \cite{goodman_pragmatic_2016}, we model the speakers as performing
 recursive Bayesian inference about one another's beliefs. To capture both evidence effects,
 we require four layers, which we divide into the `na\"ive' layers and the `pragmatic' layers.
-The model is implemented in WebPPL, a probabilistic programming language that allows for
+The model is implemented in WebPPL \cite{dippl}, a probabilistic programming language that allows for
 fast hierarchical inference in low-dimensional domains such as this one.
 
 \subsubsection{Na\"ive Judge and Speaker}
@@ -181,7 +240,7 @@ Using the sum rule, we arrive at the relevant posterior, which in the case of di
 	p_{J_1} ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_T ) = \sum_{\mathcal{S}_N \colon \bar{S}_N \ge 0.5} p_{J_1} (\mathcal{S}_N \ | \ \mathcal{A}'_T).
 \end{equation}
 
-We consider two distinct versions of the pragmatic judge: one in which he knows the biases of each agent in advance, and
+We consider two distinct versions of the pragmatic judge: one in which he knows the biases of each speaker in advance, and
 one in which these biases are drawn, i.i.d., from a categorical prior over the aforementioned range of bias values. This is 
 necessary as the weak and strong evidence effects demand the former and latter versions, respectively. 
 
@@ -201,34 +260,56 @@ This layer is only required to capture the strong evidence effects.
 
 \section{Simulations}
 \subsection{Simulation 1: Weak Evidence Effect}
-%\begin{figure}[t!]
-%\begin{center}
-%\begin{subfigure}[t!]{0.2\textwidth}
-%	\centering
-%	\includegraphics[width=\textwidth]{figures/wee3.png}
-%	\label{fig:wee3}
-%\end{subfigure}
-%~
-%\begin{subfigure}[t!]{0.2\textwidth}
-%	\centering
-%	\includegraphics[width=\textwidth]{figures/wee4.png}
-%	\label{fig:wee4}
-%\end{subfigure}
-%~
-%\begin{subfigure}[t!]{0.2\textwidth}
-%	\centering
-%	\includegraphics[width=\textwidth]{figures/wee5.png}
-%	\label{fig:wee5}
-%\end{subfigure}
-%\end{center}
-%\caption{This is a figure.} 
-%\label{fig:wee}
-%\end{figure}
+\begin{figure*}[h]
+\centering
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks3bias2.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks3bias5.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks3bias10.png}
+\end{subfigure}
+
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks4bias2.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks4bias5.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks4bias10.png}
+\end{subfigure}
+
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks5bias2.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks5bias5.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.3\linewidth}
+	\includegraphics[width=\linewidth]{figures/nSticks5bias10.png}
+\end{subfigure}
+\caption{Heatmaps depicting the stick pairs for which the weak evidence effect appears, and the strength
+of the effect in the cases where it does appear. Values for which there is no weak evidence effect are colored
+in black. We vary both the sample size $N$ and the agents' bias strength $\beta$.} 
+\label{fig:wee}
+\end{figure*}
 
 \subsubsection{Set-Up}
 In the first simulation, we captured the pragmatic judge's ability to capture the \textit{weak evidence effect}. We 
 present the judge with one stick in turn from two speakers, whose biases are known to the judge and fixed at
-$\beta_1 \in \{2, 5, 10\}, \beta_2 = -\beta_1$. We then contrast the na\"ive and pragmatic judge's posteriors over whether the
+\begin{equation}
+\beta_1 \in \{2, 5, 10\}, \quad \beta_2 = -\beta_1.
+\end{equation}
+We then contrast the na\"ive and pragmatic judge's posteriors over whether the
 sample is long, having seen both sticks.
 
 In this context, the weak evidence effect occurs when the na\"ive judge \textit{decreases} his belief that the sample is
@@ -239,20 +320,56 @@ respect to a na\"ive judge, who effectively regards the sticks as being sampled 
 (that is, the conditional probabilities after the first and second stick observation) are evaluated with respect to the pragmatic 
 judge with a more nuanced sampling assumption.
 
+We also measure the \textit{strength} of the weak evidence effect for each stick pairing, given by the changes in
+belief from observing the first and second stick, summed over the na\"ive and pragmatic judge.\footnote{This is 
+set to zero for stick pairings for which the weak evidence effect does not occur.} In particular, this strength is given
+by
+\begin{equation}
+\sum_{J \in \{J_0, J_1\}} \lvert p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_2) - p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_1) \rvert .
+\end{equation}
+
 For this simulation, we vary the total sample size $N$ between 3 and 5, and we consider the full range of possible stick pairs to
 be presented.
 
 \subsubsection{Results}
+The heatmaps show that our model is capable of capturing the weak evidence effect, with the effect being at its 
+strongest for $a_1^{(1)} \approx 0.675$ and $a_2^{(2)} \approx 0.475$. Notably, this effect seems to \textit{weaken} for
+stronger values of $a_1^{(1)}$: this is possibly due to the fact that such strong evidence makes it very unlikely that
+the sample is long, so that the weaker evidence causes a smaller shift in belief for both judges.
 
-\begin{figure}[H]
-\begin{center}
-\fbox{CoGNiTiVe ScIeNcE}
-\end{center}
-\caption{This is a figure.} 
-\label{wee}
-\end{figure}
+We also observe that increasing the magnitude of the biases for both speakers both the range 
+of stick pairs for which we observe the weak evidence effect, as well as the strength of the effect. That this occurs is
+no surprise: in the limit, observations of sticks from biased speakers effectively informs us of the upper and lower bounds
+of the sample, giving us a significant amount of information about the sample mean in the case in which the second stick
+provides `weak' evidence for the sample being short.
+
+Finally, we see that increasing the sample size broadens the range of stick pairs for which we observe the weak evidence
+effect.
 
 \subsection{Simulation 2: Strong Evidence Effect for Speakers}
+\begin{figure*}[h]
+\centering
+\begin{subfigure}{0.45\textwidth}
+	\includegraphics[width=\textwidth]{figures/seeVBias.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.45\textwidth}
+	\includegraphics[width=\textwidth]{figures/seeVMean.png}
+\end{subfigure}
+
+\begin{subfigure}{0.45\textwidth}
+	\includegraphics[width=\textwidth]{figures/seeFlatBias.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.45\textwidth}
+	\includegraphics[width=\textwidth]{figures/seeFlatMean.png}
+\end{subfigure}
+\caption{Scatter plots of the probability mass on the optimal strategy for $S_1$ vs. $S_2$. Plot points are colored
+both by sample mean and by agent bias, and results are shown for $S_2$ modeling a judge with either a flat or 
+V-shaped prior over agent bias.} 
+\label{fig:seeSpeaker}
+\end{figure*}
+
 \subsubsection{Set-Up}
 In the second simulation, we investigate the strong evidence effect for \textit{speakers}, and in particular, whether adding the 
 pragmatic speaker is truly necessary to capture this effect. We consider a simple speaker with a bias $\beta\in\{2, 5, 10\}$.
@@ -273,6 +390,27 @@ likelihood that the speaker will adopt this strategy, and instead leads to a dif
 a reduction would show that the pragmatic speaker demonstrates a strong evidence effect.
 
 \subsubsection{Results}
+\begin{table}[H]
+\begin{center} 
+\caption{Percentage of trials for which the MAP strategy is the optimal strategy, given for both speakers $S_1$ and $S_2$.} 
+\label{seeSpeakerTable} 
+\vskip 0.12in
+\resizebox{\linewidth}{!}{
+\begin{tabular}{llll} 
+\hline
+bias prior shape &  agent bias ($\beta$) & $\text{MAP}(S_1) = \textrm{opt}$ (\%) & $\text{MAP}(S_2) = \textrm{opt}$ (\%)  \\
+\hline
+flat & 2.0 & 41.3 & 37.3 \\
+& 5.0 & 76.7 & 66.7 \\
+& 10.0 & 97.3 & 78.7 \\
+V-shaped & 2.0 & 42.7 & 45.3 \\
+& 5.0 & 76.0 & 69.3 \\
+& 10.0 & 97.3 & 72.0 \\
+\hline
+\end{tabular} }
+\end{center} 
+\end{table}
+
 Plotting the probability mass on the optimal probability for the na\"ive speaker against the pragmatic speaker, we see that,
 in the majority of cases (\textbf{give a proportion}), the na\"ive speaker has a higher probability of choosing the optimal 
 strategy than the pragmatic speaker. In particular, the probability of choosing the optimal strategy for the pragmatic speaker never
@@ -288,7 +426,7 @@ favorable.
 
 % Remarks about sampleMean and agentBias
 We also see that, for both the na\"ive and pragmatic speaker, the probability of choosing the optimal strategy \textit{increases} as
-agent bias increases and \textit{decreases} as sample mean increases. The former phenomenon is clearly true for the na\"ive speaker,
+speaker bias increases and \textit{decreases} as sample mean increases. The former phenomenon is clearly true for the na\"ive speaker,
 whereas for the pragmatic speaker we can argue that increasing the bias begins to crowd out considerations about how the judge perceives
 that bias. The latter phenomenon can be explained as follows: in the domain in which the sample mean is high, the speaker
 can afford to choose a sub-optimal strategy and still get her desired outcome, though if the sample mean is low it becomes 
@@ -296,36 +434,26 @@ increasingly important to just show the longest sticks.
 
 The strong evidence effect also appears by looking at the MAP strategies in Table~\ref{seeSpeakerTable}, which shows that (with one exception),
 the number of inferred distributions for which the optimal strategy was the MAP strategy decreases as we move from a 
-na\"ive to a pragmatic speaker. Moreover, this gap increases as we increase the bias of the agent.
+na\"ive to a pragmatic speaker. Moreover, this gap increases as we increase the bias of the speaker.
 
-
-\begin{figure}[H]
-\begin{center}
-\fbox{CoGNiTiVe ScIeNcE}
-\end{center}
-\caption{This is a figure.} 
-\label{seeSpeaker}
-\end{figure}
-
-\begin{table}[H]
-\begin{center} 
-\caption{Sample table title.} 
-\label{seeSpeakerTable} 
-\vskip 0.12in
-\begin{tabular}{ll} 
-\hline
-Error type    &  Example \\
-\hline
-Take smaller        &   63 - 44 = 21 \\
-Always borrow~~~~   &   96 - 42 = 34 \\
-0 - N = N           &   70 - 47 = 37 \\
-0 - N = 0           &   70 - 47 = 30 \\
-\hline
-\end{tabular} 
-\end{center} 
-\end{table}
 
 \subsection{Simulation 3: Strong Evidence Effect for Judges}
+\begin{figure*}[h]
+\centering
+\begin{subfigure}{0.45\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{figures/seeFlat.png}
+\end{subfigure}
+~
+\begin{subfigure}{0.45\textwidth}
+	\centering
+	\includegraphics[width=\textwidth]{figures/seeV.png}
+\end{subfigure}
+\caption{Pragmatic judge $J_1$'s posterior over agent bias, after seeing one stick, where the stick length
+and initial prior shape are varied.} 
+\label{seeJudge}
+\end{figure*}
+
 \subsubsection{Set-Up}
 In this simulation, we investigate the strong evidence effect for \textit{judges}, which predicts a relationship between 
 the strength of the evidence presented by a speaker, and the judge's perception of the speaker's bias.
@@ -335,22 +463,32 @@ not know \textit{a priori} what the speaker's bias value is in this context, in 
 whether the judge begins with a flat prior over bias values, or a V-shaped prior.
 
 \subsubsection{Results}
+
 Figure~\ref{seeJudge} shows, predictably, that an increase stick length leads to an increased posterior probability in
 higher bias values, whereas for lower bias values this increase eventually plateaus or slightly decreases. This is clearer 
 in the case of a flat bias prior than a V-shaped prior, where the initial skew in belief towards greater bias values suppresses
 the belief that the speaker is positively biased for lower stick values. However, in both cases the overall shape and trend 
 of the curves are the same.
 
-\begin{figure}[H]
-\begin{center}
-\fbox{CoGNiTiVe ScIeNcE}
-\end{center}
-\caption{This is a figure.} 
-\label{seeJudge}
-\end{figure}
+
 
 \section{Discussion and Future Work}
-% Future work: Higher dimensional problems (climate change). AI Safety via Debate. Reasoning specifically about other agent's biases.
+Knowing that the information you receive is coming from partisan sources might invite a degree of skepticism, often to
+the extent that the evidence received provides no informational content whatsoever. Yet by employing a recursive theory of
+mind, we show that we are able to capture the nuanced influences perceived bias can have,
+both on speakers and listeners. Our model provides a computational justification for some of the seemingly counter-intuitive
+behaviors exhibited in rhetorical, argumentative contexts.
+
+Future work would investigate the extent to which RSA-style models can work in higher-dimensional reasoning tasks,
+and whether higher-order speaker models are able to capture other persuasive techniques if given a greater variety of
+possible utterances \cite{cialdini1993influence, falk_persuasion_2018}.
+
+Finally, it would be interesting to apply this work to the recently-proposed context of AI safety via debate \cite{irving_ai_2018}, in which
+agents compete in a debate game to produce the most true, useful information for a human to judge in a decision-making
+task. While previous models have looked at agents playing a zero-sum game using Monte Carlo Tree Search, it is 
+plausible that an agent model with a theory of mind about the target of persuasion can perform better in terms of producing
+useful information. This would be in line with other research indicating the importance of human-like AI models for human-AI
+interaction \cite{carroll2019utility, hilgard_learning_2019}.
 
 
 %\section{General Formatting Instructions}
@@ -500,15 +638,7 @@ of the curves are the same.
 %chapter, journal article, dissertation, book, technical report, and
 %edited volume, respectively.
 
-\nocite{ChalnickBillman1988a}
-\nocite{Feigenbaum1963a}
-\nocite{Hill1983a}
-\nocite{OhlssonLangley1985a}
-% \nocite{Lewis1978a}
-\nocite{Matlock2001}
-\nocite{NewellSimon1972a}
-\nocite{ShragerLangley1990a}
-
+\nocite{lawson-tancred_art_1991}
 
 \bibliographystyle{apacite}
 
