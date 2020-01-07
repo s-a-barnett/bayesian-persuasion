@@ -9,8 +9,12 @@ var stickPrior = function(nSticks) {
 };
 
 // Discretized U-shape prior
-var biasPrior = function() {
-  return categorical({vs: [-5, 0, 5], ps: [.45, .1, .45]});
+var biasPrior = function(params) {
+  var biasRange = [-10, -5, -2, 0, 2, 5, 10];
+  var prior = params.biasPrior == 'flat' ? categorical({vs: biasRange}) :
+              params.biasPrior == 'v' ? categorical({vs: biasRange, ps: [8, 4, 2, 1, 2, 4, 8]}) :
+              error('biasPrior must be "flat" or "v".')
+  return prior
 };
 
 // L0 judge: assumes data received are i.i.d.
@@ -93,8 +97,8 @@ var J1 = cache(function(obs, params) {
     // assume agents have independent biases
     // (fix as common knowledge if param is provided, otherwise infer it)
     var biases = {
-      agent0: _.isFinite(params.fixedBiasAgent0) ? params.fixedBiasAgent0 : biasPrior() ,
-      agent1: _.isFinite(params.fixedBiasAgent1) ? params.fixedBiasAgent1 : biasPrior()
+      agent0: _.isFinite(params.fixedBiasAgent0) ? params.fixedBiasAgent0 : biasPrior(params),
+      agent1: _.isFinite(params.fixedBiasAgent1) ? params.fixedBiasAgent1 : biasPrior(params)
     };
 
     // Condition on observations coming from biased agent

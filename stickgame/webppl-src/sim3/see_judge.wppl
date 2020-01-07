@@ -4,34 +4,14 @@
 // Read from the command line
 var params = {
   nSticks : argv.nSticks,
+  stick: argv.stick,
   numExp : argv.numExp,
-  agentBias : argv.agentBias
+  biasPrior : argv.biasPrior,
+  fixedBiasAgent1 : 0 // Shortcuts spurious inference about agent1
 };
 
-// Allows the S2 agent to choose maxSteps sticks, where maxSteps <= nSticks
-// To run from the beginning, set stickChoices and stickChoicesValues to []
-// These variables allow earlier choices to factor into decision-making
-var runAgent = function(bias, sticks, stickChoices, stickChoiceString, maxSteps) {
+// Agent 0's first move.
+var evidence = [{'agentID': 'agent0', stickLength: argv.stick}];
 
-  if(stickChoices.length < maxSteps) {
-    var agent = S2(bias, sticks, stickChoices, 'agent0', params)
-    var stick = MAP(agent)['val'];
-    var choice = [{'agentID': 'agent0', stickLength: stick}]
-
-    // Record judges beliefs about isLong and agent bias, given choice
-    csv.writeJoint(J1(stickChoices.concat(choice), params),
-                   'results/exp' + params.numExp + '_move' + stickChoices.length + '.csv',
-                   params)
-
-    runAgent(bias, shared.removeSingleElement(stick, sticks), stickChoices.concat(choice), stickChoiceString + ',' + stick, maxSteps)
-  } else {
-    // Write a csv listing the choices of the agent, in order
-    var output_handle = csv.open('results/exp' + params.numExp + '_moves.csv')
-    csv.writeLine(stickChoiceString, output_handle)
-    csv.close(output_handle)
-  }
-}
-
-var maxSteps = 2 // Hard-coded choice for experiments and simulations
-var sticks = stickPrior(params.nSticks) // Arbitrarily draw sticks for experiment
-runAgent(argv.agentBias, sticks, [], '', maxSteps)
+// Record simulation values for model with bias factor
+csv.writeJoint(J1(evidence, params), 'results/exp' + params.numExp + 'posterior.csv')

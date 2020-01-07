@@ -5,8 +5,8 @@
 // Read from the command line
 var params = {
   nSticks: argv.nSticks,
-  fixedBiasAgent0: argv.fixedBiasAgent0,
-  fixedBiasAgent1: -argv.fixedBiasAgent1,
+  fixedBiasAgent0: argv.fixedBiasAgent,
+  fixedBiasAgent1: -argv.fixedBiasAgent,
   numExp : argv.numExp
 };
 
