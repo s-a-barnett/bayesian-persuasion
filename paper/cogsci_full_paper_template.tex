@@ -70,7 +70,7 @@
 
 \begin{abstract}
 An honest speaker that is attempting to convince you of some fact must balance
-the need to be persuasive with the need to appear as an impartial informer. An effective listener
+the need to be show the strongest evidence for that fact with the need to appear as an impartial informer. An effective listener
 will be able to make inferences from a biased speaker if also modeling the fact that
 the speaker has a bias of some nature. Here, we employ a recursive Bayesian model
 of two particular phenomena that arise in this context: the weak and strong evidence effects.
@@ -78,7 +78,7 @@ We show that the model is capable of capturing these effects in an intuitive way
 higher-order levels of reasoning are \textit{essential} for doing so.
 
 \textbf{Keywords:} 
-communication; computational modeling; persuasion; theory of mind
+communication; computational modeling; persuasion; rational analysis; theory of mind
 \end{abstract}
 
 \section{Introduction}
@@ -91,15 +91,16 @@ the emotions}{\textit{Aristotle}}
 
 % Motivate the problem. 
 Much of the information we learn comes through communication with actors 
-in the world with their own desires, and epistemological viewpoint. An honest agent 
-that is attempting to convince you of some fact must balance the need to be persuasive 
+in the world with their own desires, model of the world, and epistemological access to it. An honest speaker 
+that is attempting to convince you of some fact must balance the need to show you
+the evidence that best supports her case
 with the need to appear as an impartial informer. An effective listener will be able to 
-make inferences from a biased speaker, provided that he is able to take into account the
-nature of the speaker's biased.
+make inferences from a biased speaker, regarding both the bias of the speaker and the
+content of his utterances.
 
 % Describe the strong and weak evidence effect. Talk about relevant papers.
 This paper models two particular phenomena that occur in the context of communication
-with biased agents: the \textit{weak} and \textit{strong evidence effects}. 
+with biased speakers: the \textit{weak} and \textit{strong evidence effects}. 
 
 The \textit{weak evidence effect} typically occurs in the context in which a listener first
 hears one side of a dispute, followed by the other side \cite{mckenzie_when_2002}.  For example, in a courtroom, jurors first
@@ -121,10 +122,13 @@ of the underlying evidence leans overwhelmingly towards the speaker's side of th
 % Say how you'll model these. 
 This paper shows how both the strong and weak evidence effects can be predicted and explained under
 one unified Bayesian computational model in the toy context of \textit{the stick task}. 
+Simulation 1 is based on experiments in \citeA{mckenzie_when_2002}, and Simulations 2 and 3 are based on
+Studies 1 and 2 in \citeA{perfors_stronger_2018}, respectively.
 This is the first computational model to demonstrate the 
 strong evidence effect, and the first model of the weak evidence effect employing an explicit theory of mind
 in its explanation.\footnote{Previous work models the weak evidence effect by evaluating case strength with
-respect to a malleable reference point.}
+respect to a malleable reference point. Furthermore, faint praise, a phenomenon related to the weak evidence effect,
+has been given a Bayesian formalization by \citeA{harris_james_2013}.}
 
 The core of this model is recursive Bayesian inference about underlying states given utterances by Bayesian
 decision-makers, in the style of Rational Speech Act (RSA) models \cite{goodman_pragmatic_2016}. In particular, we begin at the lowest level
@@ -135,7 +139,7 @@ of each speaker can then be captured by a simple, scalar bias parameter.
 % Describe weak, strong, and pedagogical sampling as related work.
 This work is also related to work about learning from examples showing that different assumptions
 about how the data are sampled can have a large impact on learning. In particular, previous models have 
-looked at \textit{weak}, \textit{strong}, and\textit{pedagogical} sampling 
+looked at \textit{weak}, \textit{strong}, and \textit{pedagogical} sampling 
 \cite{hsu2009differential, shafto_rational_2014, tenenbaum1999bayesian, tenenbaum2001generalization}, each corresponding to different ways
 in which the data are generated, and subsequently corresponding to different likelihood functions assumed by
 the learner. This work can be considered to introduce a fourth sampling assumption, \textit{rhetorical sampling},
@@ -160,7 +164,7 @@ A sample of $N$ sticks whose lengths are given by
 \end{equation}
 are drawn i.i.d.\ from the Uniform$[0,1]$ distribution and is fixed throughout
 the task.\footnote{In practice, we use a discrete approximation to this distribution 
-by modeling the sticks as being drawn uniformly from the set $\{ 0.025, 0.075, ..., 0.975\}$.} 
+by modeling the sticks as being drawn uniformly from the set~${\{ 0.025, 0.075, ..., 0.975\}}$.} 
 
 Each speaker observes the full sample before the task, and at each time step $t$ a speaker
 $i$ (one per time step, taking it in turn) chooses one stick from the sample to reveal
@@ -169,11 +173,10 @@ the judge. Notationally, the speaker chooses action
 \begin{equation}
 a_t^{(i)} \in \{s_1, s_2, ..., s_N\} \setminus \mathcal{A}_{t-1},
 \end{equation}
-where $s_i$ is the realization of random variable $S_i$ and $\mathcal{A}_{t-1}$ denotes the first
-$t-1$ actions chosen. For simplicity, we let $\mathcal{A}_0 = \emptyset$.
+where $s_i$ is the realization of random variable $S_i$ and $\mathcal{A}_{t-1}$ denotes the first~${t-1}$ 
+actions chosen. For simplicity, we let~${\mathcal{A}_0 = \emptyset}$.
 
-At each time step $t$, the judge reasons about the sample mean of the sticks, 
-$\bar{S} = \frac{1}{N} \sum_{n=1}^N S_n$.\footnote{It is assumed that the judge knows $N$, but only observes the stick values through the speakers' actions.}
+At each time step $t$, the judge reasons about the sample mean of the sticks,~${\bar{S} = \frac{1}{N} \sum_{n=1}^N S_n}$.\footnote{It is assumed that the judge knows $N$, but only observes the stick values through the speakers' actions.}
 In particular, the judge evaluates his posterior over whether the sample is `long' or `short', i.e., whether or not
 $\bar{S	}_N \ge 0.5$. Hence, the relevant posterior for the judge at time step $t$ is
 \begin{equation}
@@ -182,7 +185,7 @@ p( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}_t ).
 Each speaker will have an incentive to select evidence that persuades the judge that the sample is
 either long or short, or the speaker will be indifferent towards the outcome.
 
-The task runs for a total of $T\le N$ time steps.
+The task runs for a total of~${T\le N}$ time steps.
 
 \subsection{Agent Models}
 In the manner of Rational Speech Act (RSA) models \cite{goodman_pragmatic_2016}, we model the speakers as performing
@@ -202,7 +205,7 @@ p_{J_0}( \bar{S}_N \ge 0.5 \ | \ S_1=s_1, S_2=s_2, ..., S_t=s_t).
 The second layer, $S_1$, describes the na\"ive speaker, whose choice about which stick to show
 at time $t$ is represented as a posterior over the available sticks defined in reference to $p_{J0}$.
 Importantly, each speaker has a bias $\beta$, where in our simulations we model the biases as being
-in the range $\beta \in \{-10, -5, -2, 0, 2, 5, 10\}.$ This bias represents the incentive regarding the judge's
+in the range~${\beta \in \{-10, -5, -2, 0, 2, 5, 10\}}$. This bias represents the incentive regarding the judge's
 inference: a positive (resp. negative) bias entails that the speaker is incentivized to show sticks to the judge
 that steer the judge towards the belief that the sample is long (resp. short).
 
@@ -245,7 +248,7 @@ one in which these biases are drawn, i.i.d., from a categorical prior over the a
 necessary as the weak and strong evidence effects demand the former and latter versions, respectively. 
 
 We further divided the latter case into two by considering two possible priors: a flat prior over the bias range, and a `V-shaped' prior which down-weights 
-the likelihood of neutrality.\footnote{Concretely, the V-shaped prior is given by the normalized probability vector $\frac{1}{29} [8, 4, 2, 1, 2, 4, 8]$.} 
+the likelihood of neutrality.\footnote{Concretely, the V-shaped prior is given by the normalized probability vector $\frac{1}{29} (8, 4, 2, 1, 2, 4, 8)$.} 
 We considered these two priors as, although the V-shaped prior better describes the context of the stick task, we wished to show 
 that strong evidence effects were robust to our choice of prior. Factoring in uncertainty over the bias is then a matter of 
 marginalizing over the possible bias settings using the sum rule.
@@ -256,7 +259,7 @@ the pragmatic speaker performs soft-maximization based on $J_1$'s judgment, as o
 	p_{S_2} (a_t \ | \ \mathcal{A}_{t-1},\ \mathcal{S}_N) \propto \exp \bigl(\beta \cdot a_t \cdot p_{J_1} (\bar{S}_N \ge 0.5 \ | \ \mathcal{A}_{t-1} \cup \{a_t\} \bigr).
 \end{equation}
 
-This layer is only required to capture the strong evidence effects.
+This layer is only applicable to the simulations capturing the strong evidence effects.
 
 \section{Simulations}
 \subsection{Simulation 1: Weak Evidence Effect}
@@ -332,16 +335,16 @@ For this simulation, we vary the total sample size $N$ between 3 and 5, and we c
 be presented.
 
 \subsubsection{Results}
-The heatmaps show that our model is capable of capturing the weak evidence effect, with the effect being at its 
-strongest for $a_1^{(1)} \approx 0.675$ and $a_2^{(2)} \approx 0.475$. Notably, this effect seems to \textit{weaken} for
+The heatmaps (Fig.~\ref{fig:wee}) show that our model is capable of capturing the weak evidence effect, with the effect being at its 
+strongest for~${a_1^{(1)} \approx 0.675}$ and~${a_2^{(2)} \approx 0.47}$. Notably, this effect seems to \textit{weaken} for
 stronger values of $a_1^{(1)}$: this is possibly due to the fact that such strong evidence makes it very unlikely that
 the sample is long, so that the weaker evidence causes a smaller shift in belief for both judges.
 
-We also observe that increasing the magnitude of the biases for both speakers both the range 
+We also observe that increasing the magnitude of the biases for both speakers increases both the range 
 of stick pairs for which we observe the weak evidence effect, as well as the strength of the effect. That this occurs is
-no surprise: in the limit, observations of sticks from biased speakers effectively informs us of the upper and lower bounds
+no surprise: in the limit, observations of sticks from biased speakers effectively inform us of the upper and lower bounds
 of the sample, giving us a significant amount of information about the sample mean in the case in which the second stick
-provides `weak' evidence for the sample being short.
+provides weak evidence for the sample being short.
 
 Finally, we see that increasing the sample size broadens the range of stick pairs for which we observe the weak evidence
 effect.
@@ -372,8 +375,8 @@ V-shaped prior over agent bias.}
 
 \subsubsection{Set-Up}
 In the second simulation, we investigate the strong evidence effect for \textit{speakers}, and in particular, whether adding the 
-pragmatic speaker is truly necessary to capture this effect. We consider a simple speaker with a bias $\beta\in\{2, 5, 10\}$.
-The stick task is then run for $T=2$ steps, with $N=5$ available sticks. In contrast to Simulation 1, the pragmatic judge 
+pragmatic speaker is truly necessary to capture this effect. We consider a simple speaker with a bias~${\beta\in\{2, 5, 10\}}$.
+The stick task is then run for~${T=2}$ steps, with~${N=5}$ available sticks. In contrast to Simulation 1, the pragmatic judge 
 (as modelled by the pragmatic speaker) no longer knows the speaker bias, and instead has either a flat or a V-shaped prior over possible bias values.
 
 For each setting of bias value and bias prior shape, we consider 150 draws of initial stick samples (recording the true sample mean)
@@ -382,15 +385,15 @@ We then look at the distribution over possible ordered pairs of sticks that the 
 which we refer to as `strategies'. For computational reasons, this distribution is inferred via a Monte Carlo estimate with 100 samples,
 as opposed to using the enumeration method that governs the lower-order inferences.
 
-To study the effect, we compare this distribution of strategies to what we call the `optimal strategy': to show the sticks in descending order.
-Given only a na\"ive judge, this is the strategy that maximizes the judge's posterior probability that the sample is long. Hence, as 
-$\beta\to\infty$ we would expect the probability mass of this strategy to tend to 1 for the na\"ive speaker. We therefore compare the probability mass of this 
+To study the effect, we compare this distribution of strategies to what we call the `optimal strategy', viz., showing the sticks in descending order.
+Given only a na\"ive judge, this is the strategy that maximizes the judge's posterior probability that the sample is long. Hence, as~${\beta\to\infty}$ 
+we would expect the probability mass of this strategy to tend to 1 for the na\"ive speaker. We therefore compare the probability mass of this 
 strategy for the na\"ive speaker to the pragmatic speaker, to see if the taking into account that the judge is modeling the speaker bias reduces the 
 likelihood that the speaker will adopt this strategy, and instead leads to a different Maximum A Posteriori (MAP) strategy. Such
 a reduction would show that the pragmatic speaker demonstrates a strong evidence effect.
 
 \subsubsection{Results}
-\begin{table}[H]
+\begin{table}[h]
 \begin{center} 
 \caption{Percentage of trials for which the MAP strategy is the optimal strategy, given for both speakers $S_1$ and $S_2$.} 
 \label{seeSpeakerTable} 
@@ -411,11 +414,11 @@ V-shaped & 2.0 & 42.7 & 45.3 \\
 \end{center} 
 \end{table}
 
-Plotting the probability mass on the optimal probability for the na\"ive speaker against the pragmatic speaker, we see that,
-in the majority of cases (\textbf{give a proportion}), the na\"ive speaker has a higher probability of choosing the optimal 
+Plotting the probability mass on the optimal probability for the na\"ive speaker against the pragmatic speaker, we see in Fig.~\ref{fig:seeSpeaker} that,
+in the majority of cases (53\%), the na\"ive speaker has a higher probability of choosing the optimal 
 strategy than the pragmatic speaker. In particular, the probability of choosing the optimal strategy for the pragmatic speaker never
-exceeds $\varepsilon$ higher than the probability for the na\"ive speaker, and can (and often is) much lower. This shows that the 
-pragmatic speaker is able to capture the strong evidence effect.
+exceeds 0.45 higher than the probability for the na\"ive speaker, and is up to 0.89 lower. This shows that the 
+pragmatic speaker is better able to capture the strong evidence effect.
 
 % Remarks about flat vs. V-shaped bias
 Interestingly, we see little difference in whether the judge is modeled to have a flat prior or a V-shaped prior over speaker biases,
@@ -473,170 +476,35 @@ of the curves are the same.
 
 
 \section{Discussion and Future Work}
-Knowing that the information you receive is coming from partisan sources might invite a degree of skepticism, often to
-the extent that the evidence received provides no informational content whatsoever. Yet by employing a recursive theory of
-mind, we show that we are able to capture the nuanced influences perceived bias can have,
-both on speakers and listeners. Our model provides a computational justification for some of the seemingly counter-intuitive
-behaviors exhibited in rhetorical, argumentative contexts.
 
-Future work would investigate the extent to which RSA-style models can work in higher-dimensional reasoning tasks,
+
+Knowing that the information you receive is coming from partisan sources might invite a degree of skepticism, often to
+the extent that the speaker is completely disregarded: hence the disarming power of the expression, 
+``well he would say that, wouldn't he?''  Yet by employing a recursive theory of
+mind, we show that we are able to capture some of the more nuanced influences perceived bias can have,
+both on speakers and listeners. Our model provides a computational justification for the 
+behaviors exhibited in rhetorical, argumentative contexts that seem counter-intuitive when the listener is
+treated as a na\"ive Bayesian with no theory of mind.
+
+Human experiments would be desirable to see if people demonstrate the weak and strong evidence effects for the stick task.
+This, along with performing inference by enumeration and allowing for more stick choices in Simulation 2, may give us a clearer
+picture of the competing incentives for this task in particular.
+
+Future work would investigate the extent to which RSA-style models can work in higher-dimensional reasoning tasks with
+a greater number of speakers and listeners,
 and whether higher-order speaker models are able to capture other persuasive techniques if given a greater variety of
-possible utterances \cite{cialdini1993influence, falk_persuasion_2018}.
+possible utterances \cite{cialdini1993influence, falk_persuasion_2018}. The ultimate aim of such research would be to
+provide the computational underpinnings of a \textit{rhetorical principle}, by means of analogy to Grice's cooperative 
+principle \cite{grice_logic_1975}, which would describe how people interact in social settings in which they aim not
+only to inform but also to \textit{persuade.}.
 
 Finally, it would be interesting to apply this work to the recently-proposed context of AI safety via debate \cite{irving_ai_2018}, in which
 agents compete in a debate game to produce the most true, useful information for a human to judge in a decision-making
 task. While previous models have looked at agents playing a zero-sum game using Monte Carlo Tree Search, it is 
 plausible that an agent model with a theory of mind about the target of persuasion can perform better in terms of producing
-useful information. This would be in line with other research indicating the importance of human-like AI models for human-AI
-interaction \cite{carroll2019utility, hilgard_learning_2019}.
+useful information. This would be in line with other research indicating the importance of human-like AI models for tasks in which
+humans and AI systems must cooperate \cite{carroll2019utility, hilgard_learning_2019}.
 
-
-%\section{General Formatting Instructions}
-%
-%The entire content of a paper (including figures, references, and anything else) can be no longer than six pages in the \textbf{initial submission}. In the \textbf{final submission}, the text of the paper, including an author line, must fit on six pages. Up to one additional page can be used for acknowledgements and references.
-%
-%The text of the paper should be formatted in two columns with an
-%overall width of 7 inches (17.8 cm) and length of 9.25 inches (23.5
-%cm), with 0.25 inches between the columns. Leave two line spaces
-%between the last author listed and the text of the paper; the text of
-%the paper (starting with the abstract) should begin no less than 2.75 inches below the top of the
-%page. The left margin should be 0.75 inches and the top margin should
-%be 1 inch.  \textbf{The right and bottom margins will depend on
-%  whether you use U.S. letter or A4 paper, so you must be sure to
-%  measure the width of the printed text.} Use 10~point Times Roman
-%with 12~point vertical spacing, unless otherwise specified.
-%
-%The title should be in 14~point bold font, centered. The title should
-%be formatted with initial caps (the first letter of content words
-%capitalized and the rest lower case). In the initial submission, the
-%phrase ``Anonymous CogSci submission'' should appear below the title,
-%centered, in 11~point bold font.  In the final submission, each
-%author's name should appear on a separate line, 11~point bold, and
-%centered, with the author's email address in parentheses. Under each
-%author's name list the author's affiliation and postal address in
-%ordinary 10~point type.
-%
-%Indent the first line of each paragraph by 1/8~inch (except for the
-%first paragraph of a new section). Do not add extra vertical space
-%between paragraphs.
-%
-%
-%\section{First Level Headings}
-%
-%First level headings should be in 12~point, initial caps, bold and
-%centered. Leave one line space above the heading and 1/4~line space
-%below the heading.
-%
-%
-%\subsection{Second Level Headings}
-%
-%Second level headings should be 11~point, initial caps, bold, and
-%flush left. Leave one line space above the heading and 1/4~line
-%space below the heading.
-%
-%
-%\subsubsection{Third Level Headings}
-%
-%Third level headings should be 10~point, initial caps, bold, and flush
-%left. Leave one line space above the heading, but no space after the
-%heading.
-%
-%
-%\section{Formalities, Footnotes, and Floats}
-%
-%Use standard APA citation format. Citations within the text should
-%include the author's last name and year. If the authors' names are
-%included in the sentence, place only the year in parentheses, as in
-%\citeA{NewellSimon1972a}, but otherwise place the entire reference in
-%parentheses with the authors and year separated by a comma
-%\cite{NewellSimon1972a}. List multiple references alphabetically and
-%separate them by semicolons
-%\cite{ChalnickBillman1988a,NewellSimon1972a}. Use the
-%``et~al.'' construction only after listing all the authors to a
-%publication in an earlier reference and for citations with four or
-%more authors.
-%
-%
-%\subsection{Footnotes}
-%
-%Indicate footnotes with a number\footnote{Sample of the first
-%footnote.} in the text. Place the footnotes in 9~point font at the
-%bottom of the column on which they appear. Precede the footnote block
-%with a horizontal rule.\footnote{Sample of the second footnote.}
-%
-%
-%\subsection{Tables}
-%
-%Number tables consecutively. Place the table number and title (in
-%10~point) above the table with one line space above the caption and
-%one line space below it, as in Table~\ref{sample-table}. You may float
-%tables to the top or bottom of a column, and you may set wide tables across
-%both columns.
-%
-%\begin{table}[H]
-%\begin{center} 
-%\caption{Sample table title.} 
-%\label{sample-table} 
-%\vskip 0.12in
-%\begin{tabular}{ll} 
-%\hline
-%Error type    &  Example \\
-%\hline
-%Take smaller        &   63 - 44 = 21 \\
-%Always borrow~~~~   &   96 - 42 = 34 \\
-%0 - N = N           &   70 - 47 = 37 \\
-%0 - N = 0           &   70 - 47 = 30 \\
-%\hline
-%\end{tabular} 
-%\end{center} 
-%\end{table}
-%
-%
-%\subsection{Figures}
-%
-%All artwork must be very dark for purposes of reproduction and should
-%not be hand drawn. Number figures sequentially, placing the figure
-%number and caption, in 10~point, after the figure with one line space
-%above the caption and one line space below it, as in
-%Figure~\ref{sample-figure}. If necessary, leave extra white space at
-%the bottom of the page to avoid splitting the figure and figure
-%caption. You may float figures to the top or bottom of a column, and
-%you may set wide figures across both columns.
-%
-%\begin{figure}[H]
-%\begin{center}
-%\fbox{CoGNiTiVe ScIeNcE}
-%\end{center}
-%\caption{This is a figure.} 
-%\label{sample-figure}
-%\end{figure}
-%
-%
-%\section{Acknowledgments}
-%
-%In the \textbf{initial submission}, please \textbf{do not include
-%  acknowledgements}, to preserve anonymity.  In the \textbf{final submission},
-%place acknowledgments (including funding information) in a section \textbf{at
-%the end of the paper}.
-%
-%
-%\section{References Instructions}
-%
-%Follow the APA Publication Manual for citation format, both within the
-%text and in the reference list, with the following exceptions: (a) do
-%not cite the page numbers of any book, including chapters in edited
-%volumes; (b) use the same format for unpublished references as for
-%published ones. Alphabetize references by the surnames of the authors,
-%with single author entries preceding multiple author entries. Order
-%references by the same authors by the year of publication, with the
-%earliest first.
-%
-%Use a first level section heading, ``{\bf References}'', as shown
-%below. Use a hanging indent style, with the first line of the
-%reference flush against the left margin and subsequent lines indented
-%by 1/8~inch. Below are example references for a conference paper, book
-%chapter, journal article, dissertation, book, technical report, and
-%edited volume, respectively.
 
 \nocite{lawson-tancred_art_1991}
 
