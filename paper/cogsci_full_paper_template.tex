@@ -1,30 +1,9 @@
-% 
-% Annual Cognitive Science Conference
-% Sample LaTeX Paper -- Proceedings Format
-% 
-
-% Original : Ashwin Ram (ashwin@cc.gatech.edu)       04/01/1994
-% Modified : Johanna Moore (jmoore@cs.pitt.edu)      03/17/1995
-% Modified : David Noelle (noelle@ucsd.edu)          03/15/1996
-% Modified : Pat Langley (langley@cs.stanford.edu)   01/26/1997
-% Latex2e corrections by Ramin Charles Nakisa        01/28/1997 
-% Modified : Tina Eliassi-Rad (eliassi@cs.wisc.edu)  01/31/1998
-% Modified : Trisha Yannuzzi (trisha@ircs.upenn.edu) 12/28/1999 (in process)
-% Modified : Mary Ellen Foster (M.E.Foster@ed.ac.uk) 12/11/2000
-% Modified : Ken Forbus                              01/23/2004
-% Modified : Eli M. Silk (esilk@pitt.edu)            05/24/2005
-% Modified : Niels Taatgen (taatgen@cmu.edu)         10/24/2006
-% Modified : David Noelle (dnoelle@ucmerced.edu)     11/19/2014
-% Modified : Roger Levy (rplevy@mit.edu)     12/31/2018
-
-
-
-%% Change "letterpaper" in the following line to "a4paper" if you must.
 
 \documentclass[10pt,letterpaper]{article}
 
 \usepackage{cogsci}
 \usepackage{amsmath}
+\usepackage{bm}
 \usepackage{graphicx}
 \usepackage{subcaption}
 
@@ -232,26 +211,27 @@ of observations of $S_1$ speakers
 \end{equation}
 and let $\mathcal{A}'_0 = \emptyset$.
 
-The posterior of $J_1$ can now be computed via Bayes' rule:
+In order for the pragmatic judge to reason about the na\"ive speaker, the posterior of $J_1$ must reason about the agent
+biases (denoted $\bm{\beta}$) as well as the distribution over remaining sticks. This can be computed by Bayes' rule:
 \begin{align*}
-	p_{J_1} (\mathcal{S}_N \ | \ \mathcal{A}'_T) &\propto p(\mathcal{A}'_T \ | \ \mathcal{S}_N) p(\mathcal{S}_N) \\
-	&=  p(\mathcal{S}_N) \prod_{t=1}^T p_{S_1}(A_t^{(i_t)}=a_t^{(i_t)} \ |  \mathcal{A}'_{t-1})
+	p_{J_1} (\mathcal{S}_N, \bm{\beta} \ | \ \mathcal{A}'_T) &\propto p(\mathcal{A}'_T \ | \ \mathcal{S}_N, \bm{\beta}) p(\mathcal{S}_N) p(\bm{\beta}) \\
+	&= p(\bm{\beta}) p(\mathcal{S}_N) \prod_{t=1}^T p_{S_1}(A_t^{(i_t)}=a_t^{(i_t)} \ |  \mathcal{A}'_{t-1}, \bm{\beta})
 \end{align*}
 
 Using the sum rule, we arrive at the relevant posterior, which in the case of discretized stick lengths is given by
 \begin{equation}
-	p_{J_1} ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_T ) = \sum_{\mathcal{S}_N \colon \bar{S}_N \ge 0.5} p_{J_1} (\mathcal{S}_N \ | \ \mathcal{A}'_T).
+	p_{J_1} ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_T ) = \sum_{\bm{\beta}} \sum_{\substack{\mathcal{S}_N \\ \bar{S}_N \ge 0.5}} p_{J_1} (\mathcal{S}_N \ | \ \mathcal{A}'_T).
 \end{equation}
 
 We consider two distinct versions of the pragmatic judge: one in which he knows the biases of each speaker in advance, and
 one in which these biases are drawn, i.i.d., from a categorical prior over the aforementioned range of bias values. This is 
-necessary as the weak and strong evidence effects demand the former and latter versions, respectively. 
+necessary as the weak and strong evidence effects demand the former and latter versions, respectively. Given the above notation,
+we can view the former case as modeling $p(\bm{\beta})$ as a delta distribution on the known bias values of each speaker.
 
 We further divided the latter case into two by considering two possible priors: a flat prior over the bias range, and a `V-shaped' prior which down-weights 
 the likelihood of neutrality.\footnote{Concretely, the V-shaped prior is given by the normalized probability vector $\frac{1}{29} (8, 4, 2, 1, 2, 4, 8)$.} 
 We considered these two priors as, although the V-shaped prior better describes the context of the stick task, we wished to show 
-that strong evidence effects were robust to our choice of prior. Factoring in uncertainty over the bias is then a matter of 
-marginalizing over the possible bias settings using the sum rule.
+that strong evidence effects were robust to our choice of prior.
 
 The final layer, the pragmatic speaker $S_2$, is nearly identical to the na\"ive speaker $S_1$, except for the fact that
 the pragmatic speaker performs soft-maximization based on $J_1$'s judgment, as opposed to $J_0$'s judgment:
@@ -331,8 +311,8 @@ by
 \sum_{J \in \{J_0, J_1\}} \lvert p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_2) - p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_1) \rvert .
 \end{equation}
 
-For this simulation, we vary the total sample size $N$ between 3 and 5, and we consider the full range of possible stick pairs to
-be presented.
+For this simulation, we vary the total sample size $N$ between 3 and 5, and we present to the judge the full range of possible stick pairs 
+such that the length of the second stick does not exceed the length of the first.
 
 \subsubsection{Results}
 The heatmaps (Fig.~\ref{fig:wee}) show that our model is capable of capturing the weak evidence effect, with the effect being at its 
