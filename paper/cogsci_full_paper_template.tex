@@ -139,7 +139,7 @@ the judge, changes the nature of the weak and strong evidence effects in intuiti
 The stick task consists of a judge, and a set of speakers indexed by $I$. 
 A sample of $N$ sticks whose lengths are given by
 \begin{equation}
-\mathcal{S}_N = \{ S_1, S_2, ..., S_N \}
+\mathcal{S}_N = \{ s_1, s_2, ..., s_N \}
 \end{equation}
 are drawn i.i.d.\ from the Uniform$[0,1]$ distribution and is fixed throughout
 the task.\footnote{In practice, we use a discrete approximation to this distribution 
@@ -155,7 +155,7 @@ a_t^{(i)} \in \{s_1, s_2, ..., s_N\} \setminus \mathcal{A}_{t-1},
 where $s_i$ is the realization of random variable $S_i$ and $\mathcal{A}_{t-1}$ denotes the first~${t-1}$ 
 actions chosen. For simplicity, we let~${\mathcal{A}_0 = \emptyset}$.
 
-At each time step $t$, the judge reasons about the sample mean of the sticks,~${\bar{S} = \frac{1}{N} \sum_{n=1}^N S_n}$.\footnote{It is assumed that the judge knows $N$, but only observes the stick values through the speakers' actions.}
+At each time step $t$, the judge reasons about the sample mean of the sticks,~${\bar{S} = \frac{1}{N} \sum_{n=1}^N s_n}$.\footnote{It is assumed that the judge knows $N$, but only observes the stick values through the speakers' actions.}
 In particular, the judge evaluates his posterior over whether the sample is `long' or `short', i.e., whether or not
 $\bar{S	}_N \ge 0.5$. Hence, the relevant posterior for the judge at time step $t$ is
 \begin{equation}
@@ -178,7 +178,7 @@ The first layer, $J_0$, describes the na\"ive judge - this judge is na\"ive in t
 does not model the speakers as having any incentives, and instead assumes that the actions are selected
 uniformly from the available sample. Relabeling without loss of generality, the posterior of $J_0$ at time $t$ is given by
 \begin{equation}
-p_{J_0}( \bar{S}_N \ge 0.5 \ | \ S_1=s_1, S_2=s_2, ..., S_t=s_t).
+p_{J_0}( \bar{S}_N \ge 0.5 \ | \ s_1, s_2, ..., s_t).
 \end{equation}
 
 The second layer, $S_1$, describes the na\"ive speaker, whose choice about which stick to show
@@ -189,14 +189,15 @@ inference: a positive (resp. negative) bias entails that the speaker is incentiv
 that steer the judge towards the belief that the sample is long (resp. short).
 
 To produce this behavior, the speaker samples a stick based on the soft-maximization of biased informativity
-of that stick, taking into account the previous sticks shown. If~${\beta>=0}$, then this is written as:
+of that stick, taking into account the previous sticks shown. If~${\beta\ge 0}$, then this is written as:
 \begin{equation}\label{S1}
 p_{S_1} (a_t \ | \ \mathcal{A}_{t-1},\ \mathcal{S}_N, \beta) \propto \exp \bigl(\lvert\beta\rvert \cdot p_{J_0} (\bar{S}_N \ge 0.5 \ | \ \mathcal{A}_{t-1} \cup \{a_t\} \bigr).
 \end{equation}
 
 For $\beta<0$, we simply replace the event~${\bar{S}_N \ge 0.5}$ in the above expression with~${\bar{S}_N < 0.5}$.
 Observe that, if $\beta = 0$, this entails that the speaker will sample the sticks uniformly based on the available
-evidence, which is equivalent to the speaker being indifferent to the outcome.
+evidence, which is equivalent to the speaker being indifferent to the outcome.\footnote{The $\beta$ parameter also 
+plays the same role as the optimality parameter $\alpha$ in models such as that of \citeA{goodman_pragmatic_2016}.}
 
 \subsubsection{Pragmatic Judge and Speaker}
 The pragmatic judge, $J_1$, performs a similar inference as $J_0$, though with one crucial difference: the judge
@@ -232,10 +233,10 @@ we can view the former case as modeling $p(\bm{\beta})$ as a delta distribution 
 We further divided the latter case into two by considering two possible priors: a flat prior over the bias range, and a `V-shaped' prior which down-weights 
 the likelihood of neutrality.\footnote{Concretely, the V-shaped prior is given by the normalized probability vector $\frac{1}{29} (8, 4, 2, 1, 2, 4, 8)$.} 
 We considered these two priors as, although the V-shaped prior better describes the context of the stick task, we wished to show 
-that strong evidence effects were robust to our choice of prior.
+that strong evidence effects varied with respect to our choice of prior.
 
 The final layer, the pragmatic speaker $S_2$, is nearly identical to the na\"ive speaker $S_1$, except for the fact that
-the pragmatic speaker performs soft-maximization based on $J_1$'s judgment, as opposed to $J_0$'s judgment. For~${\beta>=0}$,
+the pragmatic speaker performs soft-maximization based on $J_1$'s judgment, as opposed to $J_0$'s judgment. For~${\beta\ge0}$,
 this is given as
 \begin{equation}
 	p_{S_2} (a_t \ | \ \mathcal{A}_{t-1},\ \mathcal{S}_N, \beta) \propto \exp \bigl(\lvert\beta\rvert  \cdot p_{J_1} (\bar{S}_N \ge 0.5 \ | \ \mathcal{A}_{t-1} \cup \{a_t\} \bigr),
@@ -314,8 +315,8 @@ by
 \sum_{J \in \{J_0, J_1\}} \lvert p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_2) - p_J ( \bar{S}_N \ge 0.5 \ | \ \mathcal{A}'_1) \rvert .
 \end{equation}
 
-For this simulation, we vary the total sample size $N$ between 3 and 5, and we present to the judge the full range of possible stick pairs 
-such that the length of the second stick does not exceed the length of the first.
+For this simulation, we vary the total sample size $N$ between 3 and 5, and we present to the judge the simplex of possible stick pairs 
+where the length of the second stick does not exceed the length of the first.
 
 \subsubsection{Results}
 The heatmaps (Fig.~\ref{fig:wee}) show that our model is capable of capturing the weak evidence effect, with the effect being at its 
@@ -358,8 +359,8 @@ Bottom row: Histogram of MAP stick choices, where 1 represents the longest stick
 
 \subsubsection{Set-Up}
 In the second simulation, we investigate the strong evidence effect for \textit{speakers}, and in particular, whether adding the 
-pragmatic speaker is truly necessary to capture this effect. We consider a simple speaker with a fixed bias~${\beta=10}$.
-The stick task is then run for 1 step, with~${N=5}$ available sticks. In contrast to Simulation 1, the pragmatic judge 
+pragmatic speaker is truly necessary to capture this effect. We consider a single speaker with a fixed bias~${\beta=10}$.
+The stick task is then run for one step, with~${N=5}$ available sticks. In contrast to Simulation 1, the pragmatic judge 
 (as modelled by the pragmatic speaker) no longer knows the speaker bias, and instead has either a flat or a V-shaped prior over possible bias values.
 
 For each setting of bias prior shape, we consider 150 draws of initial stick samples (recording the true sample mean)
@@ -375,16 +376,16 @@ a reduction would show that the pragmatic speaker demonstrates a strong evidence
 
 We find that, in the majority of cases (80.7\% - 84.7\% for the flat prior and 76.7\% for the V-shaped prior), the na\"ive speaker has a higher probability of choosing the optimal 
 strategy than the pragmatic speaker. This suggests that the pragmatic speaker is better able to capture the strong evidence effect.
-Moreover, by looking at the histogram (Fig~\ref{fig:seeSpeaker}) showing the distribution of MAP choices made by $S_2$ for both flat and V-shaped priors,
-we see a significant number of cases in which the MAP choice is to \textit{not} choose the longest stick.\footnote{The na\"ive speaker
-will always choose the longest stick.} 
+Moreover, by looking at the histogram (Fig.~\ref{fig:seeSpeaker}) showing the distribution of MAP choices made by $S_2$ for both flat and V-shaped priors,
+we see a significant number of cases in which the MAP choice is to \textit{not} choose the longest stick.\footnote{We do not plot this histogram for the na\"ive speaker,
+as she will always by definition choose the longest stick.} 
 
 This is clear for the V-shaped prior, which in the samples considered is roughly half as likely to choose the longest stick than any other stick.
 We posit that the reason for this difference between the flat and V-shaped priors can be attributed to the greater likelihood that longer sticks
 will lead to a judge's inference that the speaker is biased in the V-shaped case, leading to the speaker choosing her sticks more carefully.
 
-We also plot in Fig~\ref{fig:seeSpeaker} how the probability of choosing the longest stick changes with respect to the mean of the sample.
-While we see little relation between the probability mass for the na\"ive speaker, the pragmatic speaker is less likely to choose the longest stick as
+We also plot in Fig.~\ref{fig:seeSpeaker} how the probability of choosing the longest stick changes with respect to the mean of the sample.
+While we see little relation between the probability mass and sample mean for the na\"ive speaker, the pragmatic speaker is less likely to choose the longest stick as
 the mean of the sample representing her possible choices increases. This can be explained as follows: in the domain in which the sample mean is high, the speaker
 can afford to choose a sub-optimal strategy and still get her desired outcome, though if the sample mean is low it becomes 
 increasingly important to just show the longest sticks.
@@ -417,7 +418,7 @@ whether the judge begins with a flat prior over bias values, or a V-shaped prior
 
 \subsubsection{Results}
 
-Figure~\ref{seeJudge} shows, predictably, that an increase stick length leads to an increased posterior probability in
+Fig.~\ref{seeJudge} shows, predictably, that an increased stick length leads to an increased posterior probability in
 higher bias values, whereas for lower bias values this increase eventually plateaus or slightly decreases. This is clearer 
 in the case of a flat bias prior than a V-shaped prior, where the initial skew in belief towards greater bias values suppresses
 the belief that the speaker is positively biased for lower stick values. However, in both cases the overall shape and trend 
@@ -437,6 +438,9 @@ behaviors exhibited in rhetorical, argumentative contexts that seem counter-intu
 treated as a na\"ive Bayesian with no theory of mind.
 
 Human experiments would be desirable to see if people demonstrate the weak and strong evidence effects for the stick task.
+Our insights into the model's behavior in the stick task would also be aided by running the speaker in Simulation 2 for more steps,
+and with a greater number of overall sticks. However, in this regime performing exact inference by enumeration becomes less
+feasible.
 
 Future work would investigate the extent to which RSA-style models can work in higher-dimensional reasoning tasks with
 a greater number of speakers and listeners,
