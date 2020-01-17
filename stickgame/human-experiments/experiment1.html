@@ -5,6 +5,7 @@
         <script src="jspsych-6.1.0/jspsych.js"></script>
         <script src="jspsych-6.1.0/plugins/jspsych-html-keyboard-response.js"></script>
         <script src="jspsych-6.1.0/plugins/jspsych-html-slider-response.js"></script>
+        <script src="jspsych-6.1.0/plugins/jspsych-image-slider-response.js"></script>
         <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css"></link>
     </head>
     <body></body>
@@ -19,13 +20,16 @@
 
     timeline.push(welcome);
 
-    // Parameters to vary for each experiment. Is there a better way to do this
-    // with timeline variables?
-    var numSticks = jsPsych.randomization.sampleWithReplacement([3,4,5,6,7], 1)[0]
-    var agent1bias = jsPsych.randomization.sampleWithReplacement([0, 1, 5], 1)[0]
-    var agent2bias = jsPsych.randomization.sampleWithReplacement([0, 1, 5], 1)[0]
-    var agent1stick = jsPsych.randomization.sampleWithReplacement([0.8, 0.9, 1.0], 1)[0]
-    var agent2stick = jsPsych.randomization.sampleWithReplacement([0.4, 0.3], 1)[0]
+    // Values fixed for human experiments.
+    var numSticks = 5
+    var agentBias = 10
+    var max_stimulus_height = 300
+
+    // TODO: Replace with input from MongoDB
+    // agent1stick \in \{ 0.6, 0.7, ..., 1.0\}
+    // agent2stick \in \{ 0.1, 0.2, ..., 0.5\}
+    var agent1stick = 0.7
+    var agent2stick = 0.4
 
 
     var instructions = {
@@ -37,15 +41,18 @@
       "<p> You must assess your degree of confidence that " +
       "the sample is 'long', i.e. that " +
       "the mean stick length of the sample is at least 0.5. </p>" +
-      "Player 1 will be paid $" + agent1bias + " if your confidence that the " +
+      "Player 1 will be paid $" + agentBias + " if your confidence that the " +
       "sample is long is at least 5 after the two turns. Otherwise, Player 2 " +
-      "will be paid $" + agent2bias + ".</p>" +
+      "will be paid $" + agentBias + ".</p>" +
       "<p> After each move, you must also assess your degree of belief that " +
       "the player is biased towards showing you longer or shorter sticks. " +
       "<p>Press any key to begin.</p>"
     };
 
     timeline.push(instructions);
+
+    // Add example with 5 sticks. Display mean and stick lengths. Show stick
+    // choices for each.
 
     // Make the choices feel more realistic by adding arbitrary delay.
     var pre_first_move = {
@@ -58,12 +65,14 @@
     timeline.push(pre_first_move);
 
     var first_move = {
-        type: "html-slider-response",
-        stimulus: "<p> Player 1 shows a stick of length " + agent1stick +
+        type: "image-slider-response",
+        stimulus: 'figures/stick.jpg',
+        stimulus_height: agent1stick * max_stimulus_height,
+        prompt: "<p> Player 1 shows a stick of length " + agent1stick +
         " from the sample.</p>" +
         "<p> Assess your confidence that the overall sample is long.</p>",
         labels: ['Definitely short.', 'Definitely long.'],
-        max: 21 // Number 21 based on McKenzie et al. (2002) experiments.
+        require_movement: true
     }
 
     timeline.push(first_move);
@@ -75,8 +84,7 @@
         labels: ['Biased towards showing shorter sticks.',
                  'Showing sticks at random.',
                  'Biased towards showing longer sticks.'],
-        min: -10,
-        max: 10
+                 require_movement: true
     }
 
     timeline.push(post_first_move);
@@ -98,7 +106,7 @@
         agent2stick + " from the sample.</p>" +
         "<p> Assess your confidence that the overall sample is long.</p>",
         labels: ['Definitely short.', 'Definitely long.'],
-        max: 21
+        require_movement: true
     }
 
     timeline.push(second_move);
@@ -110,8 +118,7 @@
         labels: ['Biased towards showing shorter sticks.',
                  'Showing sticks at random.',
                  'Biased towards showing longer sticks.'],
-        min: -10,
-        max: 10
+                 require_movement: true
     }
 
     timeline.push(post_second_move);
@@ -126,8 +133,7 @@
     // Store experiment parameter settings in the data.
     jsPsych.data.addProperties({
         numSticks: numSticks,
-        agent1bias: agent1bias,
-        agent2bias: agent2bias,
+        agentBias: agentBias,
         agent1stick: agent1stick,
         agent2stick: agent2stick
     });
