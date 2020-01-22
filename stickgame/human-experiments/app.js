@@ -26,14 +26,6 @@ if(argv.gameport) {
   console.log('no gameport specified: using 8886\nUse the --gameport flag to change');
 }
 
-if(argv.recogVersion) {
-  recogVersion = argv.recogVersion;
-  console.log('running version ' + recogVersion);
-} else {
-  recogVersion = 'yoked';
-  console.log('no version specified: running yoked\nUse the --recogVersion flag to change');
-}
-
 try {
   var privateKey  = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.key'),
       certificate = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.crt'),
@@ -50,17 +42,22 @@ try {
 // serve stuff that the client requests
 app.get('/*', (req, res) => {
   var id = req.query.workerId;
-  // Let them through if researcher, or in 'testing' mode
   var isResearcher = _.includes(researchers, id);
+
   if(!id || id === 'undefined' || (isResearcher && !blockResearcher)) {
+
+    // Let through if researcher, or in 'testing' mode
     serveFile(req, res);
+    
   } else if(!valid_id(id)) {
+    
     // If invalid id, block them
-    return handleInvalidID(req, res);
     console.log('invalid id, blocked');
+    return handleInvalidID(req, res);
+    
   } else {
-    // If the database shows they've already participated, block them
-    // If not a repeat worker, then send client stims
+
+    // If the database shows they've already participated, block them.
     console.log('neither invalid nor blank id, check if repeat worker');
     checkPreviousParticipant(id, (exists) => {    
       return exists ? handleDuplicate(req, res) : serveFile(req, res);
@@ -71,18 +68,26 @@ app.get('/*', (req, res) => {
 io.on('connection', function (socket) {
 
   // Recover query string information and set condition
-  var hs = socket.request;
-  var query = require('url').parse(hs.headers.referer, true).query;
-
+  const query = socket.handshake.query;
+  
   // Send client stims
   initializeWithTrials(socket);
 
   // Set up callback for writing client data to mongo
   socket.on('currentData', function(data) {
     console.log('currentData received: ' + JSON.stringify(data));
-    writeDataToMongo(data);
+    sendPostRequest(
+      'http://localhost:6004/db/insert',
+      { json: data },
+      (error, res, body) => {
+        if (!error && res.statusCode === 200) {
+          console.log(`sent data to store`);
+        } else {
+	  console.log(`error sending data to store: ${error} ${body}`);
+        }
+      }
+    );
   });
-
 });
 
 var serveFile = function(req, res) {
@@ -110,7 +115,7 @@ var handleInvalidID = function(req, res) {
 function checkPreviousParticipant (workerId, callback) {
   var p = {'workerId': workerId};
   var postData = {
-    dbname: '3dObjects',
+    dbname: 'bayesian-persuasion',
     query: p,
     projection: {'_id': 1}
   };
@@ -137,15 +142,10 @@ function checkPreviousParticipant (workerId, callback) {
 
 function initializeWithTrials(socket) {
   var gameid = UUID();
-  var colname = (recogVersion == 'yoked' ? 'graphical_conventions_sketches_yoked_refgame2.0' :
-		 recogVersion == 'scrambled40' ? 'graphical_conventions_sketches_scrambled40_refgame2.0_dev' :
-		 recogVersion == 'scrambled10' ? 'graphical_conventions_sketches_scrambled10_refgame2.0_dev' :
-		 console.error('unknown version: ' + recogVersion));
   sendPostRequest('http://localhost:6004/db/getstims', {
     json: {
-      dbname: 'stimuli',
-      colname: colname,
-      numTrials: 1,
+      dbname: 'bayesian-persuasion',
+      colname: 'stimuli',
       gameid: gameid
     }
   }, (error, res, body) => {
@@ -153,9 +153,8 @@ function initializeWithTrials(socket) {
       // send trial list (and id) to client
       var packet = {
       	gameid: gameid,
-      	version: recogVersion,	
-      	recogID: body.recogID,
-      	trials: body.meta
+      	stick1: body.stick1,
+        stick2: body.stick2
       };      
       socket.emit('onConnected', packet);
     } else {
@@ -163,21 +162,6 @@ function initializeWithTrials(socket) {
     }
   });
 }
-
-
-function writeDataToMongo (data) {
-  sendPostRequest(
-    'http://localhost:6004/db/insert',
-    { json: data },
-    (error, res, body) => {
-      if (!error && res.statusCode === 200) {
-        console.log(`sent data to store`);
-      } else {
-	console.log(`error sending data to store: ${error} ${body}`);
-      }
-    }
-  );
-};
 
 function UUID () {
   var baseName = (Math.floor(Math.random() * 10) + '' +
