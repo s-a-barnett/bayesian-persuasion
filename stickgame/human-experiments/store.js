@@ -54,7 +54,7 @@ function mongoConnectWithRetry(delayInMilliseconds, callback) {
 }
 
 function markAnnotation(collection, gameid, sketchid) {
-  collection.update({_id: ObjectID(sketchid)}, {
+  collection.updateOne({_id: ObjectID(sketchid)}, {
     $push : {games : gameid},
     $inc  : {numGames : 1}
   }, function(err, items) {
@@ -62,6 +62,7 @@ function markAnnotation(collection, gameid, sketchid) {
       console.log(`error marking annotation data: ${err}`);
     } else {
       console.log(`successfully marked annotation. result: ${JSON.stringify(items)}`);
+      console.log(`now shows: ${collection.findOne({_id: ObjectID(sketchid)}, {limit : 1}, (err, docs) => {console.log(docs);})}`);
     }
   });
 };
@@ -144,7 +145,7 @@ function serve() {
       const collection = database.collection(collectionName);
 
       const data = _.omit(request.body, ['colname', 'dbname']);
-      collection.insert(data, (err, result) => {
+      collection.insert_one(data, (err, result) => {
         if (err) {
           return failure(response, `error inserting data: ${err}`);
         } else {
@@ -173,17 +174,17 @@ function serve() {
       const collection = database.collection(collectionName);
 
       // sort by number of times previously served up and take the first
-      collection.aggregate([
-        { $addFields : { numGames: { $size: '$games'} } },
-        { $sort : {numGames : 1} },
-        { $limit : 1}
-        ]).toArray( (err, results) => {
+      collection.findOne({}, {
+	sort: [['numGames', 1]],
+        limit : 1
+      }, (err, results) => {
         if(err) {
           console.log(err);
         } else {
+	  console.log(results);
 	  // Immediately mark as annotated so others won't get it too
-	  markAnnotation(collection, request.body.gameid, results[0]['_id']);
-          response.send(results[0]);
+	  markAnnotation(collection, request.body.gameid, results['_id']);
+          response.send(results);
         }
       });
     });
