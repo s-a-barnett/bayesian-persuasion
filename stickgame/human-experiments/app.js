@@ -1,6 +1,6 @@
 global.__base = __dirname + '/';
 
-var
+const
     use_https     = true,
     argv          = require('minimist')(process.argv.slice(2)),
     https         = require('https'),
@@ -12,37 +12,37 @@ var
     sendPostRequest = require('request').post;
 
 
-// define number of trials to fetch from database (what is length of each recog HIT?)
-var gameport;
-var recogVersion;
-var researchers = ['A4SSYO0HDVD4E', 'A1BOIDKD33QSDK', 'A1MMCS8S8CTWKU','A1MMCS8S8CTWKV','A1MMCS8S8CTWKS'];
-var blockResearcher = false;
+const researchers = ['A4SSYO0HDVD4E', 'A1BOIDKD33QSDK', 'A1MMCS8S8CTWKU','A1MMCS8S8CTWKV','A1MMCS8S8CTWKS'];
+const blockResearcher = false;
 
+let gameport;
 if(argv.gameport) {
   gameport = argv.gameport;
   console.log('using port ' + gameport);
 } else {
   gameport = 8887;
-  console.log('no gameport specified: using 8886\nUse the --gameport flag to change');
+  console.log('no gameport specified: using 8887\nUse the --gameport flag to change');
 }
 
+let server;
+let io;
 try {
-  var privateKey  = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.key'),
-      certificate = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.crt'),
-      intermed    = fs.readFileSync('/etc/apache2/ssl/intermediate.crt'),
-      options     = {key: privateKey, cert: certificate, ca: intermed},
-      server      = require('https').createServer(options,app).listen(gameport),
-      io          = require('socket.io')(server);
+  const privateKey  = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.key'),
+        certificate = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.crt'),
+        intermed    = fs.readFileSync('/etc/apache2/ssl/intermediate.crt'),
+        options     = {key: privateKey, cert: certificate, ca: intermed};
+  server            = require('https').createServer(options,app).listen(gameport),
+  io                = require('socket.io')(server);
 } catch (err) {
   console.log("cannot find SSL certificates; falling back to http");
-  var server      = app.listen(gameport),
-      io          = require('socket.io')(server);
+  server = app.listen(gameport),
+  io     = require('socket.io')(server);
 }
 
 // serve stuff that the client requests
 app.get('/*', (req, res) => {
-  var id = req.query.workerId;
-  var isResearcher = _.includes(researchers, id);
+  const id = req.query.workerId;
+  const isResearcher = _.includes(researchers, id);
 
   if(!id || id === 'undefined' || (isResearcher && !blockResearcher)) {
 
@@ -90,31 +90,31 @@ io.on('connection', function (socket) {
   });
 });
 
-var serveFile = function(req, res) {
-  var fileName = req.params[0];
+const serveFile = function(req, res) {
+  const fileName = req.params[0];
   console.log('\t :: Express :: file requested: ' + fileName);
   return res.sendFile(fileName, {root: __dirname});
 };
 
-var handleDuplicate = function(req, res) {
+const handleDuplicate = function(req, res) {
   console.log("duplicate id: blocking request");
   res.sendFile('duplicate.html', {root: __dirname});
   return res.redirect('/duplicate.html');
 
 };
 
-var valid_id = function(id) {
+const valid_id = function(id) {
   return (id.length <= 15 && id.length >= 12) || id.length == 41;
 };
 
-var handleInvalidID = function(req, res) {
+const handleInvalidID = function(req, res) {
   console.log("invalid id: blocking request");
   return res.redirect('/invalid.html');
 };
 
 function checkPreviousParticipant (workerId, callback) {
-  var p = {'workerId': workerId};
-  var postData = {
+  const p = {'workerId': workerId};
+  const postData = {
     dbname: 'bayesian-persuasion',
     query: p,
     projection: {'_id': 1}
@@ -141,21 +141,21 @@ function checkPreviousParticipant (workerId, callback) {
 };
 
 function initializeWithTrials(socket) {
-  var gameid = UUID();
+  const gameid = UUID();
   sendPostRequest('http://localhost:6004/db/getstims', {
     json: {
       dbname: 'bayesian-persuasion',
-      colname: 'stimuli',
+      colname: 'experiment1_stimuli',
       gameid: gameid
     }
   }, (error, res, body) => {
     if (!error && res.statusCode === 200) {
       // send trial list (and id) to client
-      var packet = {
-      	gameid: gameid,
-      	stick1: body.stick1,
-        stick2: body.stick2
-      };      
+      console.log(body);
+      var packet = _.extend({}, body, {
+      	gameid: gameid
+      });
+      console.log(packet);
       socket.emit('onConnected', packet);
     } else {
       console.log(`error getting stims: ${error} ${body}`);
