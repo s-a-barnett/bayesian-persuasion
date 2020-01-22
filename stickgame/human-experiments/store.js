@@ -66,7 +66,6 @@ function markAnnotation(collection, gameid, sketchid) {
   });
 };
 
-
 function serve() {
 
   mongoConnectWithRetry(2000, (connection) => {
@@ -84,9 +83,7 @@ function serve() {
       const query = request.body.query;
       const projection = request.body.projection;
 
-      // hardcoded for now (TODO: get list of collections in db)
-      var collectionList = ['sketchpad_basic','sketchpad_repeated',
-          'graphical_conventions', 'graphical_conventions_recog']; 
+      var collectionList = ['experiment1', 'experiment2'];
 
       function checkCollectionForHits(collectionName, query, projection, callback) {
         const collection = database.collection(collectionName);        
@@ -96,7 +93,7 @@ function serve() {
       }
 
       function checkEach(collectionList, checkCollectionForHits, query,
-       projection, evaluateTally) {
+                         projection, evaluateTally) {
         var doneCounter = 0;
         var results = 0;          
         collectionList.forEach(function (collectionName) {
@@ -147,7 +144,6 @@ function serve() {
       const collection = database.collection(collectionName);
 
       const data = _.omit(request.body, ['colname', 'dbname']);
-      // log(`inserting data: ${JSON.stringify(data)}`);
       collection.insert(data, (err, result) => {
         if (err) {
           return failure(response, `error inserting data: ${err}`);
@@ -185,8 +181,8 @@ function serve() {
         if(err) {
           console.log(err);
         } else {
-	    // Immediately mark as annotated so others won't get it too
-	    markAnnotation(collection, request.body.gameid, results[0]['_id']);
+	  // Immediately mark as annotated so others won't get it too
+	  markAnnotation(collection, request.body.gameid, results[0]['_id']);
           response.send(results[0]);
         }
       });
