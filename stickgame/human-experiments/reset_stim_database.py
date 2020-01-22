@@ -24,7 +24,10 @@ if stim_coll.count() != 0 :
     stim_coll.drop()
 
 # Loop through evidence and insert into collection
-for stick1 in [.6, .7, .8, .9, 1] :
-    for stick2 in [.1, .2, .3, .4, .5] :
+for stick1 in [.1, .2, .3, .4, .5] :
+    for stick2 in  [.6, .7, .8, .9, 1] :
         packet = {'stick1' : stick1, 'stick2' : stick2, 'numGames': 0, 'games' : []}
         stim_coll.insert_one(packet)
+
+print('checking one of the docs in the collection...')
+print(stim_coll.find_one())
