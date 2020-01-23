@@ -88,7 +88,7 @@ function serve() {
 
       function checkCollectionForHits(collectionName, query, projection, callback) {
         const collection = database.collection(collectionName);        
-        collection.find(query, projection).limit(1).toArray((err, items) => {          
+        collection.findOne(query, projection).limit(1).toArray((err, items) => {          
           callback(!_.isEmpty(items));
         });  
       }
@@ -145,7 +145,7 @@ function serve() {
       const collection = database.collection(collectionName);
 
       const data = _.omit(request.body, ['colname', 'dbname']);
-      collection.insert_one(data, (err, result) => {
+      collection.insertOne(data, (err, result) => {
         if (err) {
           return failure(response, `error inserting data: ${err}`);
         } else {
