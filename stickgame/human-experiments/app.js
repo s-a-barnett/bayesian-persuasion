@@ -152,13 +152,19 @@ function initializeWithTrials(socket) {
     if (!error && res.statusCode === 200) {
       // send trial list (and id) to client
       console.log(body);
-      var packet = _.extend({}, body, {
+      var packet = _.extend({}, _.omit(body, ["_id", "numGames", "games"]), {
       	gameid: gameid
       });
-      console.log(packet);
+      console.log('got condition packet from db: ', packet);
       socket.emit('onConnected', packet);
     } else {
       console.log(`error getting stims: ${error} ${body}`);
+      console.log('returning hard-coded sticks');
+      socket.emit('onConnected', {
+	gameid: gameid,
+	agent1stick: .1,
+	agent2stick: .7
+      });
     }
   });
 }
