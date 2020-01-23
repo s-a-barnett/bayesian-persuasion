@@ -51,8 +51,8 @@
         var turkInfo = jsPsych.turk.turkInfo();    
 
         // Extract stick data from mongo
-        var agent1stick = mongoData.stick1
-        var agent2stick = mongoData.stick2
+        var agent1stick = mongoData.agent1stick
+        var agent2stick = mongoData.agent2stick
 
         // if still in preview mode, tell them to accept first, otherwise show first slide
         if (!turkInfo.previewMode) { 
@@ -207,11 +207,7 @@
 
         var goodbye = {
           type: 'html-keyboard-response',
-          stimulus: 'Thank you for participating! Press any key to exit.',
-          on_finish : function() {
-            console.log('sending data to mturk');
-            jsPsych.turk.submitToTurk();
-          }
+          stimulus: 'Thank you for participating! Press any key to exit.'
         }
 
         timeline.push(goodbye);
@@ -226,7 +222,12 @@
         
         jsPsych.init({
           timeline: timeline,
-          on_finish: function(trialData) {
+          on_finish : function() {
+            // At the end of the experiment, submit to turk
+            console.log('sending data to mturk');
+            jsPsych.turk.submitToTurk();
+          },
+          on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
             var packet = Object.assign({}, mongoData, trialData, {
               dbname: 'bayesian-persuasion',
