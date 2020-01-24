@@ -401,3 +401,7 @@ dmypy.json
 
 # Secure configs
 auth.json
+
+# node installations
+node_modules/
+package-lock.json
