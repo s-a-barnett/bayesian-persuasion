@@ -44,7 +44,7 @@
       var iterationName = 'testing'
       var numSticks = 5
       var agentBias = 10
-      var maxStimulusHeight = 300
+      var sliderWidthScale = 0.7
 
       // Start building timeline when we hear from server
       socket.on('onConnected', function(mongoData) {
@@ -132,9 +132,9 @@
             "average is more likely to be <strong>shorter than 5in</strong>, " +
             "click further to the left. If you think it is more likely to be " +
             "<strong>longer than 5in</strong>, click further to the right.</p>" +
-            "<p>Please move the slider to continue.</p>",
-          labels: ['Definitely short', 'Definitely long'],
-          slider_width: 1000,
+            "<p>Please move the slider before pressing 'Continue'.</p>",
+          labels: ['Definitely shorter', 'Definitely longer'],
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
@@ -142,18 +142,20 @@
 
         var instructions_7 = {
           type: "image-slider-response",
-          stimulus: "figures/stick8.png",
+          stimulus: "figures/stick8grey.png",
           prompt:
-            "<p>After each turn, you will use this slider to report " +
+            "<p>Of course, people differ in their response to incentives and " +
+            "how much they are willing to bend the truth.</p>" +
+            "<p>Therefore, after each turn, you will use this slider to report " +
             "how biased each contestant is. If you think the contestant " +
             "is more likely to show <strong>shorter sticks</strong>, " +
             "click further to the left. If you think they are more likely to show " +
             "<strong>longer sticks</strong>, click further to the right.</p>" +
-            "<p>Please move the slider to continue.</p>",
+            "<p>Please move the slider before pressing 'Continue'.</p>",
           labels: ['Biased towards showing shorter sticks',
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
-          slider_width: 1000,
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
@@ -182,9 +184,11 @@
           stimulus: "figures/stick" + (10 * agent2stick) + ".png",
           prompt:
             "<p>Blue contestant shows a stick of length " + (10 * agent2stick) +
-            "in from the sample.</p>",
-          labels: ['Definitely short', 'Definitely long'],
-          slider_width: 1000,
+            "in from the sample.</p>" +
+            "<p>Is the average stick length for the whole sample more likely to " +
+            "be longer or shorter than 5in?</p>",
+          labels: ['Definitely shorter', 'Definitely longer'],
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
@@ -193,13 +197,13 @@
         // Allows us to measure the strong evidence effect for listeners.
         var post_first_move = {
           type: "image-slider-response",
-          stimulus: "figures/stick" + (10 * agent2stick) + ".png",
+          stimulus: "figures/stick" + (10 * agent2stick) + "grey.png",
           prompt:
             "<p>How biased is the blue contestant?</p>",
           labels: ['Biased towards showing shorter sticks',
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
-          slider_width: 1000,
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
@@ -221,9 +225,11 @@
           prompt:
             "<p>Blue contestant shows a stick of length " + (10 * agent2stick) +
             "in from the sample, and the red contestant shows a stick of length " +
-            (10 * agent1stick) + "in from the sample.</p>",
-          labels: ['Definitely short', 'Definitely long'],
-          slider_width: 1000,
+            (10 * agent1stick) + "in from the sample.</p>" +
+            "<p>Is the average stick length for the whole sample more likely to " +
+            "be longer or shorter than 5in?</p>",
+          labels: ['Definitely shorter', 'Definitely longer'],
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
@@ -232,13 +238,13 @@
         // Allows us to measure the strong evidence effect for listeners.
         var post_second_move = {
           type: "image-slider-response",
-          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
+          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "grey.png",
           prompt:
             "<p>How biased is the red contestant?</p>",
           labels: ['Biased towards showing shorter sticks',
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
-          slider_width: 1000,
+          slider_width: sliderWidthScale * screen.width,
           require_movement: true
         };
 
