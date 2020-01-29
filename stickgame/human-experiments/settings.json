@@ -1,0 +1,13 @@
+{
+ "_cosubSpecVersion": 2,
+ "Url": "https://stanford-cogsci.org:8886/experiment1.html",
+ "Title": "Stick Debate",
+ "Description": "Judgment task about debate over average stick length.",
+ "Keywords": "judgment, sticks, uncertainty",
+ "Batch": false,
+ "FrameHeight": 900,
+ "AssignmentDuration": "10 minutes",
+ "AutoApprovalDelay": "10 minutes",
+ "Reward": "1",
+ "QualificationRequirements": []
+}
