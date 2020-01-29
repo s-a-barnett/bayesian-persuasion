@@ -70,7 +70,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'testing'
+      var iterationName = 'pilot1'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -227,7 +227,7 @@
                     return true;
               	},
             on_finish: function() {
-              if (quizAttempts > maxQuizAttempts) {
+              if (quizAttempts >= maxQuizAttempts) {
                 alert('Experiment terminated: too many failed quiz attempts.')
                 jsPsych.endExperiment()
               }
