@@ -13,7 +13,6 @@
   </head>
   <body></body>
   <script>
-    var quizAttempts = 1; // Initialize number of attempts at quiz
 
     var preview = {
       type: 'instructions',
@@ -195,6 +194,8 @@
         //
         // timeline.push(instructions_7);
 
+        var quizAttempts = 1; // Initialize number of attempts at quiz
+
         var preQuiz = {
           type: "html-button-response",
           stimulus: "<p>Before we begin, you must complete a short quiz to " +
@@ -357,16 +358,18 @@
           numSticks: numSticks,
           agentBias: agentBias,
           agent1stick: agent1stick,
-          agent2stick: agent2stick,
-          quizAttempts: quizAttempts
+          agent2stick: agent2stick
         });
 
         jsPsych.init({
           timeline: timeline,
           on_finish : function() {
             // At the end of the experiment, submit to turk
+            // Record number of quiz attempts
+            jsPsych.data.addProperties({quizAttempts: quizAttempts});
             console.log('sending data to mturk');
             jsPsych.turk.submitToTurk();
+            jsPsych.data.displayData();
           },
           on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
