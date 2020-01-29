@@ -35,7 +35,7 @@
         "<font size='2'><p align='left'>This research is being conducted by Samuel Barnett, a graduate student, " +
         "Robert Hawkins and Mark Ho, postdoctoral " +
         "research fellows, and Tom Griffiths, a faculty member, at Princeton " +
-        "University. This study takes approximately 10-15 minutes to complete.</p>" +
+        "University. This study takes approximately 5-10 minutes to complete.</p>" +
         "<p align='left'>If you agree to take part in the research, you will make a series " +
         "of judgments about a debate: at each stage you will be " +
         "presented with information displayed both as text and as an image and " +
@@ -74,6 +74,7 @@
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
+      var maxQuizAttempts = 3
 
       // Start building timeline when we hear from server
       socket.on('onConnected', function(mongoData) {
@@ -168,38 +169,21 @@
             "This is a practice judgment.</p>",
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
-          require_movement: true
+          require_movement: true,
+          data: {
+            stimulus_type: 'practice'
+          }
         };
 
         timeline.push(instructions_6);
-
-        // var instructions_7 = {
-        //   type: "image-slider-response",
-        //   stimulus: "figures/stick8grey.png",
-        //   prompt:
-        //     "<p>Of course, people differ in their response to incentives and " +
-        //     "how much they are willing to bend the truth.</p>" +
-        //     "<p>Therefore, after each turn, you will use this slider to report " +
-        //     "how biased each contestant is. If you think the contestant " +
-        //     "is more likely to show <strong>shorter sticks</strong>, " +
-        //     "click further to the left. If you think they are more likely to show " +
-        //     "<strong>longer sticks</strong>, click further to the right.</p>" +
-        //     "<p>Please move the slider before pressing 'Continue'.</p>",
-        //   labels: ['Biased towards showing shorter sticks',
-        //             'Showing sticks at random',
-        //             'Biased towards showing longer sticks'],
-        //   slider_width: sliderWidthScale * screen.width,
-        //   require_movement: true
-        // };
-        //
-        // timeline.push(instructions_7);
 
         var quizAttempts = 1; // Initialize number of attempts at quiz
 
         var preQuiz = {
           type: "html-button-response",
           stimulus: "<p>Before we begin, you must complete a short quiz to " +
-          "show that you understand the task.</p>",
+          "show that you understand the task. You must pass the quiz within " +
+          maxQuizAttempts + " attempts to continue.</p>",
           choices: ['Continue']
         }
 
@@ -230,7 +214,6 @@
         var loopNode = {
             timeline: [quizTrial],
             loop_function: function(data){
-              	// console.log(data.values()[0]['responses']);
               	resp = JSON.parse(data.values()[0]['responses']);
               	if ((resp["Q0"] == 'The contestants') &&
                    (resp["Q1"]== 'A contestant chooses a stick to show you') &&
@@ -240,9 +223,15 @@
               	} else {
               	    alert('Please try again! One or more of your responses was incorrect.');
                     quizAttempts += 1;
+                    }
                     return true;
-              	}
-                  }
+              	},
+            on_finish: function() {
+              if (quizAttempts > maxQuizAttempts) {
+                alert('Experiment terminated: too many failed quiz attempts.')
+                jsPsych.endExperiment()
+              }
+            }
         }
 
         timeline.push(loopNode);
@@ -275,7 +264,11 @@
             "be longer or shorter than 5in?</p>",
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
-          require_movement: true
+          require_movement: true,
+          data: {
+            stimulus_type: 'isLong',
+            stimulus_contestant: 'first'
+          }
         };
 
         timeline.push(first_move);
@@ -300,7 +293,11 @@
             "be longer or shorter than 5in?</p>",
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
-          require_movement: true
+          require_movement: true,
+          data: {
+            stimulus_type: 'isLong',
+            stimulus_contestant: 'second'
+          }
         };
 
         timeline.push(second_move);
@@ -311,7 +308,10 @@
           prompt:
             "<p>Do you think that the average of the five sticks is longer than " +
             "or shorter than 5in?</p>",
-          choices: ['Shorter than 5in', 'Longer than 5in']
+          choices: ['Shorter than 5in', 'Longer than 5in'],
+          data: {
+            stimulus_type: '2afc'
+          }
         };
 
         timeline.push(final_decision);
@@ -326,7 +326,11 @@
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
           slider_width: sliderWidthScale * screen.width,
-          require_movement: true
+          require_movement: true,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'first'
+          }
         };
 
         timeline.push(post_first_move);
@@ -341,7 +345,11 @@
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
           slider_width: sliderWidthScale * screen.width,
-          require_movement: true
+          require_movement: true,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'second'
+          }
         };
 
         timeline.push(post_second_move);
@@ -369,7 +377,7 @@
             jsPsych.data.addProperties({quizAttempts: quizAttempts});
             console.log('sending data to mturk');
             jsPsych.turk.submitToTurk();
-            jsPsych.data.displayData();
+            // jsPsych.data.displayData('csv'); // Uncomment this line to debug
           },
           on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
