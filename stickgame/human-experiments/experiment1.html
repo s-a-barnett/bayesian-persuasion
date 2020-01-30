@@ -10,6 +10,7 @@
     <script src="jspsych-6.1.0/plugins/jspsych-image-button-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-image-slider-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-survey-multi-choice.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-survey-text.js"></script>
     <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css"></link>
   </head>
   <body></body>
@@ -354,6 +355,18 @@
         };
 
         timeline.push(post_second_move);
+
+        var exit_survey = {
+          type: 'survey-text',
+          questions: [
+            {prompt: "Do you have any comments or suggestions?"}
+          ],
+          data: {
+            stimulus_type: 'exit_survey'
+          }
+        };
+
+        timeline.push(exit_survey)
 
         var goodbye = {
           type: 'html-keyboard-response',
