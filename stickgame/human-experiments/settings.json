@@ -2,12 +2,29 @@
  "_cosubSpecVersion": 2,
  "Url": "https://stanford-cogsci.org:8886/experiment1.html",
  "Title": "Stick Debate",
- "Description": "Judgment task about debate over average stick length.",
- "Keywords": "judgment, sticks, uncertainty",
- "Batch": false,
+ "Description": "You will be the judge of a debate! Expected length 5-7 minutes.",
+ "Keywords": "psychology, princeton, game, survey, judgment, uncertainty",
+ "Batch": true,
  "FrameHeight": 900,
- "AssignmentDuration": "10 minutes",
+ "AssignmentDuration": "30 minutes",
  "AutoApprovalDelay": "10 minutes",
- "Reward": "1",
- "QualificationRequirements": []
+ "Reward": "1.40",
+ "QualificationRequirements": [
+    {
+      "Name": "Worker_Locale",
+      "Comparator": "In",
+      "LocaleValues": [
+        {
+          "Country": "US"
+        }
+      ]
+    },
+    {
+      "Name": "Worker_PercentAssignmentsApproved",
+      "Comparator": "GreaterThan",
+      "IntegerValues": [
+        97
+      ]
+    }
+  ]
 }
