@@ -5,6 +5,7 @@
     <script src="/socket.io/socket.io.js" type="text/javascript"></script>
     <script src="jspsych-6.1.0/jspsych.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-html-keyboard-response.js"></script>
+    <script src="jspsych-6.1.0/plugins/jspsych-instructions.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-html-button-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-image-button-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-image-slider-response.js"></script>
@@ -70,7 +71,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'pilot1'
+      var iterationName = 'pilot2'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -371,12 +372,12 @@
 
         jsPsych.init({
           timeline: timeline,
-          on_finish : function() {
+          on_finish : function(data) {
             // At the end of the experiment, submit to turk
             // Record number of quiz attempts
             jsPsych.data.addProperties({quizAttempts: quizAttempts});
             console.log('sending data to mturk');
-            jsPsych.turk.submitToTurk();
+            jsPsych.turk.submitToTurk({'value': 0});
             // jsPsych.data.displayData('csv'); // Uncomment this line to debug
           },
           on_trial_finish: function(trialData) {
