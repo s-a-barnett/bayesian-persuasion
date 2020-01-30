@@ -1,0 +1,44 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(tidyboot)
+d <- read_csv('./stickgame/human-experiments/dataFromMongo.csv') 
+
+manip_check <- d %>%
+  filter(stimulus_type == 'bias') %>%
+  select(stimulus_contestant, response, gameid, agent1stick) %>%
+  spread(stimulus_contestant, response) %>%
+  filter(first > 55, second < 45) %>%
+  pull(gameid)
+  
+ok_rts <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  group_by(gameid) %>%
+  summarize(rt = mean(rt)) %>%
+  filter(rt > 5000, rt < 30000) %>%
+  pull(gameid)
+
+d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(gameid %in% ok_rts) %>%
+  filter(gameid %in% manip_check) %>%
+  group_by(gameid) %>%
+  select(stimulus_contestant, agent1stick, gameid, response) %>%
+  spread(stimulus_contestant, response) %>%
+  mutate(diff = second - first) %>%
+  group_by(agent1stick) %>%
+  tidyboot::tidyboot_mean(diff) %>%
+  ggplot(aes(x = agent1stick, y = empirical_stat)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
+    geom_smooth(method = 'lm', color = 'red') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggthemes::theme_few() +
+    labs(x = 'agent 2 stick length', y = 'absolute change in belief')
+    
+```
+
