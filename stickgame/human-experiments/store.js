@@ -87,10 +87,10 @@ function serve() {
       var collectionList = ['experiment1', 'experiment2'];
 
       function checkCollectionForHits(collectionName, query, projection, callback) {
-        const collection = database.collection(collectionName);        
-        collection.findOne(query, projection).limit(1).toArray((err, items) => {          
+        const collection = database.collection(collectionName);
+	collection.findOne(query, {limit : 1}, (err, items) => {          
           callback(!_.isEmpty(items));
-        });  
+        }); 
       }
 
       function checkEach(collectionList, checkCollectionForHits, query,
