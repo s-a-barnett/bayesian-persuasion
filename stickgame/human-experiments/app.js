@@ -13,7 +13,7 @@ const
 
 
 const researchers = ['A4SSYO0HDVD4E', 'A1BOIDKD33QSDK', 'A1MMCS8S8CTWKU','A1MMCS8S8CTWKV','A1MMCS8S8CTWKS'];
-const blockResearcher = false;
+const blockResearcher = true;
 
 let gameport;
 if(argv.gameport) {
@@ -113,7 +113,7 @@ const handleInvalidID = function(req, res) {
 };
 
 function checkPreviousParticipant (workerId, callback) {
-  const p = {'workerId': workerId};
+  const p = {'wID': workerId};
   const postData = {
     dbname: 'bayesian-persuasion',
     query: p,

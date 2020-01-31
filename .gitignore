@@ -401,6 +401,7 @@ dmypy.json
 
 # Secure configs
 auth.json
+hit-ids.json
 
 # node installations
 node_modules/
