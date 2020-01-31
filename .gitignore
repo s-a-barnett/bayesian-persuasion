@@ -405,3 +405,4 @@ auth.json
 # node installations
 node_modules/
 package-lock.json
+.Rproj.user
