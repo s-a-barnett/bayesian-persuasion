@@ -25,7 +25,7 @@ if stim_coll.count() != 0 :
 
 # Loop through evidence and insert into collection
 for stick1 in [.1, .2, .3, .4] :
-    for stick2 in  [.7] : # Change this back for real experiment
+    for stick2 in  [.6, .8] : # Change this back for real experiment
         packet = {'agent1stick' : stick1, 'agent2stick' : stick2, 'numGames': 0, 'games' : []}
         stim_coll.insert_one(packet)
 
