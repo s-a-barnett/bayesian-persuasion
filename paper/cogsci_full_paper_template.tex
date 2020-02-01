@@ -353,65 +353,8 @@ provides weak evidence for the sample being short.
 Finally, we see that increasing the sample size broadens the range of stick pairs for which we observe the weak evidence
 effect.
 
-\subsection{Simulation 2: Strong Evidence Effect for Speakers}
-\begin{figure*}[h]
-\centering
-\begin{subfigure}{0.45\textwidth}
-	\includegraphics[width=\textwidth]{figures/see_maxVsSampleMeanFlat.png}
-\end{subfigure}
-~
-\begin{subfigure}{0.45\textwidth}
-	\includegraphics[width=\textwidth]{figures/see_maxVsSampleMeanV.png}
-\end{subfigure}
 
-\begin{subfigure}{0.45\textwidth}
-	\includegraphics[width=\textwidth]{figures/see_histFlat.png}
-\end{subfigure}
-~
-\begin{subfigure}{0.45\textwidth}
-	\includegraphics[width=\textwidth]{figures/see_histV.png}
-\end{subfigure}
-\caption{Top row: Plots of the probability for choosing the longest stick, for $S_1$ and $S_2$, with respect to the sample mean.
-\\
-Bottom row: Histogram of MAP stick choices, where 1 represents the longest stick, and 5 the shortest.} 
-\label{fig:seeSpeaker}
-\end{figure*}
-
-\subsubsection{Set-Up}
-In the second simulation, we investigate the strong evidence effect for \textit{speakers}, and in particular, whether adding the 
-pragmatic speaker is truly necessary to capture this effect. We consider a single speaker with a fixed bias~${\beta=10}$.
-The stick task is then run for one step, with~${N=5}$ available sticks. In contrast to Simulation 1, the pragmatic judge 
-(as modelled by the pragmatic speaker) no longer knows the speaker bias, and instead has either a flat or a V-shaped prior over possible bias values.
-
-For each setting of bias prior shape, we consider 150 draws of initial stick samples (recording the true sample mean)
-for the speaker to choose from. We then look at the distribution over sticks that the speaker chooses to show the judge, computed via enumeration.
-
-Given only a na\"ive judge, the strategy that maximizes the judge's posterior probability that the sample is long is to pick the longest stick. Hence, as~${\beta\to\infty}$ 
-we would expect the probability mass of choosing the longest stick to tend to 1 for the na\"ive speaker. We therefore compare the probability mass of this 
-strategy for the na\"ive speaker to the pragmatic speaker, to see if the taking into account that the judge is modeling the speaker bias reduces the 
-likelihood that the speaker will adopt this strategy, and instead leads to a different Maximum A Posteriori (MAP) strategy. Such
-a reduction would show that the pragmatic speaker demonstrates a strong evidence effect.
-
-\subsubsection{Results}
-
-We find that, in the majority of cases (80.7\% - 84.7\% for the flat prior and 76.7\% for the V-shaped prior), the na\"ive speaker has a higher probability of behaving optimally
-than the pragmatic speaker. This suggests that the pragmatic speaker is better able to capture the strong evidence effect.
-Moreover, by looking at the histogram (Fig.~\ref{fig:seeSpeaker}) showing the distribution of MAP choices made by $S_2$ for both flat and V-shaped priors,
-we see a significant number of cases in which the MAP choice is to \textit{not} choose the longest stick.\footnote{We do not plot this histogram for the na\"ive speaker,
-as she will always by definition choose the longest stick.} 
-
-This is clear for the V-shaped prior, which in the samples considered is roughly half as likely to choose the longest stick than any other stick.
-We posit that the reason for this difference between the flat and V-shaped priors can be attributed to the greater likelihood that longer sticks
-will lead to a judge's inference that the speaker is biased in the V-shaped case, leading to the speaker choosing her sticks more carefully.
-
-We also plot in Fig.~\ref{fig:seeSpeaker} how the probability of choosing the longest stick changes with respect to the mean of the sample.
-While we see little relation between the probability mass and sample mean for the na\"ive speaker, the pragmatic speaker is less likely to choose the longest stick as
-the mean of the sample representing her possible choices increases. This can be explained as follows: in the domain in which the sample mean is high, the speaker
-can afford to choose a sub-optimal strategy and still get her desired outcome, though if the sample mean is low it becomes 
-increasingly important to just show the longest sticks.
-
-
-\subsection{Simulation 3: Strong Evidence Effect for Judges}
+\subsection{Simulation 2: Strong Evidence Effect for Judges}
 \begin{figure*}[h]
 \centering
 \begin{subfigure}{0.45\textwidth}
@@ -444,6 +387,30 @@ in the case of a flat bias prior than a V-shaped prior, where the initial skew i
 the belief that the speaker is positively biased for lower stick values. However, in both cases the overall shape and trend 
 of the curves are the same.
 
+\section{Experiment}
+To evaluate our model, we implemented a version of the stick task that could be played by a human judge responding to
+stimuli from two `contestant' speakers. This allowed us to test whether the weak evidence effect and the strong evidence effect
+for listeners was present in the stick task, and whether the model could predict the strength of the effect and the circumstances
+under which it occurs.
+
+\subsection{Procedure}
+$X$ participants were recruited via MTurk to participant in our experiment using \texttt{nosub}. Participants were briefed
+that they were to be the judge of a debate between two contestants, one of which would be rewarded \$10 based on the participant's
+final judgment about the sample. In order to be included in the trial, they must successfully complete a quiz about the briefing within
+three attempts.
+
+For one turn each, a `contestant' would reveal a stick to the participant from an overall sample of 5 sticks: the first (resp. second) contestant
+shows a stick to the participant with a length in inches in the range $\{6, 7, ..., 10\}$ (resp. $\{1, 2, ..., 5\}$). Each pairing of sticks acts as a cell
+into which the participants were divided. After being presented each stick, the participant must rate from 0 to 100 their belief that 
+the average of the overall stick sample is longer than 5 inches. The participant is then given a 2AFC task to make a final decision on whether
+the sample is `long' or `short'. 
+
+Finally, the participant is asked to rate between 0 and 100 their belief in the bias of each contestant, where 0 (resp. 100) represents
+the a strong belief that the contestant is biased towards showing shorter (resp. longer) sticks, and 50 means that the contestant
+is showing sticks at random. The participant is reminded of the length of sticks that each contestant presented, as well as the payment
+incentive of each contestant.
+
+\subsection{Results}
 
 
 \section{Discussion and Future Work}
@@ -456,11 +423,6 @@ mind, we show that we are able to capture some of the more nuanced influences pe
 both on speakers and listeners. Our model provides a computational justification for the 
 behaviors exhibited in rhetorical, argumentative contexts that seem counter-intuitive when the listener is
 treated as a na\"ive Bayesian with no theory of mind.
-
-Human experiments would be desirable to see if people demonstrate the weak and strong evidence effects for the stick task.
-Our insights into the model's behavior in the stick task would also be aided by running the speaker in Simulation 2 for more steps,
-and with a greater number of overall sticks. However, in this regime performing exact inference by enumeration becomes less
-feasible.
 
 Future work would investigate the extent to which RSA-style models can work in higher-dimensional reasoning tasks with
 a greater number of speakers and listeners,
