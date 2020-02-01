@@ -402,6 +402,7 @@ dmypy.json
 # Secure configs
 auth.json
 hit-ids.json
+pullMongoData.sh
 
 # node installations
 node_modules/
