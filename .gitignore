@@ -351,6 +351,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
 
 # IPython
 profile_default/
@@ -403,6 +404,7 @@ dmypy.json
 auth.json
 hit-ids.json
 pullMongoData.sh
+production-results/
 
 # node installations
 node_modules/
