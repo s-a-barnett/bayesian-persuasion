@@ -15,7 +15,6 @@
   </head>
   <body></body>
   <script>
-
     var preview = {
       type: 'instructions',
       pages: ['<p> Welcome! In this HIT, you will make a series of quick decisions based on evidence. </p>' +
@@ -178,6 +177,57 @@
         };
 
         timeline.push(instructions_6);
+
+        var preSpeakerTrials = {
+          type: "html-button-response",
+          stimulus: "<p> To get an understanding of the trial, you will first " +
+          "take one turn of this task as each of the contestants, showing " +
+          "a stick to the judge.</p>" +
+          "<p> You will see the full sample of sticks, and you will choose one " +
+          "to show to the judge. You will also be told how much you will " +
+          "(fictionally) earn if the judge gives a certain verdict.</p>",
+          choices: ['Continue']
+        };
+
+        timeline.push(preSpeakerTrials);
+
+        var stickChoice = ['2in', '4in', '7in', '8in', '9in'];
+
+        var speakerTrial_1 = {
+          type: "image-button-response",
+          stimulus: 'figures/twopeople.png',
+          prompt:
+            "<p> You are the blue speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
+            "5in. Which stick do you show to the judge first?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            stickChoice.splice(parseInt(data.button_pressed), 1)
+            data.remainingSticks = stickChoice;
+          },
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'first'
+          }
+        }
+
+        timeline.push(speakerTrial_1);
+
+        var speakerTrial_2 = {
+          type: "image-button-response",
+          stimulus: 'figures/twopeople.png',
+          prompt:
+            "<p> Now, you are the red speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "5in. Which stick do you show to the judge first?</p>",
+          choices: stickChoice,
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'second'
+          }
+        }
+
+        timeline.push(speakerTrial_2);
 
         var quizAttempts = 1; // Initialize number of attempts at quiz
 
@@ -391,7 +441,7 @@
             jsPsych.data.addProperties({quizAttempts: quizAttempts});
             console.log('sending data to mturk');
             jsPsych.turk.submitToTurk({'value': 0});
-            // jsPsych.data.displayData('csv'); // Uncomment this line to debug
+            jsPsych.data.displayData(); // Uncomment this line to debug
           },
           on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
