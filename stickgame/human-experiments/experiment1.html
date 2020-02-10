@@ -199,16 +199,19 @@
         timeline.push(preSpeakerTrials);
 
         var stickChoice = ['2in', '4in', '7in', '8in', '9in'];
+        var chosenStick = ''; // Initialise as empty string
 
         var speakerTrial_1 = {
           type: "image-button-response",
-          stimulus: 'figures/twopeople.png',
+          stimulus: 'figures/speakerTaskBlue.png',
           prompt:
             "<p> You are the blue speaker. You will be paid $10 if the judge's " +
             "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
             "5in. Which stick do you show to the judge first?</p>",
           choices: stickChoice,
           on_finish: function(data) {
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)]
+            console.log(chosenStick);
             stickChoice.splice(parseInt(data.button_pressed), 1)
             data.remainingSticks = stickChoice;
           },
@@ -222,7 +225,9 @@
 
         var speakerTrial_2 = {
           type: "image-button-response",
-          stimulus: 'figures/twopeople.png',
+          stimulus: function(){
+            return 'figures/speakerTaskRed' + chosenStick + '.png';
+          },
           prompt:
             "<p> Now, you are the red speaker. You will be paid $10 if the judge's " +
             "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
