@@ -256,7 +256,7 @@
             "<p> You have passed the quiz!</p>" +
             "<p> To help you understand what it's like to be a contestant, " +
             "you will begin by selecting sticks to show another judge.</p>" +
-            "<p> You will see the full set of sticks, and you will choose one " +
+            "<p> You will see the full set of sticks, and for four turns you will choose one " +
             "to show to the judge. You will also be told how much you will " +
             "(fictionally) earn if the judge gives a certain verdict.</p>",
           choices: ['Continue']
@@ -277,9 +277,9 @@
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
           on_finish: function(data) {
-            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)]
-            stickChoice.splice(parseInt(data.button_pressed), 1)
-            data.remainingSticks = stickChoice;
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
           },
           data: {
             stimulus_type: 'speakerTrial',
@@ -300,6 +300,11 @@
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
           data: {
             stimulus_type: 'speakerTrial',
             stimulus_contestant: 'second'
@@ -308,10 +313,60 @@
 
         timeline.push(speakerTrial_2);
 
+        var speakerTrial_3 = {
+          type: "image-button-response",
+          stimulus: function(){
+            return 'figures/speakerTaskBlue' + chosenStick + '.png';
+          },
+          prompt:
+            "<p> Now, you are the blue speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'third'
+          }
+        }
+
+        timeline.push(speakerTrial_3);
+
+        var speakerTrial_4 = {
+          type: "image-button-response",
+          stimulus: function(){
+            return 'figures/speakerTaskRed' + chosenStick + '.png';
+          },
+          prompt:
+            "<p> Finally, you are the red speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'fourth'
+          }
+        }
+
+        timeline.push(speakerTrial_4);
+
         var ready_screen = {
           type: "html-button-response",
-          stimulus: "<p>Ready to play as the judge? Click 'Continue'!</p>",
-          choices: ['Continue']
+          stimulus:
+            "<p>Ready to play as the judge? Remember, each contestant now " +
+            "only gets <strong>one</strong> turn to send you a stick.</p>",
+          choices: ['Begin']
         }
 
         timeline.push(ready_screen);
