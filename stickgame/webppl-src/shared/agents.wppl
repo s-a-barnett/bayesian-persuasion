@@ -10,6 +10,7 @@ var stickPrior = function(nSticks) {
 
 // Discretized U-shape prior
 var biasPrior = function(params) {
+  // If scale param not set, automatically set scale = 0
   var biasRange = _.isFinite(params.scale) ?
     map(function(num){return num * Math.pow(10, params.scale)}, [-10, -5, -2, 0, 2, 5, 10]) :
     [-10, -5, -2, 0, 2, 5, 10];
@@ -26,7 +27,7 @@ var J0 = cache(function(obs, params) {
   var observe_fn = function(observations, sticks) {
     if(observations.length > 0) {
       var datum = first(observations)
-      factor(_.includes(sticks, datum)? 0 : -1000)
+      factor(_.includes(sticks, datum)? 0 : -100)
       observe_fn(rest(observations), shared.removeSingleElement(datum, sticks))
     }
   };
@@ -118,11 +119,11 @@ var J1 = cache(function(obs, params) {
 // S2 reasons about judge that is thinking about bias
 var S2 = cache(function(bias, sticks, prevEvidence, agentID, params) {
   return Infer({method: 'enumerate', model: function() {
-    var stick = uniformDraw(sticks)
+    var stickSubset = categorical({vs: shared.k_combinations(sticks, params.choiceSize)});
 
     // Counterfactually added evidence
     var evidence = prevEvidence.concat(
-      [{'agentID': agentID, stickLength: stick}]
+      [{'agentID': agentID, stickLength: stickSubset}]
     )
 
     // Soft-max utility of showing stick proportional to probability
@@ -130,6 +131,6 @@ var S2 = cache(function(bias, sticks, prevEvidence, agentID, params) {
     var desiredOutcome = bias > 0 ? 'long' : 'short';
     factor(Math.abs(bias) *
            marginalize(J1(evidence, params), "isLong").score(desiredOutcome));
-    return stick;
+    return stickSubset;
   }})
 })
