@@ -10,7 +10,9 @@ var stickPrior = function(nSticks) {
 
 // Discretized U-shape prior
 var biasPrior = function(params) {
-  var biasRange = [-10, -5, -2, 0, 2, 5, 10];
+  var biasRange = _.isFinite(params.scale) ?
+    map(function(num){return num * Math.pow(10, params.scale)}, [-10, -5, -2, 0, 2, 5, 10]) :
+    [-10, -5, -2, 0, 2, 5, 10];
   var prior = params.biasPrior == 'flat' ? categorical({vs: biasRange}) :
               params.biasPrior == 'v' ? categorical({vs: biasRange, ps: [8, 4, 2, 1, 2, 4, 8]}) :
               error('biasPrior must be "flat" or "v".')
@@ -47,18 +49,18 @@ var J0 = cache(function(obs, params) {
 // prevEvidence refers to the stick observations already made
 var S1 = cache(function(bias, sticks, prevEvidence, agentID, params) {
   return Infer({method: 'enumerate', model: function() {
-    var stick = uniformDraw(sticks)
+    var stickSubset = categorical({vs: shared.k_combinations(sticks, params.choiceSize)});
 
     // Counterfactually added evidence
     var evidence = prevEvidence.concat(
-      [{'agentID': agentID, stickLength: stick}]
+      [{'agentID': agentID, stickLength: stickSubset}]
     )
 
     // Soft-max utility of showing stick proportional to probability
     // that judge says 'long' after seeing this stick, weighted by bias
     var desiredOutcome = bias > 0 ? 'long' : 'short';
-    factor(Math.abs(bias) * J0(_.map(evidence, 'stickLength'), params).score(desiredOutcome));
-    return stick;
+    factor(Math.abs(bias) * J0(_.flatten(_.map(evidence, 'stickLength')), params).score(desiredOutcome));
+    return stickSubset;
   }})
 })
 
@@ -74,7 +76,7 @@ var J1 = cache(function(obs, params) {
 
       // Shortcut to avoid evaluating speaker for cases where
       // observation isn't even in list of sticks
-      if(_.includes(sticks, datum.stickLength))
+      if(shared.includesList(sticks, datum.stickLength))
         observe(S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params),
                 datum.stickLength);
       else
@@ -84,7 +86,7 @@ var J1 = cache(function(obs, params) {
       observe_fn(
         rest(observations),
         prevObs.concat(datum),
-        shared.removeSingleElement(datum.stickLength, sticks),
+        shared.removeMultipleElements(datum.stickLength, sticks),
         biases
       )
     }

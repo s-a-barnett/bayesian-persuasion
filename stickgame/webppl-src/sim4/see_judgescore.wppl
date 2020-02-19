@@ -1,0 +1,29 @@
+// Run simulations for weak evidence effect
+// webppl persuasion.wppl --require ../shared
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: 5,
+  agentBias: 100,
+  fixedBiasAgent1: 0,
+  biasPrior: 'v',
+  scale: 1
+};
+
+var printFactors = function(stick, scores) {
+  if (stick<=1.) {
+    var evidence = [{'agentID': 'agent0', stickLength: argv.stick}, {'agentID': 'agent0', stickLength: stick}];
+    var score = params.agentBias * marginalize(J1(evidence, params), "isLong").score('long');
+    return printFactors(_.round(stick+0.05, 3), scores.concat([score]));
+  } else {
+    return scores
+  };
+};
+
+var results = printFactors(0.025, [])
+console.log('Results complete!')
+
+var output_handle = csv.open("results/scores_" + (1000 * argv.stick) + ".csv")
+csv.writeLine(results.toString(), output_handle)
+csv.close(output_handle)

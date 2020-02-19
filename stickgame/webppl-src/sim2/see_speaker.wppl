@@ -7,15 +7,30 @@ var params = {
   nSticks : argv.nSticks,
   numExp : argv.numExp,
   biasPrior : argv.biasPrior,
-  agentBias : argv.agentBias,
+  agentBias : argv.agentBias * Math.pow(10, argv.scale),
+  scale : argv.scale,
   fixedBiasAgent1 : 0 // Shortcuts spurious inference about agent1
 };
 
-var sticks = stickPrior(params.nSticks) // Arbitrarily draw sticks for experiment
+// Draws a sample of nSticks such that at least numAboveHalf sticks are >= 0.5
+var filterSticks = function(nSticks, numAboveHalf) {
+  var sticks = stickPrior(nSticks);
+  var aboveHalf = _.map(sticks, function(num) { return 1*(num>=0.5); });
+  var sumAboveHalf = _.reduce(aboveHalf, function(memo, num){ return memo + num; }, 0);
+  if (sumAboveHalf < numAboveHalf) {
+    filterSticks()
+  }
+  else {
+    return sticks
+  }
+};
+
+// Let there be at least 2 sticks of length >= 0.5
+var sticks = filterSticks(argv.nSticks, 2)
 
 var output_handle = csv.open('results/exp' + params.numExp + '_sticks.csv')
 csv.writeLine(sticks, output_handle)
 csv.close(output_handle)
 
-csv.writeJoint(S1(argv.agentBias, sticks, [], 'agent0', params), 'results/exp' + params.numExp + '_S1.csv')
-csv.writeJoint(S2(argv.agentBias, sticks, [], 'agent0', params), 'results/exp' + params.numExp + '_S2.csv')
+csv.writeJoint(S1(params.agentBias, sticks, [], 'agent0', params), 'results/exp' + params.numExp + '_S1.csv')
+csv.writeJoint(S2(params.agentBias, sticks, [], 'agent0', params), 'results/exp' + params.numExp + '_S2.csv')

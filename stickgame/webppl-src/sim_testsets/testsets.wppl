@@ -1,0 +1,24 @@
+var params = {
+  nSticks: 5,
+  bias: 100,
+  biasPrior: 'flat',
+  scale: 1,
+  // fixedBiasAgent0: 100., // Speeds up inference
+  fixedBiasAgent1: -100., // Speeds up inference
+  choiceSize: 3
+};
+
+var sticks = stickPrior(params.nSticks);
+console.log(sticks);
+
+var subset = sample(S1(params.bias, sticks, [], 'agent0', params));
+console.log(subset);
+
+var obs = [{'agentID': 'agent0', stickLength: subset}];
+var datum = first(obs);
+console.log(datum.stickLength === subset);
+console.log(shared.includesList(sticks, datum.stickLength));
+
+// csv.writeJoint(S1(params.bias, sticks, [], 'agent0', params), 'my_joint.csv');
+// console.log(shared.removeMultipleElements([0.825, 0.825], sticks));
+csv.writeJoint(J1(obs, params), 'my_joint.csv');
