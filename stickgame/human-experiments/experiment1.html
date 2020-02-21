@@ -68,7 +68,7 @@
       // failing three quiz attempts.
       var pComplete = jsPsych.progress()['percent_complete'];
       var trialType = jsPsych.currentTrial()['type'];
-      if ((pComplete != 100) & ((Math.round(pComplete) != 33) || (trialType != 'survey-multi-choice'))) {
+      if ((!turkInfo.previewMode) & (pComplete != 100) & ((Math.round(pComplete) != 33) || (trialType != 'survey-multi-choice'))) {
         return "Data will be lost if you leave the page, are you sure?";
       }
     };
