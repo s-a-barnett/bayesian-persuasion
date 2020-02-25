@@ -105,7 +105,7 @@ beliefChange.d %>%
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
     geom_hline(yintercept = 50, linetype = 'dotted') +
     ggthemes::theme_few() +
-    labs(x = 'agent 1 stick length', y = 'absolute change in belief')
+    labs(x = 'agent 1 stick length', y = 'absolute belief')
     
 ```
 
