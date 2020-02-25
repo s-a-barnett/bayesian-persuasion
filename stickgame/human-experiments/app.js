@@ -12,8 +12,8 @@ const
     sendPostRequest = require('request').post;
 
 
-const researchers = ['A4SSYO0HDVD4E', 'A1BOIDKD33QSDK', 'A1MMCS8S8CTWKU','A1MMCS8S8CTWKV','A1MMCS8S8CTWKS'];
-const blockResearcher = true;
+const researchers = ['A4SSYO0HDVD4E', 'A1BOIDKD33QSDK', 'A1MMCS8S8CTWKU','A1MMCS8S8CTWKV','A1MMCS8S8CTWKS', 'A1KXXBD1M6NBK5'];
+const blockResearcher = false;
 
 let gameport;
 if(argv.gameport) {
@@ -48,20 +48,20 @@ app.get('/*', (req, res) => {
 
     // Let through if researcher, or in 'testing' mode
     serveFile(req, res);
-    
+
   } else if(!valid_id(id)) {
-    
+
     // If invalid id, block them
     console.log('invalid id, blocked');
     return handleInvalidID(req, res);
-    
+
   } else {
 
     // If the database shows they've already participated, block them.
     console.log('neither invalid nor blank id, check if repeat worker');
-    checkPreviousParticipant(id, (exists) => {    
+    checkPreviousParticipant(id, (exists) => {
       return exists ? handleDuplicate(req, res) : serveFile(req, res);
-    });      
+    });
   }
 });
 
@@ -69,7 +69,7 @@ io.on('connection', function (socket) {
 
   // Recover query string information and set condition
   const query = socket.handshake.query;
-  
+
   // Send client stims
   initializeWithTrials(socket);
 

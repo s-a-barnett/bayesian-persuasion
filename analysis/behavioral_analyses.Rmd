@@ -11,7 +11,7 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed) 
-d <- read_csv('../stickgame/human-experiments/dataFromMongo.csv') 
+d <- read_csv('../stickgame/human-experiments/dataFromMongo_sample3.csv') 
 ```
 
 # Implement exclusions, get descriptive stats
@@ -24,16 +24,16 @@ complete_games <- d %>%
   filter(n == 2) %>%
   pull(gameid)
 
-cat(length(complete_games), 'participants completed both isLong trials')
+cat(length(complete_games), 'participants completed both isLong trials \n')
 
 passed_manip_check <- d %>%
   filter(stimulus_type == 'bias') %>%
-  select(stimulus_contestant, response, gameid, agent1stick) %>%
+  select(stimulus_contestant, response, gameid, agent1stick, rt) %>%
   spread(stimulus_contestant, response) %>%
-  filter(first > 60, second < 40) %>%
+  filter(first > 60 | second < 40) %>%
   pull(gameid)
 
-cat(length(passed_manip_check), 'participants passed bias manipulation check')
+cat(length(passed_manip_check)/2, 'participants passed bias manipulation check \n')
 
 passed_rt_criterion <- d %>%
   filter(stimulus_type == 'isLong') %>%
@@ -46,8 +46,17 @@ passed_rt_criterion <- d %>%
   filter(n == 2) %>%
   pull(gameid)
 
-cat(length(passed_rt_criterion), 'participants passed RT exclusion')
-cat(length(intersect(passed_rt_criterion, passed_manip_check)), 'participants passed both criteria')
+cat(length(passed_rt_criterion), 'participants passed RT exclusion \n')
+
+passed_speaker_criterion <- d %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  select(stimulus_contestant, button_pressed, gameid, rt) %>%
+  spread(stimulus_contestant, button_pressed) %>%
+  filter(first == 4 | second == 0 | third == 2 | fourth == 0) %>%
+  pull(gameid)
+
+cat(length(passed_speaker_criterion)/4, 'participants passed speaker exclusion \n')
+cat(length(intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check))), 'participants passed all criteria \n')
 ```
 
 # Plot change in belief
@@ -58,11 +67,12 @@ beliefChange.d <- d %>%
   filter(gameid %in% intersect(passed_manip_check, passed_rt_criterion)) %>%
   filter(stimulus_type == 'isLong') %>%
   group_by(gameid) %>%
-  select(stimulus_contestant, agent1stick, gameid, response) %>%
+  select(stimulus_contestant, agent1stick, agent2stick, gameid, response) %>%
   spread(stimulus_contestant, response) %>%
   mutate(diff = second - first) 
 
 beliefChange.d %>%
+  filter(agent2stick == 0.6) %>%
   group_by(agent1stick) %>%
   tidyboot::tidyboot_mean(diff) %>%
   ggplot(aes(x = agent1stick, y = empirical_stat)) +
@@ -71,7 +81,31 @@ beliefChange.d %>%
     geom_smooth(method = 'lm', color = 'red') +
     geom_hline(yintercept = 0, linetype = 'dotted') +
     ggthemes::theme_few() +
-    labs(x = 'agent 2 stick length', y = 'absolute change in belief')
+    labs(x = 'agent 2 stick length', y = 'absolute change in belief', 
+         title = 'agent 1 stick = 0.6')
+
+beliefChange.d %>%
+  filter(agent2stick == 0.8) %>%
+  group_by(agent1stick) %>%
+  tidyboot::tidyboot_mean(diff) %>%
+  ggplot(aes(x = agent1stick, y = empirical_stat)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
+    geom_smooth(method = 'lm', color = 'red') +
+    geom_hline(yintercept = 0, linetype = 'dotted') +
+    ggthemes::theme_few() +
+    labs(x = 'agent 2 stick length', y = 'absolute change in belief', 
+         title = 'agent 1 stick = 0.8')
+
+beliefChange.d %>%
+  group_by(agent2stick) %>%
+  tidyboot::tidyboot_mean(first) %>%
+  ggplot(aes(x = agent2stick, y = empirical_stat)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
+    geom_hline(yintercept = 50, linetype = 'dotted') +
+    ggthemes::theme_few() +
+    labs(x = 'agent 1 stick length', y = 'absolute belief')
     
 ```
 
