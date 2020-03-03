@@ -39,8 +39,12 @@ var J0 = cache(function(obs, params) {
     // Condition on observations
     observe_fn(obs, sticks)
 
+    var stat = params.statistic == 'mean' ? _.mean(sticks) :
+               params.statistic == 'median' ? shared.median(sticks) :
+               error('statistic must be "mean" or "median"');
+
     // return marginal distribution of interest
-    return _.mean(sticks) >= .5 ? 'long' : 'short'
+    return stat >= .5 ? 'long' : 'short'
   }})
 })
 
@@ -107,9 +111,13 @@ var J1 = cache(function(obs, params) {
     // Condition on observations coming from biased agent
     observe_fn(obs, [], sticks, biases);
 
+    var stat = params.statistic == 'mean' ? _.mean(sticks) :
+               params.statistic == 'median' ? shared.median(sticks) :
+               error('statistic must be "mean" or "median"');
+
     // return marginal distributions of interest
     return {
-      isLong: _.mean(sticks) >= .5 ? 'long' : 'short',
+      isLong: stat >= .5 ? 'long' : 'short',
       bias0: biases['agent0'],
       bias1: biases['agent1']
     }

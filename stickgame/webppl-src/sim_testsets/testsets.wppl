@@ -1,20 +1,21 @@
 var params = {
-  nSticks: 10,
-  bias: 10,
+  nSticks: 5,
+  bias: 100,
   biasPrior: 'v',
-  scale: 0,
+  scale: 1,
   // fixedBiasAgent0: 100., // Speeds up inference
   fixedBiasAgent1: -100., // Speeds up inference
-  choiceSize: 3
+  choiceSize: 2,
+  statistic: 'median'
 };
 
-// var sticks = [0.075, 0.375, 0.625, 0.825, 0.925]
+// var sticks = [0.075, 0.375, 0.625, 0.825, 0.925];
 var sticks = stickPrior(params.nSticks);
 console.log(sticks);
 
 // var subset = sample(S1(params.bias, sticks, [], 'agent0', params));
 //
-// // var obs = [{'agentID': 'agent0', stickLength: [0.975, 0.925]},
+// var obs = [{'agentID': 'agent0', stickLength: [0.975, 0.925]}];
 // //            {'agentID': 'agent1', stickLength: [0.025, 0.075]}];
 // // var datum = first(obs);
 

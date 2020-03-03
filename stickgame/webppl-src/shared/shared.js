@@ -1,3 +1,21 @@
+// Compute the median value of an array
+function median(values){
+  var values_copy = values;
+
+  if(values_copy.length === 0) return 0;
+
+  _.sortBy(values_copy, function(a,b){
+    return a-b;
+  });
+
+  var half = Math.floor(values_copy.length / 2);
+
+  if (values_copy.length % 2)
+    return values_copy[half];
+
+  return (values_copy[half - 1] + values_copy[half]) / 2.0;
+}
+
 // Remove first instance of element found in l
 var removeSingleElement = function(element, l) {
   var i = _.indexOf(l, element);
@@ -67,5 +85,5 @@ function k_combinations(set, k) {
 }
 
 module.exports = {
-  removeSingleElement, removeMultipleElements, includesList, k_combinations
+  removeSingleElement, removeMultipleElements, includesList, k_combinations, median
 }
