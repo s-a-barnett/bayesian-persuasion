@@ -126,6 +126,7 @@ var J1 = cache(function(obs, params) {
 
 // S2 reasons about judge that is thinking about bias
 var S2 = cache(function(bias, sticks, prevEvidence, agentID, params) {
+  var agentNumeral = agentID.slice(-1)
   return Infer({method: 'enumerate', model: function() {
     var stickSubset = categorical({vs: shared.k_combinations(sticks, params.choiceSize)});
 
@@ -137,8 +138,10 @@ var S2 = cache(function(bias, sticks, prevEvidence, agentID, params) {
     // Soft-max utility of showing stick proportional to probability
     // that judge says 'long' after seeing this stick, weighted by bias
     var desiredOutcome = bias > 0 ? 'long' : 'short';
-    factor(Math.abs(bias) *
-           marginalize(J1(evidence, params), "isLong").score(desiredOutcome));
+    var biasPenalty = _.isFinite(params.explicitBias) ? params.fixedBiasAgent0 : 0;
+    factor(Math.abs(bias) * marginalize(J1(evidence, params), "isLong").score(desiredOutcome)
+           - biasPenalty*expectation(marginalize(J1(evidence, params), "bias" + agentNumeral),
+                         function(b) {return Math.abs(b)}));
     return stickSubset;
   }})
 })

@@ -6,10 +6,10 @@
 var params = {
   nSticks: 5,
   agentBias: 100,
-  fixedBiasAgent0: 0,
+  // fixedBiasAgent0: 0,
   fixedBiasAgent1: 0,
-  biasPrior: 'v',
-  statistic: 'median',
+  biasPrior: 'flat',
+  statistic: 'mean',
   choiceSize: 1,
   scale: 1
 };
@@ -17,7 +17,11 @@ var params = {
 var printFactors = function(stick, scores) {
   if (stick<=1.) {
     var evidence = [{'agentID': 'agent0', stickLength: [stick]}];
-    var score = params.agentBias * marginalize(J1(evidence, params), "isLong").score('long');
+    // var score = (params.agentBias * marginalize(J1(evidence, params), "isLong").score('long'))
+    //             - 5*expectation(marginalize(J1(evidence, params), "bias0"),
+    //                           function(b) {return Math.abs(b)});
+    var score = - expectation(marginalize(J1(evidence, params), "bias0"),
+                              function(b) {return Math.abs(b)});
     return printFactors(_.round(stick+0.05, 3), scores.concat([score]));
   } else {
     return scores
@@ -27,6 +31,6 @@ var printFactors = function(stick, scores) {
 var results = printFactors(0.025, [])
 console.log('Results complete!')
 
-var output_handle = csv.open("results/scores_fixed.csv")
+var output_handle = csv.open("results/scores_eB_sanityCheck.csv")
 csv.writeLine(results.toString(), output_handle)
 csv.close(output_handle)
