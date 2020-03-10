@@ -94,6 +94,7 @@ beliefChange.d %>%
   group_by(agent2stick) %>%
   tidyboot::tidyboot_mean(first) %>%
   bind_rows(data.frame(agent2stick = c(0.6,0.8), empirical_stat = c(60,80), src = 'baseline')) %>%
+  bind_rows(data.frame(agent2stick = c(0.575,0.625, 0.775, 0.825), empirical_stat = c(41, 44, 54, 58), src = 'baseline')) %>%
   ggplot(aes(x = agent2stick, y = empirical_stat, color=src)) +
     geom_point() +
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
