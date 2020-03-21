@@ -78,7 +78,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'sample3'
+      var iterationName = 'prolificPilot1'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -563,7 +563,7 @@
             // Record number of quiz attempts
             jsPsych.data.addProperties({quizAttempts: quizAttempts});
             console.log('sending data to prolific');
-            jsPsych.turk.submitToTurk({'value': 0});
+            // jsPsych.turk.submitToTurk({'value': 0});
             window.location.replace("https://app.prolific.co/submissions/complete?cc=394CC1E4")
             // jsPsych.data.displayData(); // Uncomment this line to debug
           },
