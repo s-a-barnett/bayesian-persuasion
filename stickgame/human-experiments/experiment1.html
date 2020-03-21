@@ -241,7 +241,8 @@
                  (resp["Q2"] != '2') || (resp["Q3"] != 'Average') ||
                  (resp["Q4"] != 'True')) {
                 if (quizAttempts >= maxQuizAttempts) {
-                  alert('Experiment terminated: too many failed quiz attempts.');
+                  alert('Experiment terminated: too many failed quiz attempts. ' + 
+                  'You will still be paid for participating in this study.');
                   jsPsych.endExperiment()
                 }
               }
@@ -569,12 +570,15 @@
           },
           on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+
             var packet = Object.assign({}, mongoData, trialData, {
               dbname: 'bayesian-persuasion',
               colname: 'experiment1',
-              wID: turkInfo.workerId,
-              aID: turkInfo.assignmentId,
-              hitID: turkInfo.hitId,
+              wID: urlParams.get('PROLIFIC_PID'),
+              aID: urlParams.get('STUDY_ID'),
+              hitID: urlParams.get('SESSION_ID'),
               iterationName: iterationName
             })
             socket.emit('currentData', packet);
