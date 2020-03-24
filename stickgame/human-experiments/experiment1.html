@@ -196,7 +196,7 @@
           "show that you understand the task. You must pass the quiz within " +
           maxQuizAttempts + " attempts to continue.</p>",
           choices: ['Continue'],
-          force_wait: 3000
+          force_wait: 1000
         }
 
         timeline.push(preQuiz);
@@ -379,7 +379,7 @@
             {prompt: "What was your strategy for selecting sticks as a speaker? " +
                       "Please describe it briefly."}
           ],
-          force_wait: 1000,
+          force_wait: 10000,
           data: {
             stimulus_type: 'exit_survey'
           }
@@ -461,10 +461,10 @@
         var postJudgeSurvey = {
           type: 'survey-text',
           questions: [
-            {prompt: "How did you adjust your judgment based on the sticks shown by each participant? " +
+            {prompt: "How did you reach your decisions? " +
                       "Please describe your thinking briefly."}
           ],
-          force_wait: 1000,
+          force_wait: 10000,
           data: {
             stimulus_type: 'exit_survey'
           }
