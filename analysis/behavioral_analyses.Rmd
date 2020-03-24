@@ -11,7 +11,7 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
-d <- read_csv('../stickgame/human-experiments/dataFromMongo_sample3.csv')
+d <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 ```
 
 # Implement exclusions, get descriptive stats
@@ -66,12 +66,26 @@ ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, 
 cat(length(ok_games), 'participants passed all criteria \n')
 ```
 
+```{r}
+passed_speaker_criterion <- d %>%
+  filter((gameid %in% complete_games)) %>%
+  filter((gameid %in% passed_manip_check)) %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  select(stimulus_contestant, gameid, chosenStick) %>%
+  group_by(gameid) %>%
+  spread(stimulus_contestant, chosenStick) %>%
+  unite(sequence, first, second, third, fourth) %>%
+  group_by(sequence) %>%
+  tally() %>%
+  arrange(-n)
+```
+
 # Plot change in belief
 
 ```{r}
 beliefChange.d <- d %>%
   filter(gameid %in% complete_games) %>%
-  filter(gameid %in% ok_games) %>%
+#  filter(gameid %in% ok_games) %>%
   filter(stimulus_type == 'isLong') %>%
   group_by(gameid) %>%
   select(stimulus_contestant, agent1stick, agent2stick, gameid, response) %>%
