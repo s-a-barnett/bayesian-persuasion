@@ -66,6 +66,12 @@ jsPsych.plugins["html-button-response"] = (function() {
         default: '8px',
         description: 'The horizontal margin of the button.'
       },
+      force_wait: {
+        type: jsPsych.plugins.parameterType.INT,
+        pretty_name: 'Force wait',
+        default: null,
+        description: 'How long participant is forced to wait before responding'
+      },
       response_ends_trial: {
         type: jsPsych.plugins.parameterType.BOOL,
         pretty_name: 'Response ends trial',
@@ -167,6 +173,18 @@ jsPsych.plugins["html-button-response"] = (function() {
       // move on to the next trial
       jsPsych.finishTrial(trial_data);
     };
+
+    if (trial.force_wait !== null) {
+      console.log('forcing wait');
+      for (var i = 0; i < trial.choices.length; i++) {
+        display_element.querySelector('#jspsych-html-button-response-button-' +i).style.visibility = 'hidden';
+      }
+      jsPsych.pluginAPI.setTimeout(function() {
+        for (var i = 0; i < trial.choices.length; i++) {
+          display_element.querySelector('#jspsych-html-button-response-button-' +i).style.visibility = 'visible';          
+        }
+      }, trial.force_wait);
+    }
 
     // hide image if timing is set
     if (trial.stimulus_duration !== null) {
