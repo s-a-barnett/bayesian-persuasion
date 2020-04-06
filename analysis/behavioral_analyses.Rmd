@@ -11,7 +11,9 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
-d <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
+d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
+d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
+d <- rbind(d_1, d_2)
 ```
 
 # Implement exclusions, get descriptive stats
@@ -151,11 +153,43 @@ d %>%
     theme_bw()
 ```
 
+#Supplemental: plot generative model histograms
+
+```{r}
+d %>%
+  filter(gameid %in% complete_games) %>%
+  filter(gameid %in% ok_games) %>%
+  filter(stimulus_type == 'genModel') %>%
+  filter(agent2stick == 0.6) %>%
+  mutate(genStick = button_pressed + 1) %>%
+  ggplot(aes(genStick)) + 
+    geom_histogram() + 
+    scale_x_continuous(name="stick length", breaks=0:10, limits=c(0, 10))
+```
+
+#Supplemental: plot generative model histograms
+
+```{r}
+d %>%
+  filter(gameid %in% complete_games) %>%
+  filter(gameid %in% ok_games) %>%
+  filter(stimulus_type == 'genModel') %>%
+  filter(agent2stick == 0.6) %>%
+  mutate(genStick = button_pressed + 1) %>%
+  filter(genStick > 6)
+
+d %>%
+  filter(gameid == '8834-a8a77fcd-2ed5-41cc-acd1-52c71e21c4e3') %>%
+  filter(stimulus_type == 'isLong')
+```
+
 # Supplemental: examine 2afc vs. point estimate
 
 ```{r}
 d %>%
   filter(gameid %in% complete_games) %>%
   filter(gameid %in% ok_games) %>%
-  filter(stimulus_type %in% c('2afc', 'meanSlider'))
+  filter(stimulus_type %in% c('2afc', 'meanSlider')) %>%
+  arrange(gameid)
+  #filter(((button_pressed == 0) & (response < 50)) | ((button_pressed == 1) & (response >= 50)))
 ```
