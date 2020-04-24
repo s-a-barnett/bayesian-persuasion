@@ -111,6 +111,12 @@ jsPsych.plugins['image-slider-response'] = (function() {
         default: null,
         description: 'How long to show the trial.'
       },
+      force_wait: {
+				type: jsPsych.plugins.parameterType.INT,
+				pretty_name: 'Force wait',
+				default: null,
+				description: 'How long participant is forced to wait before responding'
+      },
       response_ends_trial: {
         type: jsPsych.plugins.parameterType.BOOL,
         pretty_name: 'Response ends trial',
@@ -205,6 +211,14 @@ jsPsych.plugins['image-slider-response'] = (function() {
 
       // next trial
       jsPsych.finishTrial(trialdata);
+    }
+
+    if (trial.force_wait !== null) {
+      console.log('forcing wait');
+      display_element.querySelector('#jspsych-image-slider-response-next').style.visibility = 'hidden';
+      jsPsych.pluginAPI.setTimeout(function() {
+        display_element.querySelector('#jspsych-image-slider-response-next').style.visibility = 'visible';
+      }, trial.force_wait);
     }
 
     if (trial.stimulus_duration !== null) {

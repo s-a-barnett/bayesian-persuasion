@@ -67,6 +67,12 @@ jsPsych.plugins['survey-text'] = (function() {
         default: null,
         description: 'HTML formatted string to display at the top of the page above all the questions.'
       },
+      force_wait: {
+				type: jsPsych.plugins.parameterType.INT,
+				pretty_name: 'Force wait',
+				default: null,
+				description: 'How long participant is forced to wait before responding'
+      },
       button_label: {
         type: jsPsych.plugins.parameterType.STRING,
         pretty_name: 'Button label',
@@ -132,6 +138,14 @@ jsPsych.plugins['survey-text'] = (function() {
 
     html += '</form>'
     display_element.innerHTML = html;
+		
+		if (trial.force_wait !== null) {
+			console.log('forcing wait');
+			display_element.querySelector('#jspsych-survey-text-next').style.visibility = 'hidden';
+			jsPsych.pluginAPI.setTimeout(function() {
+				display_element.querySelector('#jspsych-survey-text-next').style.visibility = 'visible';
+			}, trial.force_wait);
+		}
 
     // backup in case autofocus doesn't work
     display_element.querySelector('#input-'+question_order[0]).focus();
@@ -144,15 +158,15 @@ jsPsych.plugins['survey-text'] = (function() {
 
       // create object to hold responses
       var question_data = {};
-      
+
       for(var index=0; index < trial.questions.length; index++){
         var id = "Q" + index;
-        var q_element = document.querySelector('#jspsych-survey-text-'+index).querySelector('textarea, input'); 
+        var q_element = document.querySelector('#jspsych-survey-text-'+index).querySelector('textarea, input');
         var val = q_element.value;
         var name = q_element.attributes['data-name'].value;
         if(name == ''){
           name = id;
-        }        
+        }
         var obje = {};
         obje[name] = val;
         Object.assign(question_data, obje);
