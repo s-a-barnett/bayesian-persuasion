@@ -453,3 +453,6 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Parameter files
+exp0*.csv

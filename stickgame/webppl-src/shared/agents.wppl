@@ -44,7 +44,10 @@ var J0 = cache(function(obs, params) {
                error('statistic must be "mean" or "median"');
 
     // return marginal distribution of interest
-    return stat >= .5 ? 'long' : 'short'
+    return {
+      stat: stat,
+      isLong: stat >= .5 ? 'long' : 'short'
+    }
   }})
 })
 
@@ -64,7 +67,7 @@ var S1 = cache(function(bias, sticks, prevEvidence, agentID, params) {
     // Soft-max utility of showing stick proportional to probability
     // that judge says 'long' after seeing this stick, weighted by bias
     var desiredOutcome = bias > 0 ? 'long' : 'short';
-    factor(Math.abs(bias) * J0(_.flatten(_.map(evidence, 'stickLength')), params).score(desiredOutcome));
+    factor(Math.abs(bias) * marginalize(J0(_.flatten(_.map(evidence, 'stickLength')), params), "isLong").score(desiredOutcome));
     return stickSubset;
   }})
 })
@@ -117,6 +120,7 @@ var J1 = cache(function(obs, params) {
 
     // return marginal distributions of interest
     return {
+      stat: stat,
       isLong: stat >= .5 ? 'long' : 'short',
       bias0: biases['agent0'],
       bias1: biases['agent1']
