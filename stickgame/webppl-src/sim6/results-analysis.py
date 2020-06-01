@@ -3,16 +3,14 @@ import pandas as pd
 import os
 
 # Initialise lists
-numExp_vals        = []
-stick1_vals        = []
-stick2_vals        = []
-agentBias_vals     = []
-p_isLong_1_L0_vals = []
-p_isLong_2_L0_vals = []
-p_isLong_1_L1_vals = []
-p_isLong_2_L1_vals = []
-delta_L0_vals      = []
-delta_L1_vals      = []
+numExp_vals     = []
+stick1_vals     = []
+stick2_vals     = []
+agentBias_vals  = []
+judge_vals      = []
+p_isLong_1_vals = []
+p_isLong_2_vals = []
+delta_vals      = []
 
 for numExp in range(len(next(os.walk('parameters/'))[2])):
     exists = os.path.isfile('results/exp' + str(numExp) + '.csv')
@@ -33,28 +31,24 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
         delta_L0 = p_isLong_2_L0 - p_isLong_1_L0
         delta_L1 = p_isLong_2_L1 - p_isLong_1_L1
 
+        numExp_vals += 2 * [numExp]
+        stick1_vals += 2 * [stick1]
+        stick2_vals += 2 * [stick2]
+        agentBias_vals += 2 * [agentBias]
+        judge_vals += ['J0', 'J1']
+        p_isLong_1_vals += [p_isLong_1_L0, p_isLong_1_L1]
+        p_isLong_2_vals += [p_isLong_2_L0, p_isLong_2_L1]
+        delta_vals += [delta_L0, delta_L1]
 
-        numExp_vals.append(numExp)
-        stick1_vals.append(stick1)
-        stick2_vals.append(stick2)
-        agentBias_vals.append(agentBias)
-        p_isLong_1_L0_vals.append(p_isLong_1_L0)
-        p_isLong_2_L0_vals.append(p_isLong_2_L0)
-        p_isLong_1_L1_vals.append(p_isLong_1_L1)
-        p_isLong_2_L1_vals.append(p_isLong_2_L1)
-        delta_L0_vals.append(delta_L0)
-        delta_L1_vals.append(delta_L1)
 
 results_dict = {'numExp': numExp_vals,
                 'stick1': stick1_vals,
                 'stick2': stick2_vals,
+                'judge': judge_vals,
                 'agentBias': agentBias_vals,
-                'p_isLong_1_J0': p_isLong_1_L0_vals,
-                'p_isLong_2_J0': p_isLong_2_L0_vals,
-                'p_isLong_1_J1': p_isLong_1_L1_vals,
-                'p_isLong_2_J1': p_isLong_2_L1_vals,
-                'delta_J0': delta_L0_vals,
-                'delta_J1': delta_L1_vals}
+                'p_isLong_1': p_isLong_1_vals,
+                'p_isLong_2': p_isLong_2_vals,
+                'delta': delta_vals}
 
-df = pd.DataFrame(results_dict).set_index('numExp')
+df = pd.DataFrame(results_dict)
 df.to_csv('results-summary.csv')
