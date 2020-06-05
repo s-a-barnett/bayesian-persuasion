@@ -71,7 +71,7 @@ passed_speaker_criterion <- speaker_criterion %>%
 
 cat(length(passed_speaker_criterion), 'participants passed speaker exclusion \n')
 
-ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check))
+ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check) )
 cat(length(ok_games), 'participants passed all criteria \n')
 
 d <- d_raw %>%
@@ -99,7 +99,7 @@ d %>%
   filter(stimulus_type == 'isLong') %>%
   filter(stimulus_contestant == 'first') %>%
   left_join(speaker_criterion) %>%
-  mutate(first = paste0('showed stick ', first, ' first')) %>%
+  mutate(first = paste0('showed stick', first, 'first')) %>%
   group_by(agent1stick, first) %>%
   tidyboot::tidyboot_mean(response) %>%
   ggplot(aes(x = agent1stick, y = empirical_stat)) +
@@ -144,14 +144,15 @@ Absolute change in belief (anything above 0, i.e. adjusting belief in direction 
 
 ```{r}
 beliefChange.d %>%
-  group_by(agent1stick, agent2stick) %>%
+  left_join(speaker_criterion %>% select(gameid, first) %>% rename(speaker_pref = first)) %>%
+  group_by(agent1stick, agent2stick, first) %>%
   tidyboot::tidyboot_mean(diff) %>%
-  ggplot(aes(x = agent2stick, y = empirical_stat)) +
+  ggplot(aes(x = agent2stick, y = empirical_stat, color = agent1stick)) +
     geom_point() +
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
     geom_smooth(method = 'lm', color = 'red') +
     geom_hline(yintercept = 0, linetype = 'dotted') +
-    facet_wrap(~ agent1stick) +
+    facet_wrap(~ first) +
     ggthemes::theme_few() +
     labs(x = 'agent 2 stick length', y = 'absolute change in belief')
 ```
