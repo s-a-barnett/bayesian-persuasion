@@ -14,7 +14,8 @@ library(broom.mixed)
 d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
-d_raw <- rbind(d_1, d_2, d_3) %>%   
+d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.csv')
+d_raw <- rbind(d_1, d_2, d_3, d_4) %>%   
   rename(agent1stick = agent2stick, agent2stick = agent1stick)
 
 ```
@@ -136,7 +137,7 @@ beliefChange.d %>%
     geom_hline(yintercept = 50, linetype = 'dotted') +
     facet_wrap(~ agent1stick) +
     ggthemes::theme_few() +
-    labs(x = 'agent 2 stick length', y = 'absolute change in belief')
+    labs(x = 'agent 2 stick length', y = 'absolute belief')
 ```
 
 Absolute change in belief (anything above 0, i.e. adjusting belief in direction of 'long' after seeing evidence consistent with 'short', is weak evidence effect)
