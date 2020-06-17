@@ -1,0 +1,30 @@
+// Generate posterior over mean (and hence third unknown stick)
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: 3,
+  biasPrior: 'flat',
+  statistic: 'mean',
+  choiceSize: 1,
+  fixedBiasAgent0: argv.fixedBiasAgent,
+  fixedBiasAgent1: -argv.fixedBiasAgent,
+  numExp : argv.numExp
+};
+
+// Agent 1's following move.
+var secondEvidence = [{'agentID': 'agent0', stickLength: [argv.agent0stick]},
+                    {'agentID' : 'agent1', stickLength: [argv.agent1stick]}];
+
+// Record simulation values for model with bias factor
+var secondJ1 = J1(secondEvidence, params);
+
+csv.writeJoint(secondJ1, 'posterior-bias' + argv.fixedBiasAgent + '.csv')
+
+// var output_handle = csv.open('results/exp' + params.numExp + '.csv');
+// var headers = ['firstJ0', 'secondJ0', 'firstJ1', 'secondJ1'];
+// csv.writeLine(headers.toString(), output_handle);
+// var scores = [firstJ0, secondJ0, firstJ1, secondJ1];
+// csv.writeLine(scores.toString(), output_handle);
+//
+// csv.close(output_handle);
