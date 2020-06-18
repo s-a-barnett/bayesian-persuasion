@@ -15,7 +15,8 @@ d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
 d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.csv')
-d_raw <- rbind(d_1, d_2, d_3, d_4) %>%   
+d_5 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample3.csv')
+d_raw <- rbind(d_1, d_2, d_3, d_4, d_5) %>%   
   rename(agent1stick = agent2stick, agent2stick = agent1stick)
 
 ```
@@ -45,10 +46,11 @@ cat(length(passed_manip_check), 'participants passed bias manipulation check \n'
 
 passed_rt_criterion <- d_raw %>%
   filter(stimulus_type == 'isLong') %>%
-  # mutate(log_rt = log(rt),
-  #        lower = mean(log_rt) - 2*sd(log_rt),
-  #        upper = mean(log_rt) + 2*sd(log_rt)) %>%
-  filter(rt > 8000, rt < 40000) %>%
+  mutate(log_rt = log(rt),
+         lower = mean(log_rt) - 2*sd(log_rt),
+         upper = mean(log_rt) + 2*sd(log_rt)) %>%
+  filter(log_rt > lower, log_rt < upper) %>%
+  # filter(rt > 8000, rt < 40000) %>%
   group_by(gameid) %>%
   tally() %>%
   filter(n == 2) %>%
@@ -99,7 +101,7 @@ d %>%
   filter(stimulus_type == 'isLong') %>%
   filter(stimulus_contestant == 'first') %>%
   left_join(speaker_criterion) %>%
-  mutate(first = paste0('showed stick', first, 'first')) %>%
+  mutate(first = paste0('showed stick ', first, ' first')) %>%
   group_by(agent1stick, first) %>%
   tidyboot::tidyboot_mean(response) %>%
   ggplot(aes(x = agent1stick, y = empirical_stat)) +
@@ -113,6 +115,38 @@ d %>%
     xlim(0.5,1)+
     ylim(0,100)
 ```
+# Import model data
+
+```{r}
+d_model <- read_csv('../stickgame/webppl-src/sim6/results-summary.csv') %>%
+  mutate(percent_isLong_1 = 100 * p_isLong_1) %>%
+  mutate(percent_isLong_2 = 100 * p_isLong_2) %>%
+  mutate(delta_percent = percent_isLong_2 - percent_isLong_1)
+```
+
+# Plot human-model comparison
+
+```{r}
+d_stick4 <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  left_join(speaker_criterion) %>%
+  group_by(agent1stick, first) %>%
+  tidyboot::tidyboot_mean(response) %>%
+  filter(first == 4)
+
+ggplot() + 
+  geom_point(data=d_stick4, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_stick4, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 50, linetype = 'dotted') +
+  geom_line(data=filter(d_model, judge == 'J1'), aes(x=stick1, y=percent_isLong_1, color=agentBias, group=agentBias)) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.5,1)+
+  ylim(0,100)
+
+```
+
 # Plot change in belief
 
 ```{r}
@@ -128,31 +162,35 @@ Actual belief reported at this point in experiment
 
 ```{r}
 beliefChange.d %>%
-  group_by(agent1stick, agent2stick) %>%
+  left_join(speaker_criterion %>% select(gameid, first) %>% rename(speaker_pref = first)) %>%
+  group_by(agent1stick, agent2stick, speaker_pref) %>%
   tidyboot::tidyboot_mean(second) %>%
   ggplot(aes(x = agent2stick, y = empirical_stat)) +
     geom_point() +
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
     geom_smooth(method = 'lm', color = 'red') +
     geom_hline(yintercept = 50, linetype = 'dotted') +
-    facet_wrap(~ agent1stick) +
+    facet_grid(speaker_pref ~ agent1stick) +
+    ylim(0, 100) + 
     ggthemes::theme_few() +
     labs(x = 'agent 2 stick length', y = 'absolute belief')
 ```
 
-Absolute change in belief (anything above 0, i.e. adjusting belief in direction of 'long' after seeing evidence consistent with 'short', is weak evidence effect)
+Absolute change in belief (anything above 0, i.e. adjusting belief in direction of 'long' after seeing evidence consistent with 'short', is weak evidence effect) by speaker (broken)
 
 ```{r}
 beliefChange.d %>%
   left_join(speaker_criterion %>% select(gameid, first) %>% rename(speaker_pref = first)) %>%
-  group_by(agent1stick, agent2stick, first) %>%
+  group_by(agent1stick, agent2stick, speaker_pref) %>%
   tidyboot::tidyboot_mean(diff) %>%
-  ggplot(aes(x = agent2stick, y = empirical_stat, color = agent1stick)) +
+  ggplot(aes(x = agent2stick, y = empirical_stat)) +
     geom_point() +
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
-    geom_smooth(method = 'lm', color = 'red') +
+    geom_smooth(method = 'lm', color = 'red', fullrange = TRUE) +
+    ylim(-100, 50) + 
+    xlim(0, 0.5) + 
     geom_hline(yintercept = 0, linetype = 'dotted') +
-    facet_wrap(~ first) +
+    facet_grid(speaker_pref ~ agent1stick) +
     ggthemes::theme_few() +
     labs(x = 'agent 2 stick length', y = 'absolute change in belief')
 ```
@@ -174,6 +212,30 @@ beliefChange.d %>%
 #   mutate(agent1stick = agent1stick - 0.5) %>%
 #   lmer(response ~ agent1stick + stimulus_contestant + (1 | gameid), data = .) %>%
 #   tidy()
+```
+
+# Supplemental: examine survey responses
+```{r}
+wee_criterion <- d %>%
+  filter((gameid %in% complete_games)) %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  select(stimulus_contestant, button_pressed, gameid) %>%
+  group_by(gameid) %>%
+  spread(stimulus_contestant, button_pressed) %>%
+  filter(first %in% c(4)) %>%
+  pull(gameid) %>%
+  unique()
+
+survey_reponses <- d %>%
+  filter(gameid %in% wee_criterion) %>%
+  filter(stimulus_type %in% c('speakerSurvey', 'judgeSurvey', 'exit_survey')) %>%
+  filter(responses != '{"Q0":""}') %>%
+  filter(!grepl("no", responses, ignore.case = TRUE)) %>%
+  filter(!grepl("n/a", responses, ignore.case = TRUE)) %>%
+  filter(!grepl("Sam", responses)) %>%
+  # mutate(answer = substr(responses, 7, 100)) %>%
+  select(gameid, stimulus_type, responses) %>%
+  arrange(gameid)
 ```
 
 # Supplemental: examine trial-level response time distribution
