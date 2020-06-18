@@ -13,10 +13,10 @@ var params = {
 };
 
 // Agent 1's following move.
-var secondEvidence = [{'agentID': 'agent0', stickLength: [argv.agent0stick]},
-                    {'agentID' : 'agent1', stickLength: [argv.agent1stick]}];
+var secondEvidence = [{'agentID': 'agent1', stickLength: [argv.agent1stick]},
+                    {'agentID' : 'agent0', stickLength: [argv.agent0stick]}];
 
 // Record simulation values for model with bias factor
 var secondJ1 = J1(secondEvidence, params);
 
-csv.writeJoint(secondJ1, 'results/posterior-bias' + argv.fixedBiasAgent + '.csv')
+csv.writeJoint(secondJ1, 'results/posterior-bias' + argv.fixedBiasAgent + '-reverse.csv')
