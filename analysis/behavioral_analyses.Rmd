@@ -147,6 +147,27 @@ ggplot() +
 
 ```
 
+```{r}
+d_stick3 <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  left_join(speaker_criterion) %>%
+  group_by(agent1stick, first) %>%
+  tidyboot::tidyboot_mean(response) %>%
+  filter(first == 3)
+
+ggplot() + 
+  geom_point(data=d_stick3, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_stick3, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 50, linetype = 'dotted') +
+  geom_line(data=filter(d_model, judge == 'J0'), aes(x=stick1, y=percent_isLong_1)) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.5,1)+
+  ylim(0,100)
+
+```
+
 # Plot change in belief
 
 ```{r}
