@@ -3,7 +3,7 @@
 // Parameters to vary during the simulation
 // Read from the command line
 var params = {
-  nSticks: 5,
+  nSticks: argv.nSticks,
   biasPrior: 'flat',
   statistic: 'mean',
   choiceSize: 1,

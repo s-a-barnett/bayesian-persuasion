@@ -1,11 +1,11 @@
 // Ensure equal numbers on either side of 0.5
 var possibleSticks = map(function(v) {
   return _.round(v, 3);
-}, _.range(.025, 1, .05));
+}, _.range(0.0, 1.1, .1));
 
 // Place prior over combinations to ignore order of sticks
 var stickPrior = function(nSticks) {
-  return categorical({vs: shared.k_combinations(possibleSticks, nSticks)});
+  return repeat(nSticks, function() {return categorical({vs: possibleSticks});});
 };
 
 // Discretized U-shape prior

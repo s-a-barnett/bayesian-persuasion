@@ -7,6 +7,7 @@ numExp_vals     = []
 stick1_vals     = []
 stick2_vals     = []
 agentBias_vals  = []
+nSticks_vals    = []
 judge_vals      = []
 p_isLong_1_vals = []
 p_isLong_2_vals = []
@@ -23,6 +24,7 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
         stick1  = float(df_params[0])
         stick2  = float(df_params[1])
         agentBias = float(df_params[2])
+        nSticks = float(df_params[3])
         p_isLong_1_L0 = float(np.exp(df_results['firstJ0']))
         p_isLong_2_L0 = float(np.exp(df_results['secondJ0']))
         p_isLong_1_L1 = float(np.exp(df_results['firstJ1']))
@@ -35,6 +37,7 @@ for numExp in range(len(next(os.walk('parameters/'))[2])):
         stick1_vals += 2 * [stick1]
         stick2_vals += 2 * [stick2]
         agentBias_vals += 2 * [agentBias]
+        nSticks_vals += 2 * [nSticks]
         judge_vals += ['J0', 'J1']
         p_isLong_1_vals += [p_isLong_1_L0, p_isLong_1_L1]
         p_isLong_2_vals += [p_isLong_2_L0, p_isLong_2_L1]
@@ -46,6 +49,7 @@ results_dict = {'numExp': numExp_vals,
                 'stick2': stick2_vals,
                 'judge': judge_vals,
                 'agentBias': agentBias_vals,
+                'nSticks': nSticks_vals,
                 'p_isLong_1': p_isLong_1_vals,
                 'p_isLong_2': p_isLong_2_vals,
                 'delta': delta_vals}

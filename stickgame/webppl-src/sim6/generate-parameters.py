@@ -12,12 +12,13 @@ if os.path.isdir('results') is False:
     os.mkdir('results')
 
 # Write out lists of hyperparameters
-agent0stick    = [round(0.025+0.05*i, 3) for i in range(20)]
+agent0stick    = [round(0.0+0.1*i, 3) for i in range(11)]
 agent1stick    = agent0stick
 fixedBiasAgent = [2., 5., 10.]
+nSticks        = [3, 4, 5]
 
 # Create iterator to loop through
-iterator = product(agent0stick, agent1stick, fixedBiasAgent)
+iterator = product(agent0stick, agent1stick, fixedBiasAgent, nSticks)
 
 num_max = 5
 
@@ -27,7 +28,8 @@ for x in iterator:
     if (x[0] >= 0.5) and (x[1] <= 0.5):
         settings = {'agent0stick': [x[0]],
                     'agent1stick': [x[1]],
-                    'fixedBiasAgent': [x[2]]}
+                    'fixedBiasAgent': [x[2]],
+                    'nSticks': [x[3]]}
 
         df = pd.DataFrame.from_dict(settings)
         exp_name = 'exp' + str(ind).zfill(num_max)

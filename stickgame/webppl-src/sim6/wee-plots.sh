@@ -5,10 +5,10 @@ INPUT=parameters/exp$1.csv
 OLDIFS=$IFS
 IFS=','
 [ ! -f $INPUT ] && { echo "$INPUT file not found"; exit 99; }
-while read agent0stick agent1stick fixedBiasAgent
+while read agent0stick agent1stick fixedBiasAgent nSticks
 do
 	webppl wee-plots.wppl --require webppl-csv --require ../shared \
 	-- --agent0stick $agent0stick --agent1stick $agent1stick \
-	--numExp $1 --fixedBiasAgent $fixedBiasAgent
+	--numExp $1 --fixedBiasAgent $fixedBiasAgent --nSticks $nSticks
 done < $INPUT
 IFS=$OLDIFS
