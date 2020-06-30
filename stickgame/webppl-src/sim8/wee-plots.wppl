@@ -1,0 +1,28 @@
+// Run simulations for weak evidence effect for comparisons with human results
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: argv.nSticks,
+  biasPrior: 'flat',
+  statistic: 'mean',
+  choiceSize: 1,
+  fixedBiasAgent0: argv.fixedBiasAgent,
+  fixedBiasAgent1: -argv.fixedBiasAgent,
+  numExp : argv.numExp
+};
+
+// Agent 0's first move.
+var firstEvidence = [{'agentID': 'agent0', stickLength: [argv.agent0stick]}];
+
+// Record simulation values for model with bias factor
+var firstJ0 = marginalize(J0(_.flatten(_.map(firstEvidence, 'stickLength')), params), 'isLong').score('long');
+var firstJ1 = marginalize(J1(firstEvidence, params), 'isLong').score('long');
+
+var output_handle = csv.open('results/exp' + params.numExp + '.csv');
+var headers = ['firstJ0', 'firstJ1'];
+csv.writeLine(headers.toString(), output_handle);
+var scores = [firstJ0, firstJ1];
+csv.writeLine(scores.toString(), output_handle);
+
+csv.close(output_handle);
