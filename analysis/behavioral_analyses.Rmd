@@ -121,7 +121,8 @@ d %>%
 d_model <- read_csv('../stickgame/webppl-src/sim6/results-summary.csv') %>%
   mutate(percent_isLong_1 = 100 * p_isLong_1) %>%
   mutate(percent_isLong_2 = 100 * p_isLong_2) %>%
-  mutate(delta_percent = percent_isLong_2 - percent_isLong_1)
+  mutate(delta_percent = percent_isLong_2 - percent_isLong_1) %>%
+  rename(agent1stick = stick1, agent2stick = stick2)
 ```
 
 # Plot human-model comparison
@@ -139,7 +140,8 @@ ggplot() +
   geom_point(data=d_stick4, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_stick4, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
   geom_hline(yintercept = 50, linetype = 'dotted') +
-  geom_line(data=filter(d_model, judge == 'J1'), aes(x=stick1, y=percent_isLong_1, color=agentBias, group=agentBias)) + 
+  geom_line(data=(d_model %>% filter(judge == 'J1')), aes(x=agent1stick, y=percent_isLong_1, color=agentBias, group=agentBias)) + 
+  facet_grid(~ nSticks) + 
   ggthemes::theme_few() +
   labs(x = 'agent 1 stick length', y = 'belief about mean') +
   xlim(0.5,1)+
@@ -160,8 +162,9 @@ ggplot() +
   geom_point(data=d_stick3, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_stick3, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
   geom_hline(yintercept = 50, linetype = 'dotted') +
-  geom_line(data=filter(d_model, judge == 'J0'), aes(x=stick1, y=percent_isLong_1)) + 
+  geom_line(data=(d_model %>% filter(judge == 'J0')), aes(x=agent1stick, y=percent_isLong_1)) + 
   ggthemes::theme_few() +
+  facet_grid(~ nSticks) +
   labs(x = 'agent 1 stick length', y = 'belief about mean') +
   xlim(0.5,1)+
   ylim(0,100)
@@ -185,13 +188,15 @@ Actual belief reported at this point in experiment
 beliefChange.d %>%
   left_join(speaker_criterion %>% select(gameid, first) %>% rename(speaker_pref = first)) %>%
   group_by(agent1stick, agent2stick, speaker_pref) %>%
+  filter(speaker_pref == 4) %>%
   tidyboot::tidyboot_mean(second) %>%
   ggplot(aes(x = agent2stick, y = empirical_stat)) +
     geom_point() +
     geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
     geom_smooth(method = 'lm', color = 'red') +
     geom_hline(yintercept = 50, linetype = 'dotted') +
-    facet_grid(speaker_pref ~ agent1stick) +
+    geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(agent1stick %in% c(0.6, 0.7, 0.8, 0.9)) %>% filter(agent2stick %in% c(0.1, 0.2, 0.3, 0.4))), aes(x=agent2stick, y=percent_isLong_2, color=agentBias, group=agentBias)) + 
+    facet_grid(nSticks ~ agent1stick) +
     ylim(0, 100) + 
     ggthemes::theme_few() +
     labs(x = 'agent 2 stick length', y = 'absolute belief')
@@ -203,6 +208,7 @@ Absolute change in belief (anything above 0, i.e. adjusting belief in direction 
 beliefChange.d %>%
   left_join(speaker_criterion %>% select(gameid, first) %>% rename(speaker_pref = first)) %>%
   group_by(agent1stick, agent2stick, speaker_pref) %>%
+  filter(speaker_pref == 4) %>%
   tidyboot::tidyboot_mean(diff) %>%
   ggplot(aes(x = agent2stick, y = empirical_stat)) +
     geom_point() +
@@ -211,7 +217,8 @@ beliefChange.d %>%
     ylim(-100, 50) + 
     xlim(0, 0.5) + 
     geom_hline(yintercept = 0, linetype = 'dotted') +
-    facet_grid(speaker_pref ~ agent1stick) +
+    geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(agent1stick %in% c(0.6, 0.7, 0.8, 0.9))), aes(x=agent2stick, y=delta_percent, color=agentBias, group=agentBias)) + 
+    facet_grid(nSticks ~ agent1stick) +
     ggthemes::theme_few() +
     labs(x = 'agent 2 stick length', y = 'absolute change in belief')
 ```
