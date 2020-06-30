@@ -75,6 +75,8 @@ var S1 = cache(function(bias, sticks, prevEvidence, agentID, params) {
 // L1 judge models bias of agent
 var J1 = cache(function(obs, params) {
 
+  var recencyBias = _.isFinite(params.recencyBias) ? params.recencyBias : 1.0;
+
   // Recursively observe, accounting for earlier choices
   // Keeps track of previous observations in prevObs
   // Models samples as being from pragmaticAgent
@@ -84,10 +86,10 @@ var J1 = cache(function(obs, params) {
 
       // Shortcut to avoid evaluating speaker for cases where
       // observation isn't even in list of sticks
-      if(shared.includesList(sticks, datum.stickLength))
-        observe(S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params),
-                datum.stickLength);
-      else
+      if(shared.includesList(sticks, datum.stickLength)) {
+        var recencyFactor = Math.pow(recencyBias, params.nSticks - prevObs.length);
+        factor(recencyFactor * S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params).score(datum.stickLength));
+      } else
         factor(-1000);
 
       // continue to next observations
