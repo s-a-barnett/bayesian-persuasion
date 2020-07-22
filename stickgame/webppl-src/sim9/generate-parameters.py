@@ -15,8 +15,8 @@ if os.path.isdir('results') is False:
 agent0stick    = [round(0.0+0.1*i, 3) for i in range(11)]
 agent1stick    = agent0stick
 fixedBiasAgent = [5.]
-nSticks        = [3]
-recencyBias    = [0.1, 0.5, 1.0, 2.0, 10.0]
+nSticks        = [3, 4, 5]
+recencyBias    = [1.0, 2.0, 5.0, 10.0]
 
 # Create iterator to loop through
 iterator = product(agent0stick, agent1stick, fixedBiasAgent, nSticks, recencyBias)
