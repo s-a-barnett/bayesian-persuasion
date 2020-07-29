@@ -6,8 +6,9 @@ from mpl_toolkits.mplot3d import Axes3D
 plt.close('all')
 
 df = pd.read_csv('results-summary.csv')
+df = df[df.judge == 'J0']
 
-g = sns.FacetGrid(df, col="stick1", row="judge", hue="recencyBias")
+g = sns.FacetGrid(df, col="stick1", row="nSticks", hue="recencyBias")
 g.map(plt.plot, "stick2", "p_isLong_2")
 g.set_axis_labels("agent 2 stick length", "absolute belief");
 g.add_legend();
