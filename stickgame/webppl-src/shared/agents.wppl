@@ -28,8 +28,8 @@ var J0 = cache(function(obs, params) {
   var observe_fn = function(observations, sticks) {
     if(observations.length > 0) {
       var datum = first(observations)
-      var recencyFactor = Math.pow(recencyBias, (observations.length - obs.length) / params.choiceSize);
-      factor(_.includes(sticks, datum)? 0 : -recencyFactor)
+      var recencyFactor = 1 // Math.pow(recencyBias, (observations.length - 1) / params.choiceSize);
+      factor(recencyFactor * (_.includes(sticks, datum)? 0 : -1));
       observe_fn(rest(observations), shared.removeSingleElement(datum, sticks))
     }
   };
@@ -88,11 +88,9 @@ var J1 = cache(function(obs, params) {
 
       // Shortcut to avoid evaluating speaker for cases where
       // observation isn't even in list of sticks
-      if(shared.includesList(sticks, datum.stickLength)) {
-        var recencyFactor = Math.pow(recencyBias, obs.length - prevObs.length);
-        factor(recencyFactor * S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params).score(datum.stickLength));
-      } else
-        factor(-1000);
+      var recencyFactor = Math.pow(recencyBias, observations.length - 1);
+      var S1_prob = S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params).score(datum.stickLength);
+      factor(recencyFactor * (shared.includesList(sticks, datum.stickLength) ? S1_prob : -100));
 
       // continue to next observations
       observe_fn(
