@@ -23,13 +23,19 @@ var biasPrior = function(params) {
 // L0 judge: assumes data received are i.i.d.
 // Note: b/c agentIDs are irrelevant, we assume here the observations are just array of lengths to improve caching
 var J0 = cache(function(obs, params) {
+  // 0 < recencyBias <= 1, where recencyBias of 1 means no bias
   var recencyBias = _.isFinite(params.recencyBias) ? params.recencyBias : 1.0;
   // recursively condition on stick being in list of sticks
   var observe_fn = function(observations, sticks) {
     if(observations.length > 0) {
       var datum = first(observations)
-      var recencyFactor = 1 // Math.pow(recencyBias, (observations.length - 1) / params.choiceSize);
-      factor(recencyFactor * (_.includes(sticks, datum)? 0 : -1));
+      // recencyFactor tends _upwards_ from recencyBias^(obs.length - 1) to 1
+      // need to divide by params.choiceSize to properly count the number of observations,
+      //   as observations here are just array of lengths
+      var recencyFactor = 1. // Math.pow(recencyBias, (observations.length / params.choiceSize) - 1);
+      // for earlier observations, the non-include factor starts close to 0
+      // for the final observation, the non-include factor is -100
+      factor(recencyFactor * (_.includes(sticks, datum)? 0 : -100));
       observe_fn(rest(observations), shared.removeSingleElement(datum, sticks))
     }
   };
@@ -76,7 +82,7 @@ var S1 = cache(function(bias, sticks, prevEvidence, agentID, params) {
 
 // L1 judge models bias of agent
 var J1 = cache(function(obs, params) {
-
+  // 0 < recencyBias <= 1, where recencyBias of 1 means no bias
   var recencyBias = _.isFinite(params.recencyBias) ? params.recencyBias : 1.0;
 
   // Recursively observe, accounting for earlier choices
