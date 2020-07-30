@@ -149,6 +149,21 @@ ggplot() +
 
 ```
 
+# Filtered human-model comparison
+
+```{r}
+ggplot() + 
+  geom_point(data=d_stick4, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_stick4, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 50, linetype = 'dotted') +
+  geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(nSticks == 3) %>% filter(agentBias == 5)), aes(x=agent1stick, y=percent_isLong_1)) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.5,1) +
+  ylim(0,100) + 
+  ggtitle('Sceptics, J1 judge, nSticks = 3')
+```
+
 ```{r}
 d_stick3 <- d %>%
   filter(stimulus_type == 'isLong') %>%
@@ -169,6 +184,21 @@ ggplot() +
   xlim(0.5,1)+
   ylim(0,100)
 
+```
+
+# Filtered human-model comparison
+
+```{r}
+ggplot() + 
+  geom_point(data=d_stick3, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_stick3, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 50, linetype = 'dotted') +
+  geom_line(data=(d_model %>% filter(judge == 'J0') %>% filter(nSticks == 5)), aes(x=agent1stick, y=percent_isLong_1)) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.5,1) +
+  ylim(0,100) + 
+  ggtitle('Naïfs, J0 judge, nSticks = 5')
 ```
 
 # Plot change in belief
