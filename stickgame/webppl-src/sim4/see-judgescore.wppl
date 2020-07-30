@@ -1,0 +1,33 @@
+// Run simulations for factor plots in strong evidence effect
+// webppl persuasion.wppl --require ../shared
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: 5,
+  // fixedBiasAgent0: 5,
+  fixedBiasAgent1: 0,
+  biasPrior: argv.biasPrior,
+  statistic: argv.statistic,
+  choiceSize: 1
+};
+
+var printFactors = function(stick, scores) {
+  if (stick<=1.) {
+    console.log('stick length = ' + stick);
+    var evidence = [{'agentID': 'agent0', stickLength: [stick]}];
+    var score = (marginalize(J1(evidence, params), "isLong").score('long'))
+                - argv.biasPenalty*expectation(marginalize(J1(evidence, params), "bias0"),
+                              function(b) {return Math.abs(b)});
+    return printFactors(_.round(stick+0.1, 3), scores.concat([score]));
+  } else {
+    return scores
+  };
+};
+
+var results = printFactors(0.1, [])
+console.log('Results complete!')
+
+var output_handle = csv.open("results/exp" + argv.numExp + ".csv")
+csv.writeLine(results.toString(), output_handle)
+csv.close(output_handle)
