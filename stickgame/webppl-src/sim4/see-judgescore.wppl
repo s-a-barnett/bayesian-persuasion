@@ -4,7 +4,7 @@
 // Parameters to vary during the simulation
 // Read from the command line
 var params = {
-  nSticks: 5,
+  nSticks: 3,
   // fixedBiasAgent0: 5,
   fixedBiasAgent1: 0,
   biasPrior: argv.biasPrior,

@@ -14,7 +14,7 @@ if os.path.isdir('results') is False:
 # Write out lists of hyperparameters
 biasPrior = ['flat', 'v']
 statistic = ['mean', 'median']
-biasPenalty = [0., 1., 3., 10.]
+biasPenalty = [0., .3, .5, 1.]
 
 # Create iterator to loop through
 iterator = product(biasPrior, statistic, biasPenalty)
