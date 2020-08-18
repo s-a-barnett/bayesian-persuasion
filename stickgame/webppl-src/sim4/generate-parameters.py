@@ -12,9 +12,9 @@ if os.path.isdir('results') is False:
     os.mkdir('results')
 
 # Write out lists of hyperparameters
-biasPrior = ['flat', 'v']
-statistic = ['mean', 'median']
-biasPenalty = [0., .3, .5, 1.]
+biasPrior = ['flat']
+statistic = ['mean']
+biasPenalty = [.5, .6, .7, .8, .9, 1.]
 
 # Create iterator to loop through
 iterator = product(biasPrior, statistic, biasPenalty)
