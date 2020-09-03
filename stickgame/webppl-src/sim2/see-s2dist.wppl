@@ -1,0 +1,16 @@
+// Run simulations for distribution over s2 choices
+// webppl persuasion.wppl --require ../shared-deceptive --require webppl-csv
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: argv.nSticks,
+  statistic: argv.statistic,
+  liarAlpha: argv.liarAlpha,
+  alpha: argv.alpha,
+  choiceSize: 2
+};
+
+var sticks = [0.1, 0.8, 0.9];
+
+console.log(S2(sticks, [], 'agent0', params));
