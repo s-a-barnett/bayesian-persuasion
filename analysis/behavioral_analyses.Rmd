@@ -38,7 +38,8 @@ passed_manip_check <- d_raw %>%
   filter(stimulus_type == 'bias') %>%
   select(stimulus_contestant, response, gameid, agent1stick) %>%
   spread(stimulus_contestant, response) %>%
-  filter(first > 60 & second < 40) %>%
+  # filter(first > 60 & second < 40) %>%
+  filter(first >= 50 & second <= 50) %>%
   pull(gameid) %>%
   unique()
 
@@ -73,7 +74,8 @@ passed_speaker_criterion <- speaker_criterion %>%
 
 cat(length(passed_speaker_criterion), 'participants passed speaker exclusion \n')
 
-ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check) )
+# ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check) )
+ok_games  <- intersect(passed_speaker_criterion, passed_manip_check)
 cat(length(ok_games), 'participants passed all criteria \n')
 
 d <- d_raw %>%
@@ -156,12 +158,13 @@ ggplot() +
   geom_point(data=d_stick4, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_stick4, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
   geom_hline(yintercept = 50, linetype = 'dotted') +
-  geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(nSticks == 3) %>% filter(agentBias == 5)), aes(x=agent1stick, y=percent_isLong_1)) + 
+  geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(nSticks == 3) %>% filter(agentBias == 5)), aes(x=agent1stick, y=percent_isLong_1), color="blue") + 
+  geom_line(data=(d_model %>% filter(judge == 'J0') %>% filter(nSticks == 5)), aes(x=agent1stick, y=percent_isLong_1), color="red") + 
   ggthemes::theme_few() +
   labs(x = 'agent 1 stick length', y = 'belief about mean') +
   xlim(0.5,1) +
   ylim(0,100) + 
-  ggtitle('Sceptics, J1 judge, nSticks = 3')
+  ggtitle('Sceptics')
 ```
 
 ```{r}
@@ -193,12 +196,13 @@ ggplot() +
   geom_point(data=d_stick3, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_stick3, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
   geom_hline(yintercept = 50, linetype = 'dotted') +
-  geom_line(data=(d_model %>% filter(judge == 'J0') %>% filter(nSticks == 5)), aes(x=agent1stick, y=percent_isLong_1)) + 
+  geom_line(data=(d_model %>% filter(judge == 'J1') %>% filter(nSticks == 3) %>% filter(agentBias == 5)), aes(x=agent1stick, y=percent_isLong_1), color="blue") + 
+  geom_line(data=(d_model %>% filter(judge == 'J0') %>% filter(nSticks == 5)), aes(x=agent1stick, y=percent_isLong_1), color="red") + 
   ggthemes::theme_few() +
   labs(x = 'agent 1 stick length', y = 'belief about mean') +
   xlim(0.5,1) +
   ylim(0,100) + 
-  ggtitle('Naïfs, J0 judge, nSticks = 5')
+  ggtitle('Naïfs')
 ```
 
 # Plot change in belief
