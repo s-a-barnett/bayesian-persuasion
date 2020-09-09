@@ -1,0 +1,38 @@
+// Run simulations for factor plots in strong evidence effect with deecption
+// webppl persuasion.wppl --require ../shared-deceptive --require webppl-csv
+
+// Parameters to vary during the simulation
+// Read from the command line
+var params = {
+  nSticks: argv.nSticks,
+  statistic: argv.statistic,
+  liarAlpha: argv.liarAlpha,
+  alpha: argv.alpha,
+  choiceSize: 1
+};
+
+var printFactors = function(stick, stats, biases) {
+  if (stick<=1.) {
+    console.log('stick length = ' + stick);
+    var evidence = [{'agentID': 'agent0', stickLength: [stick]}];
+    var J1_dist = J1(evidence, params);
+    var stat = marginalize(J1_dist, "isLong").score('long');
+    var biasDist = marginalize(J1_dist, "bias0");
+    var liarFactor = biasDist.score('longest') + biasDist.score('shortest');
+    return printFactors(_.round(stick+0.1, 3), stats.concat([stat]), biases.concat([liarFactor]));
+  } else {
+    var results = {
+      'stats': stats,
+      'biases': biases
+    };
+    return results
+  };
+};
+
+var results = printFactors(0.1, [], [])
+console.log('Results complete!')
+
+var output_handle = csv.open("results/exp" + argv.numExp + ".csv")
+csv.writeLine(results['stats'].toString(), output_handle)
+csv.writeLine(results['biases'].toString(), output_handle)
+csv.close(output_handle)
