@@ -1,0 +1,138 @@
+// Ensure equal numbers on either side of 0.5
+var possibleSticks = map(function(v) {
+  return _.round(v, 3);
+}, _.range(0.0, 1.1, .1));
+
+// Place prior over combinations to ignore order of sticks
+var stickPrior = function(nSticks) {
+  return repeat(nSticks, function() {return categorical({vs: possibleSticks});});
+};
+
+// Discretized U-shape prior
+var biasPrior = function(params) {
+  var biasRange = [-10, -5, -2, 0, 2, 5, 10];
+  var prior = categorical({vs: biasRange});
+  return prior
+};
+
+// L0 judge: assumes data received are i.i.d.
+// Note: b/c agentIDs are irrelevant, we assume here the observations are just array of lengths to improve caching
+var J0 = cache(function(obs, params) {
+
+  // recursively condition on stick being in list of sticks
+  var observe_fn = function(observations, sticks) {
+    if(observations.length > 0) {
+      var datum = first(observations)
+      factor(_.includes(sticks, datum)? 0 : -100);
+      observe_fn(rest(observations), shared.removeSingleElement(datum, sticks))
+    }
+  };
+
+  return Infer({method: 'enumerate', model: function() {
+    // assume latent sticks drawn i.i.d
+    var sticks = stickPrior(params.nSticks);
+
+    // Condition on observations
+    observe_fn(obs, sticks);
+
+    var stat = _.mean(sticks);
+
+    // return marginal distribution of interest
+    return {
+      stat: stat,
+      isLong: stat >= .5 ? 'long' : 'short'
+    }
+  }})
+});
+
+// S1 agent has a bias towards longer or shorter sticks, depending on what she
+// thinks the judge will infer about the mean stick length
+// Note: sticks only involve those currently available to select
+// prevEvidence refers to the stick observations already made
+var S1 = cache(function(bias, sticks, prevEvidence, agentID, params) {
+  return Infer({method: 'enumerate', model: function() {
+    var stickSubset = categorical({vs: shared.k_combinations(sticks, 1)});
+
+    // Counterfactually added evidence
+    var evidence = prevEvidence.concat(
+      [{'agentID': agentID, stickLength: stickSubset}]
+    )
+
+    // Soft-max utility of showing stick proportional to probability
+    // that judge says 'long' after seeing this stick, weighted by bias
+    var desiredOutcome = bias > 0 ? 'long' : 'short';
+    factor(Math.abs(bias) * marginalize(J0(_.flatten(_.map(evidence, 'stickLength')), params), "isLong").score(desiredOutcome));
+    return stickSubset;
+  }})
+});
+
+// L1 judge models bias of agent
+var J1 = cache(function(obs, params) {
+
+  // Recursively observe, accounting for earlier choices
+  // Keeps track of previous observations in prevObs
+  // Models samples as being from pragmaticAgent
+  var observe_fn = function(observations, prevObs, sticks, biases) {
+    if(observations.length > 0) {
+      var datum = first(observations)
+
+      var S1_prob = S1(biases[datum.agentID], sticks, prevObs, datum.agentID, params).score(datum.stickLength);
+      factor(shared.includesList(sticks, datum.stickLength) ? S1_prob : -100);
+
+      // continue to next observations
+      observe_fn(
+        rest(observations),
+        prevObs.concat(datum),
+        shared.removeMultipleElements(datum.stickLength, sticks),
+        biases
+      )
+    }
+  }
+
+  return Infer({method: 'enumerate', model: function() {
+    // assume latent sticks drawn i.i.d
+    var sticks = stickPrior(params.nSticks);
+
+    // assume agents have independent biases
+    // (fix as common knowledge if param is provided, otherwise infer it)
+    var biases = {
+      agent0: _.isFinite(params.fixedBiasAgent0) ? params.fixedBiasAgent0 : biasPrior(params),
+      agent1: _.isFinite(params.fixedBiasAgent1) ? params.fixedBiasAgent1 : biasPrior(params)
+    };
+
+    // Condition on observations coming from biased agent
+    observe_fn(obs, [], sticks, biases);
+
+    var stat = _.mean(sticks);
+
+    // return marginal distributions of interest
+    return {
+      stat: stat,
+      isLong: stat >= .5 ? 'long' : 'short',
+      bias0: biases['agent0'],
+      bias1: biases['agent1']
+    }
+  }})
+});
+
+// S2 reasons about judge that is thinking about bias
+var S2 = cache(function(bias, sticks, prevEvidence, agentID, params) {
+  var agentNumeral = agentID.slice(-1)
+  return Infer({method: 'enumerate', model: function() {
+    var stickSubset = categorical({vs: shared.k_combinations(sticks, 1)});
+
+    // Counterfactually added evidence
+    var evidence = prevEvidence.concat(
+      [{'agentID': agentID, stickLength: stickSubset}]
+    );
+
+    // Soft-max utility of showing stick proportional to probability
+    // that judge says 'long' after seeing this stick, weighted by bias
+    var desiredOutcome = bias > 0 ? 'long' : 'short';
+    var biasPenalty = _.isFinite(params.biasPenalty) ? params.biasPenalty : 0;
+    factor(Math.abs(bias) * marginalize(J1(evidence, params), "isLong").score(desiredOutcome)
+           - biasPenalty*expectation(marginalize(J1(evidence, params), "bias" + agentNumeral),
+                         function(b) {return Math.abs(b)}));
+    return stickSubset;
+  }})
+});

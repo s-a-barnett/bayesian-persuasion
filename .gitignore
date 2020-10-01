@@ -456,3 +456,7 @@ vignettes/*.pdf
 
 # Parameter files
 exp0*.csv
+
+# Preliminary model comparison results
+rsa-hom-params-posterior.csv
+rsa-hom-scores.csv

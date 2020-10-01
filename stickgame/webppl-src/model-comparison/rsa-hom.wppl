@@ -1,0 +1,70 @@
+// prior over rsa hom model parameters
+var paramsPrior = function() {
+  // number of sticks modelled by judge
+  var nSticks = uniformDraw([2, 3, 4, 5]);
+  // fixed value of judge for S1 speaker
+  var agentBias = 10 * beta({a: 2, b: 5});
+  // variance for mean noise
+  var logitSigma = exponential({a: 10});
+  // proportion of participants that are J1 judges in the population
+  var levelMixture = beta({a: 1, b: 1});
+  return {
+    'nSticks': nSticks,
+    'agentBias': agentBias,
+    'logitSigma': logitSigma,
+    'levelMixture': levelMixture
+  };
+};
+
+var rsaHom = function(obs) {
+  var observe_fn = function(beliefs, params) {
+    if (beliefs.length > 2) {
+      // read single observation from overall observations
+      var stickLength = beliefs[1][0];
+      var subjectBelief = beliefs[1][1];
+      var evidence = [{'agentID': 'agent0', stickLength: [stickLength]}];
+      // determine whether observation treated by J0 or J1
+      var level = flip(params.levelMixture);
+      // compute belief in idealized model
+      var judgeDist = level ?
+        J1(evidence, params) :
+        J0(_.flatten(_.map(evidence, 'stickLength')), params);
+
+      var mean = Math.exp(marginalize(judgeDist, "isLong").score("long"));
+      // mu represents the mean of the normal distribution given by the logit
+      //   of the model belief
+      var mu = Math.log(mean) - Math.log(1-mean);
+      // people respond with 0's and 1's, so you have to make (a, b) broader than (0, 1)
+      // thought: choose a distribution with a fatter tail? truncated cauchy?
+      var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: -0.001, b: 1.001});
+
+      // in Gelman et al. notation, this is log(p(y_i | θ^s))
+      //   for i-th observation, s-th posterior sample
+      var pointScore = noiseDist.score(subjectBelief);
+
+      // write pointScore into separate external file
+      csv.writeLine(_.values(params).toString() + "," + pointScore, output_handle);
+
+      // factor and go to remaining observations
+      factor(pointScore);
+
+      observe_fn(rest(beliefs), params)
+    }
+  };
+
+  return Infer({method: 'MCMC', samples: 10, model: function() {
+    var params = paramsPrior();
+    observe_fn(obs, params, output_handle);
+    return params
+  }})
+};
+
+// read observations from csv file
+var obs = csv.read('data/rsa-hom-data.csv');
+
+// open pointScore file
+var output_handle = csv.open("results/rsa-hom-scores.csv");
+csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,score", output_handle);
+// write posterior distribution to new file
+csv.writeJoint(rsaHom(obs), "results/rsa-hom-params-posterior.csv");
+csv.close(output_handle);
