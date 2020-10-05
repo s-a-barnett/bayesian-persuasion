@@ -1,3 +1,9 @@
+var inferenceParams = {
+  samples: argv.samples,
+  burn: argv.burn,
+  verbose: (argv.verbose == 'true') // converting str to bool
+};
+
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // number of sticks modelled by judge
@@ -30,10 +36,10 @@ var rsaHom = function(obs) {
         J1(evidence, params) :
         J0(_.flatten(_.map(evidence, 'stickLength')), params);
 
-      var mean = Math.exp(marginalize(judgeDist, "isLong").score("long"));
+      var mean = marginalize(judgeDist, "isLong").score("long");
       // mu represents the mean of the normal distribution given by the logit
       //   of the model belief
-      var mu = Math.log(mean) - Math.log(1-mean);
+      var mu = mean - Math.log1p(-Math.exp(mean));
       // people respond with 0's and 1's, so you have to make (a, b) broader than (0, 1)
       // thought: choose a distribution with a fatter tail? truncated cauchy?
       var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: -0.001, b: 1.001});
@@ -43,7 +49,7 @@ var rsaHom = function(obs) {
       var pointScore = noiseDist.score(subjectBelief);
 
       // write pointScore into separate external file
-      csv.writeLine(_.values(params).toString() + "," + pointScore, output_handle);
+      csv.writeLine(_.values(params).toString() + "," + beliefs[1].toString() + "," + pointScore, output_handle);
 
       // factor and go to remaining observations
       factor(pointScore);
@@ -52,7 +58,9 @@ var rsaHom = function(obs) {
     }
   };
 
-  return Infer({method: 'MCMC', samples: 10, model: function() {
+  return Infer({method: 'MCMC', samples: inferenceParams.samples,
+    burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
+
     var params = paramsPrior();
     observe_fn(obs, params, output_handle);
     return params
@@ -64,7 +72,7 @@ var obs = csv.read('data/rsa-hom-data.csv');
 
 // open pointScore file
 var output_handle = csv.open("results/rsa-hom-scores.csv");
-csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,score", output_handle);
+csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,stickLength,subjectBelief,score", output_handle);
 // write posterior distribution to new file
 csv.writeJoint(rsaHom(obs), "results/rsa-hom-params-posterior.csv");
 csv.close(output_handle);
