@@ -79,7 +79,13 @@ var meetsTarget = function(stat, target) {
 
 // target is 'long' or 'short'
 // obs is a single stick value
+var cacheDict = {};
 var getJ0Score = function(target, obs, params) {
+  var key = params.nSticks + '_' + obs + '_' + target;
+  if(_.has(cacheDict, key)) {
+    return cacheDict[key];
+  } 
+
   var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
 
   var sum = -Infinity;
@@ -90,6 +96,7 @@ var getJ0Score = function(target, obs, params) {
       sum = numeric.logaddexp(sum, -params.nSticks * Math.log(possibleSticks.length));
     };
   };
+  cacheDict[key] = sum + Math.log(possibleSticks.length);
   return sum + Math.log(possibleSticks.length);
 };
 
@@ -116,7 +123,7 @@ var getS1Score = function(stick, sticks, params) {
 
 var getJ1Score = function(target, obs, params) {
   var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
-
+  
   var truth = -Infinity;
   var sum   = -Infinity;
   for (var i = 0; i < possibleStickSamples.length; i++) {

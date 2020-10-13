@@ -11,7 +11,7 @@ var paramsPrior = function() {
   // fixed value of judge for S1 speaker
   var agentBias = 10 * beta({a: 2, b: 5});
   // variance for mean noise
-  var logitSigma = exponential({a: 10});
+  var logitSigma = uniformDrift({a: 0, b: 2, width: .1})//exponential({a: 1});
   // proportion of participants that are J1 judges in the population
   var level = flip(.5) ? 'J1' : 'J0';//levelMixture = beta({a: 1, b: 1});
   return {
@@ -43,7 +43,7 @@ var rsaHom = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
-
+    globalStore.sum += pointScore;
     // write pointScore into separate external file
     // csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
     //               output_handle);
@@ -55,13 +55,19 @@ var rsaHom = function(obs, output_handle) {
     burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
 
     var params = paramsPrior();
-    if (inferenceParams.verbose) {
-      console.log(params);
-      console.log('here');
-    };
+
+    globalStore.sum = 0;
     mapData({data: obs}, function(datum) {
       observe_fn(datum, params);
     });
+
+    if (inferenceParams.verbose) {
+      console.log(params);
+      console.log(globalStore.sum);
+    };
+      csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
+                    output_handle);
+
     return params
   }})
 };
