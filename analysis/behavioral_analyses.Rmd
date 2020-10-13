@@ -89,7 +89,10 @@ d <- d_raw %>%
 d_mc <- d %>%
   filter(stimulus_type == 'isLong') %>%
   filter(stimulus_contestant == 'first') %>%
-  mutate(belief = response / 100) %>%
+  mutate(adjResponse = case_when(response == 100 ~ 99,
+                                response == 0 ~ 1,
+                                TRUE ~ response)) %>%
+  mutate(belief = adjResponse / 100) %>%
   select(agent1stick, belief) %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-hom-data.csv")
 ```
