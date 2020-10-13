@@ -24,34 +24,30 @@ var paramsPrior = function() {
 
 var rsaHom = function(obs, output_handle) {
   var observe_fn = function(datum, params) {
-      // read single observation from overall observations
+    // read single observation from overall observations
     var stickLength = _.toNumber(datum[0])
     var subjectBelief = _.toNumber(datum[1])
     var evidence = [{'agentID': 'agent0', stickLength: [stickLength]}];
-    // determine whether observation treated by J0 or J1
-    
+
     // compute belief in idealized model
-    var judgeDist = params.level == 'J1' ?
-        J1(evidence, params) :
-        J0(_.flatten(_.map(evidence, 'stickLength')), params);
-    var mean = marginalize(judgeDist, "isLong").score("long");
+    var mean = params.level == 'J1' ?
+        getJ1Score('long', stickLength, params) :
+        getJ0Score('long', stickLength, params) ;
+
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
     var mu = mean - Math.log1p(-Math.exp(mean));
-    // people respond with 0's and 1's, so you have to make (a, b) broader than (0, 1)
-    // thought: choose a distribution with a fatter tail? truncated cauchy?
 
-    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: -0.001, b: 1.001});
+    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
-//    console.log(pointScore)
+
     // write pointScore into separate external file
     // csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
     //               output_handle);
 
-    // factor and go to remaining observations
     factor(pointScore);
   };
 
@@ -59,18 +55,19 @@ var rsaHom = function(obs, output_handle) {
     burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
 
     var params = paramsPrior();
+    if (inferenceParams.verbose) {
       console.log(params);
-      console.log('here')
-      mapData({data: obs}, function(datum) {
-        //console.log(datum)
-        observe_fn(datum, params);
-      });
+      console.log('here');
+    };
+    mapData({data: obs}, function(datum) {
+      observe_fn(datum, params);
+    });
     return params
   }})
 };
 
-// read observations from csv file
-var obs = rest(csv.read('data/rsa-hom-data.csv'));
+// read observations from csv file (slice to skip header and empty final line)
+var obs = csv.read('data/rsa-hom-data.csv').slice(1, -1);
 
 // open pointScore file
 var output_handle = csv.open("results/rsa-hom-scores.csv");
