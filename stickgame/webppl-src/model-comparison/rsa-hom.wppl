@@ -11,9 +11,9 @@ var paramsPrior = function() {
   // fixed value of judge for S1 speaker
   var agentBias = 10 * beta({a: 2, b: 5});
   // variance for mean noise
-  var logitSigma = uniformDrift({a: 0, b: 2, width: .1})//exponential({a: 1});
-  // proportion of participants that are J1 judges in the population
-  var level = flip(.5) ? 'J1' : 'J0';//levelMixture = beta({a: 1, b: 1});
+  var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
+  // determines whether population treated as J0 or J1
+  var level = flip(.5) ? 'J1' : 'J0';
   return {
     'nSticks': nSticks,
     'agentBias': agentBias,
@@ -25,14 +25,13 @@ var paramsPrior = function() {
 var rsaHom = function(obs, output_handle) {
   var observe_fn = function(datum, params) {
     // read single observation from overall observations
-    var stickLength = _.toNumber(datum[0])
-    var subjectBelief = _.toNumber(datum[1])
-    var evidence = [{'agentID': 'agent0', stickLength: [stickLength]}];
+    var stickLength = _.toNumber(datum[0]);
+    var subjectBelief = _.toNumber(datum[1]);
 
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
-        getJ1Score('long', stickLength, params) :
-        getJ0Score('long', stickLength, params) ;
+        shared.getJ1Score('long', stickLength, params) :
+        shared.getJ0Score('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
@@ -43,10 +42,10 @@ var rsaHom = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
-    globalStore.sum += pointScore;
+    // globalStore.sum += pointScore;
     // write pointScore into separate external file
-    // csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
-    //               output_handle);
+    csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
+                  output_handle);
 
     factor(pointScore);
   };
@@ -56,17 +55,17 @@ var rsaHom = function(obs, output_handle) {
 
     var params = paramsPrior();
 
-    globalStore.sum = 0;
+    // globalStore.sum = 0;
     mapData({data: obs}, function(datum) {
       observe_fn(datum, params);
     });
 
     if (inferenceParams.verbose) {
       console.log(params);
-      console.log(globalStore.sum);
+      // console.log(globalStore.sum);
     };
-      csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
-                    output_handle);
+      // csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
+      //               output_handle);
 
     return params
   }})

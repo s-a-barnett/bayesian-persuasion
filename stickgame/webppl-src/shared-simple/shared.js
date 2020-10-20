@@ -1,3 +1,4 @@
+// lists ways of drawing k items from set (without replacement)
 function k_combinations(set, k) {
   var i, j, combs, head, tailcombs;
 
@@ -79,12 +80,11 @@ var meetsTarget = function(stat, target) {
 
 // target is 'long' or 'short'
 // obs is a single stick value
-var cacheDict = {};
 var getJ0Score = function(target, obs, params) {
   var key = params.nSticks + '_' + obs + '_' + target;
-  if(_.has(cacheDict, key)) {
-    return cacheDict[key];
-  } 
+  if (getJ0Score[key]) {
+    return getJ0Score[key];
+  };
 
   var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
 
@@ -96,12 +96,18 @@ var getJ0Score = function(target, obs, params) {
       sum = numeric.logaddexp(sum, -params.nSticks * Math.log(possibleSticks.length));
     };
   };
-  cacheDict[key] = sum + Math.log(possibleSticks.length);
-  return sum + Math.log(possibleSticks.length);
+
+  var score = sum + Math.log(possibleSticks.length);
+  getJ0Score[key] = score;
+  return score;
 };
 
 // stick must be in sticks
 var getS1Score = function(stick, sticks, params) {
+  var key = params.agentBias + '_' + stick + '_' + sticks;
+  if (getS1Score[key]) {
+    return getS1Score[key];
+  };
 
   // prevents lying leading to improper nonsense
   if (!_.includes(sticks, stick)) {
@@ -118,12 +124,20 @@ var getS1Score = function(stick, sticks, params) {
   for (var i = 1; i < sticks.length; i++) {
     sum = numeric.logaddexp(sum, utility(sticks[i]));
   };
-  return truth - sum;
+
+  var score = truth - sum;
+  getS1Score[key] = score;
+  return score;
 };
 
 var getJ1Score = function(target, obs, params) {
+  var key = params.nSticks + '_' + params.agentBias + '_' + obs + '_' + target;
+  if (getJ1Score[key]) {
+    return getJ1Score[key];
+  };
+
   var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
-  
+
   var truth = -Infinity;
   var sum   = -Infinity;
   for (var i = 0; i < possibleStickSamples.length; i++) {
@@ -134,7 +148,10 @@ var getJ1Score = function(target, obs, params) {
       truth = numeric.logaddexp(truth, getS1Score(obs, evidence, params));
     };
   };
-  return truth - sum;
+
+  var score = truth - sum;
+  getJ1Score[key] = score;
+  return score;
 };
 
 module.exports = {
