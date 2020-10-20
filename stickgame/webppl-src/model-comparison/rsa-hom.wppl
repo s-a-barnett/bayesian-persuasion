@@ -30,7 +30,7 @@ var rsaHom = function(obs, output_handle) {
 
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
-        shared.getJ1Score('long', stickLength, params) :
+        params.getJ1Score('long', stickLength, params) :
         shared.getJ0Score('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
@@ -42,8 +42,9 @@ var rsaHom = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
-    // globalStore.sum += pointScore;
+    globalStore.sum += pointScore;
     // write pointScore into separate external file
+
     csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
                   output_handle);
 
@@ -53,19 +54,22 @@ var rsaHom = function(obs, output_handle) {
   return Infer({method: 'MCMC', samples: inferenceParams.samples,
     burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
 
-    var params = paramsPrior();
+    var raw_params = paramsPrior();
+    var params = extend(raw_params, {
+      getJ1Score: shared.getJ1Score_generator(raw_params)
+    });
 
-    // globalStore.sum = 0;
+    globalStore.sum = 0;
     mapData({data: obs}, function(datum) {
       observe_fn(datum, params);
     });
 
     if (inferenceParams.verbose) {
-      console.log(params);
-      // console.log(globalStore.sum);
+      console.log(raw_params);
+      console.log(globalStore.sum);
     };
-      // csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
-      //               output_handle);
+    // csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
+    //               output_handle);
 
     return params
   }})

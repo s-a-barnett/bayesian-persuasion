@@ -103,57 +103,64 @@ var getJ0Score = function(target, obs, params) {
 };
 
 // stick must be in sticks
-var getS1Score = function(stick, sticks, params) {
-  var key = params.agentBias + '_' + stick + '_' + sticks;
-  if (getS1Score[key]) {
-    return getS1Score[key];
-  };
+var getS1Score_generator = function(params) {
+  var getS1Score = function(stick, sticks, params) {
+    var key = params.agentBias + '_' + stick + '_' + sticks;
+    if (getS1Score[key]) {
+      return getS1Score[key];
+    };
 
-  // prevents lying leading to improper nonsense
-  if (!_.includes(sticks, stick)) {
-    return -Infinity;
+    // prevents lying leading to improper nonsense
+    if (!_.includes(sticks, stick)) {
+      return -Infinity;
+    };
+    
+    var target = params.agentBias > 0 ? 'long' : 'short';
+    var utility = function(possibleStick) {
+      return Math.abs(params.agentBias) * getJ0Score(target, possibleStick, params);
+    };
+    var truth = utility(stick);
+    
+    var sum = utility(sticks[0]);
+    for (var i = 1; i < sticks.length; i++) {
+      sum = numeric.logaddexp(sum, utility(sticks[i]));
+    };
+    
+    var score = truth - sum;
+    getS1Score[key] = score;
+    return score;
   };
-
-  var target = params.agentBias > 0 ? 'long' : 'short';
-  var utility = function(possibleStick) {
-    return Math.abs(params.agentBias) * getJ0Score(target, possibleStick, params);
-  };
-  var truth = utility(stick);
-
-  var sum = utility(sticks[0]);
-  for (var i = 1; i < sticks.length; i++) {
-    sum = numeric.logaddexp(sum, utility(sticks[i]));
-  };
-
-  var score = truth - sum;
-  getS1Score[key] = score;
-  return score;
+  return getS1Score;
 };
 
-var getJ1Score = function(target, obs, params) {
-  var key = params.nSticks + '_' + params.agentBias + '_' + obs + '_' + target;
-  if (getJ1Score[key]) {
-    return getJ1Score[key];
-  };
-
-  var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
-
-  var truth = -Infinity;
-  var sum   = -Infinity;
-  for (var i = 0; i < possibleStickSamples.length; i++) {
-    var evidence = _.concat(obs, possibleStickSamples[i]);
-    sum = numeric.logaddexp(sum, getS1Score(obs, evidence, params));
-    var isLong = _.mean(evidence);
-    if (meetsTarget(isLong, target)) {
-      truth = numeric.logaddexp(truth, getS1Score(obs, evidence, params));
+var getJ1Score_generator = function(params) {
+  var getS1Score = getS1Score_generator(params);
+  var getJ1Score = function(target, obs, params) {
+    var key = params.nSticks + '_' + params.agentBias + '_' + obs + '_' + target;
+    if (getJ1Score[key]) {
+      return getJ1Score[key];
     };
+    
+    var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
+    
+    var truth = -Infinity;
+    var sum   = -Infinity;
+    for (var i = 0; i < possibleStickSamples.length; i++) {
+      var evidence = _.concat(obs, possibleStickSamples[i]);
+      sum = numeric.logaddexp(sum, getS1Score(obs, evidence, params));
+      var isLong = _.mean(evidence);
+      if (meetsTarget(isLong, target)) {
+        truth = numeric.logaddexp(truth, getS1Score(obs, evidence, params));
+      };
+    };
+    
+    var score = truth - sum;
+    getJ1Score[key] = score;
+    return score;
   };
-
-  var score = truth - sum;
-  getJ1Score[key] = score;
-  return score;
+  return getJ1Score;
 };
 
 module.exports = {
-  getJ0Score, getJ1Score
+  getJ0Score, getJ1Score_generator
 }
