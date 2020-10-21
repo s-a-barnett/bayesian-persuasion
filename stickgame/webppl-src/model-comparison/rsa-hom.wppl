@@ -45,14 +45,15 @@ var rsaHom = function(obs, output_handle) {
     globalStore.sum += pointScore;
     // write pointScore into separate external file
 
-    csv.writeLine(_.values(params).toString() + "," + datum.toString() + "," + pointScore,
+    csv.writeLine(_.values(_.omit(params, 'getJ1Score')).toString() + "," +
+                  datum.toString() + "," + pointScore,
                   output_handle);
 
     factor(pointScore);
   };
 
   return Infer({method: 'MCMC', samples: inferenceParams.samples,
-    burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
+                burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
 
     var raw_params = paramsPrior();
     var params = extend(raw_params, {
