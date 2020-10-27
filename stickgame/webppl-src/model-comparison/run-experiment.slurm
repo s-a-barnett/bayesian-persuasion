@@ -16,4 +16,4 @@ cd /home/samuelab/bayesian-persuasion/stickgame/webppl-src/model-comparison/
 mkdir -p /tigress/samuelab/bper/model-comparison/results/
 
 # Execute script
-srun sh rsa-hom.sh -s 10000 -b 1000 -l 5 -v false -o /tigress/samuelab/bper/model-comparison/results
+srun sh rsa-hom.sh -s 10000 -b 1000 -l 5 -v false -o /tigress/samuelab/bper/model-comparison/
