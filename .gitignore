@@ -459,4 +459,5 @@ exp0*.csv
 
 # Preliminary model comparison results
 rsa-hom-params-posterior.csv
-rsa-hom-scores.csv
+rsa-hom-pointScores.csv
+rsa-hom-sumScores.csv

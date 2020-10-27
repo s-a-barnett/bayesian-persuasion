@@ -1,7 +1,9 @@
 var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
-  verbose: (argv.verbose == 'true') // converting str to bool
+  lag: argv.lag,
+  verbose: (argv.verbose == 'true'), // converting str to bool
+  out: argv.out
 };
 
 // prior over rsa hom model parameters
@@ -23,6 +25,7 @@ var paramsPrior = function() {
 };
 
 var rsaHom = function(obs, output_handle) {
+
   var observe_fn = function(datum, params) {
     // read single observation from overall observations
     var stickLength = _.toNumber(datum[0]);
@@ -43,8 +46,8 @@ var rsaHom = function(obs, output_handle) {
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
     globalStore.sum += pointScore;
-    // write pointScore into separate external file
 
+    // write pointScore into separate external file
     csv.writeLine(_.values(_.omit(params, 'getJ1Score')).toString() + "," +
                   datum.toString() + "," + pointScore,
                   output_handle);
@@ -52,8 +55,12 @@ var rsaHom = function(obs, output_handle) {
     factor(pointScore);
   };
 
-  return Infer({method: 'MCMC', samples: inferenceParams.samples,
-                burn: inferenceParams.burn, verbose: inferenceParams.verbose, model: function() {
+  return Infer({method: 'MCMC',
+                samples: inferenceParams.samples,
+                burn: inferenceParams.burn,
+                lag: inferenceParams.lag,
+                verbose: inferenceParams.verbose,
+                model: function() {
 
     var raw_params = paramsPrior();
     var params = extend(raw_params, {
@@ -69,10 +76,11 @@ var rsaHom = function(obs, output_handle) {
       console.log(raw_params);
       console.log(globalStore.sum);
     };
-    // csv.writeLine(_.values(params).toString() + "," + globalStore.sum,
-    //               output_handle);
 
-    return params
+    csv.writeLine(_.values(raw_params).toString() + "," + globalStore.sum,
+                  sumScore_handle);
+
+    return raw_params
   }})
 };
 
@@ -80,8 +88,14 @@ var rsaHom = function(obs, output_handle) {
 var obs = csv.read('data/rsa-hom-data.csv').slice(1, -1);
 
 // open pointScore file
-var output_handle = csv.open("results/rsa-hom-scores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-hom-pointScores.csv");
 csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,stickLength,subjectBelief,score", output_handle);
+
+// open sumScore file
+var sumScore_handle = csv.open(inferenceParams.out + "results/rsa-hom-sumScores.csv");
+csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,score", sumScore_handle);
+
 // write posterior distribution to new file
-csv.writeJoint(rsaHom(obs, output_handle), "results/rsa-hom-params-posterior.csv");
+csv.writeJoint(rsaHom(obs, output_handle), inferenceParams.out + "results/rsa-hom-params-posterior.csv");
 csv.close(output_handle);
+csv.close(sumScore_handle);
