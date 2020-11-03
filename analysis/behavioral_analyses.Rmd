@@ -97,6 +97,28 @@ d_mc <- d %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-hom-data.csv")
 ```
 
+## Pull table with agent1stick, belief values, and first chosen stick
+
+```{r}
+d_cs <- d %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  filter(stimulus_contestant == 'first') %>%
+  mutate(firstStick = as.numeric(substring(chosenStick, 0, 1)) / 10) %>%
+  select(gameid, firstStick) 
+
+d_het <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  mutate(adjResponse = case_when(response == 100 ~ 99,
+                                response == 0 ~ 1,
+                                TRUE ~ response)) %>%
+  mutate(belief = adjResponse / 100) %>%
+  select(gameid, agent1stick, belief) %>%
+  left_join(d_cs) %>%
+  select(agent1stick, belief, firstStick) %>%
+  write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
+```
+
 ## Inspect frequency of different sequences on speaker trials
 
 ```{r}

@@ -233,5 +233,5 @@ var getS2Score_generator = function(params) {
 };
 
 module.exports = {
-  getJ0Score, getJ1Score_generator, getS2Score_generator
+  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator
 };

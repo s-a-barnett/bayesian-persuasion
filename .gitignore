@@ -458,6 +458,6 @@ vignettes/*.pdf
 exp0*.csv
 
 # Preliminary model comparison results
-rsa-hom-params-posterior.csv
-rsa-hom-pointScores.csv
-rsa-hom-sumScores.csv
+rsa-*-params-posterior.csv
+rsa-*-pointScores.csv
+rsa-*-sumScores.csv

@@ -1,0 +1,119 @@
+var inferenceParams = {
+  samples: argv.samples,
+  burn: argv.burn,
+  lag: argv.lag,
+  verbose: (argv.verbose == 'true'), // converting str to bool
+  out: argv.out
+};
+
+// prior over rsa het model parameters
+var paramsPrior = function() {
+  // number of sticks modelled by judge
+  var nSticks = uniformDraw([2, 3, 4, 5]);
+  // fixed value of judge for S1 speaker, and S1/S2 speaker bias
+  var agentBias = 10 * beta({a: 2, b: 5});
+  // fixed value of penalty for S2 speaker
+  var biasPenalty = 10 * beta({a: 2, b: 5});
+  // variance for mean noise
+  var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
+  // determines whether population treated as J0 or J1
+  var level = flip(.5) ? 'J1' : 'J0';
+  return {
+    'nSticks': nSticks,
+    'agentBias': agentBias,
+    'biasPenalty': biasPenalty,
+    'logitSigma': logitSigma,
+    'level': level
+  };
+};
+
+// choice of sticks for speaker trial in experiment
+var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
+
+var rsaHet = function(obs, output_handle) {
+
+  var observe_fn = function(datum, params) {
+    // read single observation from overall observations
+    var stickLength   = _.toNumber(datum[0]);
+    var subjectBelief = _.toNumber(datum[1]);
+    var speakerStick  = _.toNumber(datum[2]);
+
+    var speakerScore = params.level == 'J1' ?
+        params.getS2Score(speakerStick, speakerOptions, params.speaker_params) :
+        params.getS1Score(speakerStick, speakerOptions, params.speaker_params) ;
+
+    factor(speakerScore);
+
+    // compute belief in idealized model
+    var mean = params.level == 'J1' ?
+        params.getJ1Score('long', stickLength, params) :
+        shared.getJ0Score('long', stickLength, params) ;
+
+    // mu represents the mean of the normal distribution given by the logit
+    //   of the model belief
+    var mu = mean - Math.log1p(-Math.exp(mean));
+
+    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+
+    // in Gelman et al. notation, this is log(p(y_i | θ^s))
+    //   for i-th observation, s-th posterior sample
+    var pointScore = noiseDist.score(subjectBelief);
+    globalStore.sum += pointScore;
+
+    // write pointScore into separate external file
+    csv.writeLine(_.values(_.omit(params, ['getJ1Score', 'getS1Score', 'getS2Score', 'speaker_params'])).toString() + "," +
+                  datum.toString() + "," + pointScore,
+                  output_handle);
+
+    factor(pointScore);
+  };
+
+  return Infer({method: 'MCMC',
+                samples: inferenceParams.samples,
+                burn: inferenceParams.burn,
+                lag: inferenceParams.lag,
+                verbose: inferenceParams.verbose,
+                model: function() {
+
+    var raw_params = paramsPrior();
+    var speaker_params = _.set(JSON.parse(JSON.stringify(raw_params)), 'nSticks', 5);
+
+    var params = extend(raw_params, {
+      speaker_params: speaker_params,
+      getJ1Score: shared.getJ1Score_generator(raw_params),
+      getS1Score: shared.getS1Score_generator(speaker_params),
+      getS2Score: shared.getS2Score_generator(speaker_params)
+    });
+
+    globalStore.sum = 0;
+    mapData({data: obs}, function(datum) {
+      observe_fn(datum, params);
+    });
+
+    if (inferenceParams.verbose) {
+      console.log(raw_params);
+      console.log(globalStore.sum);
+    };
+
+    csv.writeLine(_.values(raw_params).toString() + "," + globalStore.sum,
+                  sumScore_handle);
+
+    return raw_params;
+  }})
+};
+
+// read observations from csv file (slice to skip header and empty final line)
+var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+
+// open pointScore file
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
+csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,stickLength,subjectBelief,speakerStick,score", output_handle);
+
+// open sumScore file
+var sumScore_handle = csv.open(inferenceParams.out + "results/rsa-het-sumScores.csv");
+csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,score", sumScore_handle);
+
+// write posterior distribution to new file
+csv.writeJoint(rsaHet(obs, output_handle), inferenceParams.out + "results/rsa-het-params-posterior.csv");
+csv.close(output_handle);
+csv.close(sumScore_handle);
