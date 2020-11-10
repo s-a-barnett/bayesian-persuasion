@@ -55,16 +55,15 @@ var rsaHet = function(obs, output_handle) {
     model: function() {
       var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
       var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
+      var sharedParams = {groupWeight, logitSigma};
+      
       var groupParams = {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-
-      var sharedParams = {groupWeight, logitSigma};
-
-      globalStore.sum = 0;
-      mapData({data: obs}, function(datum) {
-        var level = flip(sharedParams.groupWeight) ? 'J1' : 'J0';
+      var levels = repeat(obs.length, function(){return flip() ? 'J1' : 'J0'});
+      mapData({data: obs}, function(datum, i) {
+        var level = levels[i];
         var datumParams = extend(sharedParams, groupParams[level], {level});
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
@@ -73,7 +72,6 @@ var rsaHet = function(obs, output_handle) {
       csv.writeLine(_.values(sharedParams).toString() + "," +
                     _.values(_.omit(groupParams['J0'], ['getJ1Score'])).toString() + "," +
                     _.values(_.omit(groupParams['J1'], ['getJ1Score'])).toString() + "," +
-                    globalStore.sum,
                     sumScore_handle);
 
       query.add('J0nSticks', groupParams['J0'].nSticks)
