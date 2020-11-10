@@ -10,27 +10,17 @@ var inferenceParams = {
 var groupPrior = function(group) {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : 10 * beta({a: 2, b: 5})   // fixed value of judge for S1 speaker, and S1/S2 speaker bias
+    agentBias : 10 * beta({a: 2, b: 5})   // fixed value of judge for S1 speaker
   };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
-
-// choice of sticks for speaker trial in experiment
-var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
 
 var rsaHet = function(obs, output_handle) {
 
   var observe_fn = function(datum, params) {
     // read single observation from overall observations
-    var stickLength   = _.toNumber(datum[0]);
-    var subjectBelief = _.toNumber(datum[1]);
-    var speakerStick  = _.toNumber(datum[2]);
-    
-    // var speakerScore = params.level == 'J1' ?
-    //     params.getS2Score(speakerStick, speakerOptions, params.speaker_params) :
-    //     params.getS1Score(speakerStick, speakerOptions, params.speaker_params) ;
-
-    //factor(speakerScore);
+    var stickLength   = _.toNumber(datum[1]);
+    var subjectBelief = _.toNumber(datum[2]);
 
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
@@ -49,8 +39,8 @@ var rsaHet = function(obs, output_handle) {
     globalStore.sum += pointScore;
 
     // write pointScore into separate external file
-    csv.writeLine(_.values(_.omit(params, ['getJ1Score', 'getS1Score', 'getS2Score', 'speaker_params'])).toString() + "," +
-                  datum.toString() + "," + pointScore,
+    csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
+                  datum[0] + ',' + datum[1] + ',' + datum[2] + "," + pointScore,
                   output_handle);
 
     factor(pointScore);
@@ -69,26 +59,25 @@ var rsaHet = function(obs, output_handle) {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      //var speaker_params = extend(raw_params, {'nSticks': 5});
 
       var sharedParams = {groupWeight, logitSigma};
 
       globalStore.sum = 0;
-      globalStore.gameid = 0;
       mapData({data: obs}, function(datum) {
         var level = flip(sharedParams.groupWeight) ? 'J1' : 'J0';
         var datumParams = extend(sharedParams, groupParams[level], {level});
-        //query.add('p' + datum.gameid, level);
-        globalStore.gameid += 1;
+        query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
       });
-      
+
       csv.writeLine(_.values(sharedParams).toString() + "," +
-                    _.values(groupParams).toString() + "," +
+                    _.values(_.omit(groupParams['J0'], ['getJ1Score'])).toString() + "," +
+                    _.values(_.omit(groupParams['J1'], ['getJ1Score'])).toString() + "," +
                     globalStore.sum,
                     sumScore_handle);
+
       query.add('J0nSticks', groupParams['J0'].nSticks)
-      query.add('J1nSticks', groupParams['J1'].nSticks)      
+      query.add('J1nSticks', groupParams['J1'].nSticks)
       query.add('J0agentBias', groupParams['J0'].agentBias)
       query.add('J1agentBias', groupParams['J1'].agentBias)
       query.add('logitSigma', sharedParams.logitSigma)
@@ -102,13 +91,13 @@ var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
-csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,stickLength,subjectBelief,speakerStick,score", output_handle);
+csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,score", output_handle);
 
 // open sumScore file
 var sumScore_handle = csv.open(inferenceParams.out + "results/rsa-het-sumScores.csv");
-csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,score", sumScore_handle);
+csv.writeLine("groupWeight,logitSigma,J0nSticks,J0agentBias,J1nSticks,J1agentBias,score", sumScore_handle);
 
 // write posterior distribution to new file
-csv.writeJoint(rsaHet(obs, output_handle), inferenceParams.out + "results/rsa-het-params-posterior.csv");
+csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-params-posterior.csv");
 csv.close(output_handle);
 csv.close(sumScore_handle);

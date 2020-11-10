@@ -115,7 +115,7 @@ d_het <- d %>%
   mutate(belief = adjResponse / 100) %>%
   select(gameid, agent1stick, belief) %>%
   left_join(d_cs) %>%
-  select(agent1stick, belief, firstStick) %>%
+  select(gameid, agent1stick, belief, firstStick) %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
 ```
 
