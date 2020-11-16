@@ -6,14 +6,9 @@ var inferenceParams = {
   out: argv.out
 };
 
-// open sumScore file
-var sumScore_handle = csv.open(inferenceParams.out + "results/rsa-het-sumScores.csv");
-csv.writeLine("groupWeight,logitSigma,J0nSticks,J0agentBias,J1nSticks,J1agentBias,score", sumScore_handle);
-
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
 csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,score", output_handle);
-
 
 // prior over rsa het model parameters
 var groupPrior = function(group) {
@@ -48,9 +43,6 @@ var rsaHet = function(obs, output_handle) {
     globalStore.sum += pointScore;
 
     // write pointScore into separate external file
-    // console.log(datum);
-    // console.log(_.isInteger(output_handle));
-    // console.log(_.values(_.omit(params, ['getJ1Score'])).toString());
     csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
                   datum[0] + ',' + datum[1] + ',' + datum[2] + "," + pointScore,
                   output_handle);
@@ -68,7 +60,7 @@ var rsaHet = function(obs, output_handle) {
       var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
       var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
       var sharedParams = {groupWeight, logitSigma};
-      
+
       var groupParams = {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
@@ -80,13 +72,6 @@ var rsaHet = function(obs, output_handle) {
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
       });
-
-      // console.log(sumScore_handle)
-      // console.log(sumScore_handle)      
-      // csv.writeLine(_.values(sharedParams).toString() + "," +
-      //               _.values(_.omit(groupParams['J0'], ['getJ1Score'])).toString() + "," +
-      //               _.values(_.omit(groupParams['J1'], ['getJ1Score'])).toString() + "," +
-      //               sumScore_handle);
 
       query.add('J0nSticks', groupParams['J0'].nSticks)
       query.add('J1nSticks', groupParams['J1'].nSticks)
@@ -104,4 +89,3 @@ var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 // write posterior distribution to new file
 csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-params-posterior.csv");
 csv.close(output_handle);
-csv.close(sumScore_handle);
