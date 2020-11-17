@@ -104,13 +104,14 @@ var getS1Score_generator = function(params) {
 var normalize = function(dist, sum) {
   var normalizeScalar = function(point) {
     point['score'] = point['score'] - sum;
-    return point
+    return point;
   };
-  return _.map(dist, normalizeScalar)
+  return _.map(dist, normalizeScalar);
 };
 
-// returns array of shape (2, possibleBiases.length), with each entry representing
+// returns array with list of objects giving the scores
 //   log p_{J1}(target, possibleBias)
+//   for each target and possible bias value
 // obs is a single value
 var getJ1Joint = function(obs, params) {
 

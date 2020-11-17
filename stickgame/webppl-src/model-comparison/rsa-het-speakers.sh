@@ -11,5 +11,5 @@ do
   esac
 done
 
-webppl rsa-het.wppl --require ../shared-simple --require webppl-csv \
+webppl rsa-het-speakers.wppl --require ../shared-simple --require webppl-csv \
   -- --samples $SAMPLES --burn $BURN --verbose $VERBOSE --lag $LAG --out $OUT
