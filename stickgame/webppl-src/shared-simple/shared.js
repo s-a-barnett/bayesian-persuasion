@@ -233,6 +233,23 @@ var getS2Score_generator = function(params) {
   return getS2Score;
 };
 
+// function that returns the number of times it has previously been called
+var iterationTracker = function() {
+  if (_.isFinite(iterationTracker['iter'])) {
+    iterationTracker['iter'] += 1;
+  } else {
+    iterationTracker['iter'] = 0;
+  };
+  return iterationTracker['iter'];
+};
+
+// determines whether iteration should be recorded
+var isRecordedIter = function(iter, burn, lag) {
+  var cond1 = iter >= burn;
+  var cond2 = ((iter - burn) % (lag + 1)) == 0;
+  return (cond1 && cond2);
+};
+
 module.exports = {
-  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator
+  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator, iterationTracker, isRecordedIter
 };

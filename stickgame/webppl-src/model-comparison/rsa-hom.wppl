@@ -6,6 +6,8 @@ var inferenceParams = {
   out: argv.out
 };
 
+var numObs = 725;
+
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // number of sticks modelled by judge
@@ -47,10 +49,14 @@ var rsaHom = function(obs, output_handle) {
     var pointScore = noiseDist.score(subjectBelief);
     globalStore.sum += pointScore;
 
+    var iter = _.floor(shared.iterationTracker() / obs.length);
+
     // write pointScore into separate external file
-    csv.writeLine(_.values(_.omit(params, 'getJ1Score')).toString() + "," +
-                  datum.toString() + "," + pointScore,
-                  output_handle);
+    if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
+      csv.writeLine(_.values(_.omit(params, 'getJ1Score')).toString() + "," +
+                    datum.toString() + "," + pointScore,
+                    output_handle);
+    };
 
     factor(pointScore);
   };

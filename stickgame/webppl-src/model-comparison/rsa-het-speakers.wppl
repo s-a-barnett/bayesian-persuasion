@@ -51,12 +51,15 @@ var rsaHet = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
-    globalStore.sum += pointScore;
+
+    var iter = _.floor(shared.iterationTracker() / obs.length);
 
     // write pointScore into separate external file
-    csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
-                  datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + datum[3] +"," + pointScore,
-                  output_handle);
+    if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
+      csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
+                    datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + datum[3] +"," + pointScore,
+                    output_handle);
+    };
 
     factor(pointScore);
   };
