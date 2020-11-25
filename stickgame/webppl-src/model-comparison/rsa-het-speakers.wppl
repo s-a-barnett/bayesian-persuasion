@@ -79,15 +79,16 @@ var rsaHet = function(obs, output_handle) {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      var levels = repeat(obs.length, function(){return flip() ? 'J1' : 'J0'});
+      var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
         var speakerParams = _.set(JSON.parse(JSON.stringify(datumParams)), 'nSticks', 5);
         var speakerParams = extend(speakerParams, {
-                                    getS1Score: shared.getS1Score_generator(speakerParams),
-                                    getS2Score: shared.getS2Score_generator(speakerParams)});
-
+          getS1Score: shared.getS1Score_generator(speakerParams),
+          getS2Score: shared.getS2Score_generator(speakerParams)
+        });
+        
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams, speakerParams);
       });
