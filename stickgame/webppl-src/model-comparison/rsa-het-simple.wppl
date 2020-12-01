@@ -51,6 +51,7 @@ var rsaHet = function(obs, output_handle) {
     };
 
     factor(pointScore);
+    globalStore.totalScore += pointScore;
   };
 
   return Infer({
@@ -61,14 +62,16 @@ var rsaHet = function(obs, output_handle) {
     verbose: inferenceParams.verbose,
     model: function() {
       var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
-      var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
+      var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      var levels = repeat(obs.length, function(){return flip() ? 'J1' : 'J0'});
+      var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
+      globalStore.totalScore = 0;
+        
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
@@ -76,6 +79,11 @@ var rsaHet = function(obs, output_handle) {
         observe_fn(datum, datumParams);
       });
 
+      var iter = _.floor(shared.iterationTracker() / obs.length);
+      if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
+        console.log(globalStore.totalScore);
+      }
+      
       query.add('J0nSticks', groupParams['J0'].nSticks)
       query.add('J1nSticks', groupParams['J1'].nSticks)
       query.add('J0agentBias', groupParams['J0'].agentBias)
