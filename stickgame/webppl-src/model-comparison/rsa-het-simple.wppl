@@ -14,7 +14,7 @@ csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength
 var groupPrior = function(group) {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : 10 * beta({a: 2, b: 5})   // fixed value of judge for S1 speaker
+    agentBias : uniformDrift({a: 0, b: 10, width: 1})   // fixed value of judge for S1 speaker
   };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
@@ -40,18 +40,22 @@ var rsaHet = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
+    globalStore.totalScore += pointScore;
 
-    var iter = _.floor(shared.iterationTracker() / obs.length);
+    var iter = shared.iterationTracker() / obs.length;
+    var floor_iter = _.floor(iter);
 
     // write pointScore into separate external file
-    if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
+    if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
       csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
                     datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + pointScore,
                     output_handle);
+      if (floor_iter + 1 == iter + (1/obs.length)) {
+        console.log(globalStore.totalScore);
+      };
     };
 
     factor(pointScore);
-    globalStore.totalScore += pointScore;
   };
 
   return Infer({
@@ -71,7 +75,7 @@ var rsaHet = function(obs, output_handle) {
       };
       var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
       globalStore.totalScore = 0;
-        
+
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
@@ -79,11 +83,6 @@ var rsaHet = function(obs, output_handle) {
         observe_fn(datum, datumParams);
       });
 
-      var iter = _.floor(shared.iterationTracker() / obs.length);
-      if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
-        console.log(globalStore.totalScore);
-      }
-      
       query.add('J0nSticks', groupParams['J0'].nSticks)
       query.add('J1nSticks', groupParams['J1'].nSticks)
       query.add('J0agentBias', groupParams['J0'].agentBias)

@@ -14,8 +14,8 @@ csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,biasPenalty,level,gameid
 var groupPrior = function(group) {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : 10 * beta({a: 2, b: 5}),   // fixed value of judge for S1/S2 speaker
-    biasPenalty : 10 * beta({a: 2, b: 5}) // fixed value of penalty for S2 speaker
+    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+    biasPenalty : uniformDrift({a: 0, b: 10, width: 1}) // fixed value of penalty for S2 speaker
   };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
@@ -51,14 +51,19 @@ var rsaHet = function(obs, output_handle) {
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
     var pointScore = noiseDist.score(subjectBelief);
+    globalStore.totalScore += pointScore;
 
-    var iter = _.floor(shared.iterationTracker() / obs.length);
+    var iter = shared.iterationTracker() / obs.length;
+    var floor_iter = _.floor(iter);
 
     // write pointScore into separate external file
-    if (shared.isRecordedIter(iter, inferenceParams.burn, inferenceParams.lag)) {
+    if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
       csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
                     datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + datum[3] +"," + pointScore,
                     output_handle);
+      if (floor_iter + 1 == iter + (1/obs.length)) {
+        console.log(globalStore.totalScore);
+      };
     };
 
     factor(pointScore);
@@ -72,7 +77,7 @@ var rsaHet = function(obs, output_handle) {
     verbose: inferenceParams.verbose,
     model: function() {
       var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
-      var logitSigma = uniformDrift({a: 0, b: 2, width: .1});
+      var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
@@ -80,6 +85,8 @@ var rsaHet = function(obs, output_handle) {
         'J1' : groupPrior('J1')
       };
       var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
+      globalStore.totalScore = 0;
+
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
@@ -88,7 +95,7 @@ var rsaHet = function(obs, output_handle) {
           getS1Score: shared.getS1Score_generator(speakerParams),
           getS2Score: shared.getS2Score_generator(speakerParams)
         });
-        
+
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams, speakerParams);
       });
