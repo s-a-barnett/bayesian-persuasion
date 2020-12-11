@@ -255,7 +255,7 @@ var iterationTracker = function() {
 
 // determines whether iteration should be recorded
 var isRecordedIter = function(iter, burn, lag) {
-  var cond1 = iter >= burn;
+  var cond1 = iter > burn;
   var cond2 = ((iter - burn) % (lag + 1)) == 0;
   return (cond1 && cond2);
 };
