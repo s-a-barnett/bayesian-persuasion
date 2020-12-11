@@ -43,6 +43,16 @@ var meetsTarget = function(stat, target) {
 };
 
 // target is 'long' or 'short'
+// obs is a single stick value
+var getAAScore = function(target, obs, params) {
+
+  var strength = 1 / (1 + Math.exp(-params.gradient * (obs - 0.5)));
+  var pLong = 0.5 + 0.5 * (strength - params.threshold);
+  var logProb = target == 'long' ? Math.log(pLong) : Math.log(1-pLong);
+  return logProb;
+};
+
+// target is 'long' or 'short'
 // obs is a single stick value or array of values
 var getJ0Score = function(target, obs, params) {
 
@@ -251,5 +261,5 @@ var isRecordedIter = function(iter, burn, lag) {
 };
 
 module.exports = {
-  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator, iterationTracker, isRecordedIter
+  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator, iterationTracker, isRecordedIter, getAAScore
 };
