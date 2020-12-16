@@ -1,0 +1,153 @@
+var inferenceParams = {
+  samples: argv.samples,
+  burn: argv.burn,
+  lag: argv.lag,
+  verbose: (argv.verbose == 'true'), // converting str to bool
+  out: argv.out
+};
+
+// open pointScore file
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointScores.csv");
+csv.writeLine(
+  "groupWeight_J0S0,groupWeight_J0S1,groupWeight_J0S2,groupWeight_J1S0,groupWeight_J1S1,groupWeight_J1S2," +
+  "logitSigma,nSticks,agentBias,biasPenalty,judgeLevel,speakerLevel,gameid,stickLength,subjectBelief,speakerStick,score",
+  output_handle);
+
+// prior over rsa het model parameters
+var groupPrior = function() {
+  var params = {
+    nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1 speaker
+    biasPenalty : uniformDrift({a: 0, b: 10, width: 1}) // fixed value of penalty for S2 speaker
+  };
+  return extend(params, {
+    getJ1Score: shared.getJ1Score_generator(params),
+    getS1Score: shared.getS1Score_generator(extend(params, {nSticks: 5})),
+    getS2Score: shared.getS2Score_generator(extend(params, {nSticks: 5}))
+  });
+};
+
+// choice of sticks for speaker trial in experiment
+var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
+
+var rsaHet = function(obs, output_handle) {
+
+  var observe_fn = function(datum, params) {
+    // read single observation from overall observations
+    var stickLength   = _.toNumber(datum[1]);
+    var subjectBelief = _.toNumber(datum[2]);
+    var speakerStick  = _.toNumber(datum[3]);
+
+    var speakerScore = params.speakerLevel == 'S2' ?
+          params.getS2Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
+                       params.speakerLevel == 'S1' ?
+          params.getS1Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
+          - Math.log(speakerOptions.length);
+
+    factor(speakerScore);
+
+    // compute belief in idealized model
+    var mean = params.judgeLevel == 'J1' ?
+        params.getJ1Score('long', stickLength, params) :
+        shared.getJ0Score('long', stickLength, params) ;
+
+    // mu represents the mean of the normal distribution given by the logit
+    //   of the model belief
+    var mu = mean - Math.log1p(-Math.exp(mean));
+
+    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+
+    // in Gelman et al. notation, this is log(p(y_i | θ^s))
+    //   for i-th observation, s-th posterior sample
+    var pointScore = noiseDist.score(subjectBelief);
+    globalStore.totalScore += pointScore;
+
+    var iter = shared.iterationTracker() / obs.length;
+    var floor_iter = _.floor(iter);
+
+    // write pointScore into separate external file
+    if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
+      csv.writeLine(_.values(_.omit(params, ['level', 'getJ1Score', 'getS1Score', 'getS2Score'])).toString() + "," +
+                    datum.toString() + ',' + pointScore,
+                    output_handle);
+      if (floor_iter + 1 == iter + (1/obs.length)) {
+        console.log(globalStore.totalScore);
+      };
+    };
+
+    factor(pointScore);
+  };
+
+  return Infer({
+    method: 'MCMC',
+    samples: inferenceParams.samples,
+    burn: inferenceParams.burn,
+    lag: inferenceParams.lag,
+    verbose: inferenceParams.verbose,
+    model: function() {
+      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1])}).data);
+      var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
+      var sharedParams = {groupWeight, logitSigma};
+
+      var groupParams = {
+        'J0S0' : groupPrior(),
+        'J0S1' : groupPrior(),
+        'J0S2' : groupPrior(),
+        'J1S0' : groupPrior(),
+        'J1S1' : groupPrior(),
+        'J1S2' : groupPrior()
+      };
+
+      var levels = repeat(obs.length, function() {
+        return categorical({ps: groupWeight, vs: ['J0S0', 'J0S1', 'J0S2', 'J1S0', 'J1S1', 'J1S2']});
+      });
+
+      globalStore.totalScore = 0;
+
+      mapData({data: obs}, function(datum, i) {
+        var level = levels[i].toString();
+        var judgeLevel = level.slice(0, 2);
+        var speakerLevel = level.slice(2);
+        var datumParams = extend(sharedParams, groupParams[level], {judgeLevel, speakerLevel});
+        query.add('p' + datum[0], level);
+        observe_fn(datum, datumParams);
+      });
+
+      query.add('J0S0nSticks', groupParams['J0S0'].nSticks)
+      query.add('J0S1nSticks', groupParams['J0S1'].nSticks)
+      query.add('J0S2nSticks', groupParams['J0S2'].nSticks)
+      query.add('J1S0nSticks', groupParams['J1S0'].nSticks)
+      query.add('J1S1nSticks', groupParams['J1S1'].nSticks)
+      query.add('J1S2nSticks', groupParams['J1S2'].nSticks)
+
+      query.add('J0S0agentBias', groupParams['J0S0'].agentBias)
+      query.add('J0S1agentBias', groupParams['J0S1'].agentBias)
+      query.add('J0S2agentBias', groupParams['J0S2'].agentBias)
+      query.add('J1S0agentBias', groupParams['J1S0'].agentBias)
+      query.add('J1S1agentBias', groupParams['J1S1'].agentBias)
+      query.add('J1S2agentBias', groupParams['J1S2'].agentBias)
+
+      query.add('J0S0biasPenalty', groupParams['J0S0'].biasPenalty)
+      query.add('J0S1biasPenalty', groupParams['J0S1'].biasPenalty)
+      query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty)
+      query.add('J1S0biasPenalty', groupParams['J1S0'].biasPenalty)
+      query.add('J1S1biasPenalty', groupParams['J1S1'].biasPenalty)
+      query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty)
+
+      query.add('logitSigma', sharedParams.logitSigma)
+      query.add('groupWeight_J0S0', sharedParams.groupWeight[0])
+      query.add('groupWeight_J0S1', sharedParams.groupWeight[1])
+      query.add('groupWeight_J0S2', sharedParams.groupWeight[2])
+      query.add('groupWeight_J1S0', sharedParams.groupWeight[3])
+      query.add('groupWeight_J1S1', sharedParams.groupWeight[4])
+      query.add('groupWeight_J1S2', sharedParams.groupWeight[5])
+      return query;
+    }})
+};
+
+// read observations from csv file (slice to skip header and empty final line)
+var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+
+// write posterior distribution to new file
+csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-indep-params-posterior.csv");
+csv.close(output_handle);

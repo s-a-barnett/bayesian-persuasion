@@ -8,24 +8,16 @@ var inferenceParams = {
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
-csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,judgeLevel,speakerLevel,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
+csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function() {
+var groupPrior = function(group) {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1 speaker
-    biasPenalty : uniformDrift({a: 0, b: 10, width: 1}) // fixed value of penalty for S2 speaker
+    agentBias : uniformDrift({a: 0, b: 10, width: 1})   // fixed value of judge for S1 speaker
   };
-  return extend(params, {
-    getJ1Score: shared.getJ1Score_generator(params),
-    getS1Score: shared.getS1Score_generator(extend(params, {nSticks: 5})),
-    getS2Score: shared.getS2Score_generator(extend(params, {nSticks: 5}))
-  });
+  return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
-
-// choice of sticks for speaker trial in experiment
-var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
 
 var rsaHet = function(obs, output_handle) {
 
@@ -33,18 +25,9 @@ var rsaHet = function(obs, output_handle) {
     // read single observation from overall observations
     var stickLength   = _.toNumber(datum[1]);
     var subjectBelief = _.toNumber(datum[2]);
-    var speakerStick  = _.toNumber(datum[3]);
-
-    var speakerScore = params.speakerLevel == 'S2' ?
-          params.getS2Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
-                       params.speakerLevel == 'S1' ?
-          params.getS1Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
-          - Math.log(speakerOptions.length);
-
-    factor(speakerScore);
 
     // compute belief in idealized model
-    var mean = params.judgeLevel == 'J1' ?
+    var mean = params.level == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
         shared.getJ0Score('long', stickLength, params) ;
 
@@ -64,8 +47,8 @@ var rsaHet = function(obs, output_handle) {
 
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(_.values(_.omit(params, ['level', 'getJ1Score', 'getS1Score', 'getS2Score'])).toString() + "," +
-                    datum.toString() + ',' + pointScore,
+      csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
+                    datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + pointScore,
                     output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
@@ -82,55 +65,28 @@ var rsaHet = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1])}).data);
+      var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
       var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
-        'J0S0' : groupPrior(),
-        'J0S1' : groupPrior(),
-        'J0S2' : groupPrior(),
-        'J1S0' : groupPrior(),
-        'J1S1' : groupPrior(),
-        'J1S2' : groupPrior()
+        'J0' : groupPrior('J0'),
+        'J1' : groupPrior('J1')
       };
-
-      var levels = repeat(obs.length, function() {
-        return categorical({ps: groupWeight, vs: ['J0S0', 'J0S1', 'J0S2', 'J1S0', 'J1S1', 'J1S2']});
-      });
-
+      var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
       globalStore.totalScore = 0;
 
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
-        var judgeLevel = level.slice(0, 2);
-        var speakerLevel = level.slice(2);
-        var datumParams = extend(sharedParams, groupParams[level], {judgeLevel, speakerLevel});
+        var datumParams = extend(sharedParams, groupParams[level], {level});
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
       });
 
-      query.add('J0S0nSticks', groupParams['J0S0'].nSticks)
-      query.add('J0S1nSticks', groupParams['J0S1'].nSticks)
-      query.add('J0S2nSticks', groupParams['J0S2'].nSticks)
-      query.add('J1S0nSticks', groupParams['J1S0'].nSticks)
-      query.add('J1S1nSticks', groupParams['J1S1'].nSticks)
-      query.add('J1S2nSticks', groupParams['J1S2'].nSticks)
-
-      query.add('J0S0agentBias', groupParams['J0S0'].agentBias)
-      query.add('J0S1agentBias', groupParams['J0S1'].agentBias)
-      query.add('J0S2agentBias', groupParams['J0S2'].agentBias)
-      query.add('J1S0agentBias', groupParams['J1S0'].agentBias)
-      query.add('J1S1agentBias', groupParams['J1S1'].agentBias)
-      query.add('J1S2agentBias', groupParams['J1S2'].agentBias)
-
-      query.add('J0S0biasPenalty', groupParams['J0S0'].biasPenalty)
-      query.add('J0S1biasPenalty', groupParams['J0S1'].biasPenalty)
-      query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty)
-      query.add('J1S0biasPenalty', groupParams['J1S0'].biasPenalty)
-      query.add('J1S1biasPenalty', groupParams['J1S1'].biasPenalty)
-      query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty)
-
+      query.add('J0nSticks', groupParams['J0'].nSticks)
+      query.add('J1nSticks', groupParams['J1'].nSticks)
+      query.add('J0agentBias', groupParams['J0'].agentBias)
+      query.add('J1agentBias', groupParams['J1'].agentBias)
       query.add('logitSigma', sharedParams.logitSigma)
       query.add('groupWeight', sharedParams.groupWeight)
       return query;
