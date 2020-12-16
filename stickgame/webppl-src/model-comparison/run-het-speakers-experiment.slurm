@@ -16,4 +16,4 @@ cd /home/samuelab/bayesian-persuasion/stickgame/webppl-src/model-comparison/
 mkdir -p /tigress/samuelab/bper/model-comparison/results/
 
 # Execute script
-srun sh rsa-het-speakers.sh -s 10000 -b 1000 -l 200 -v false -o /tigress/samuelab/bper/model-comparison/
+srun sh infer-params.sh -m rsa-het-speakers -s 10000 -b 1000 -l 200 -v false -o /tigress/samuelab/bper/model-comparison/

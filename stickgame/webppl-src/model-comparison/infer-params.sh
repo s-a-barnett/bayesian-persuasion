@@ -1,8 +1,9 @@
 #!/bin/bash
-while getopts s:b:v:l:o: option
+while getopts m:s:b:v:l:o: option
 do
   case "${option}"
     in
+    m) MODEL=${OPTARG};;
     s) SAMPLES=${OPTARG};;
     b) BURN=${OPTARG};;
     v) VERBOSE=${OPTARG};;
@@ -11,5 +12,5 @@ do
   esac
 done
 
-webppl rsa-het-speakers.wppl --require ../shared-simple --require webppl-csv \
+webppl $MODEL.wppl --require ../shared-simple --require webppl-csv \
   -- --samples $SAMPLES --burn $BURN --verbose $VERBOSE --lag $LAG --out $OUT
