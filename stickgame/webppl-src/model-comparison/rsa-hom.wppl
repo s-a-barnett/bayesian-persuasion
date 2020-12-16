@@ -6,8 +6,6 @@ var inferenceParams = {
   out: argv.out
 };
 
-var numObs = 725;
-
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // number of sticks modelled by judge
@@ -17,26 +15,44 @@ var paramsPrior = function() {
   // variance for mean noise
   var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
   // determines whether population treated as J0 or J1
-  var level = flip(.5) ? 'J1' : 'J0';
+  var judgeLevel = flip(.5) ? 'J1' : 'J0';
+  // determines whether population treated as S0, S1, or S2
+  var speakerLevel = uniformDraw(['S0', 'S1', 'S2']);
+  // fixed value of penalty for S2 speaker
+  var biasPenalty = uniformDrift({a: 0, b: 10, width: 1});
   return {
     'nSticks': nSticks,
     'agentBias': agentBias,
     'logitSigma': logitSigma,
-    'level': level
+    'judgeLevel': judgeLevel,
+    'speakerLevel': speakerLevel,
+    'biasPenalty': biasPenalty
   };
 };
 
+// choice of sticks for speaker trial in experiment
+var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
+
 var rsaHom = function(obs, output_handle) {
 
-  var observe_fn = function(datum, params) {
+  var observe_fn = function(datum, params, sParams) {
     // read single observation from overall observations
-    var stickLength = _.toNumber(datum[0]);
-    var subjectBelief = _.toNumber(datum[1]);
+    var stickLength   = _.toNumber(datum[1]);
+    var subjectBelief = _.toNumber(datum[2]);
+    var speakerStick  = _.toNumber(datum[3]);
 
     // compute belief in idealized model
-    var mean = params.level == 'J1' ?
+    var mean = params.judgeLevel == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
         shared.getJ0Score('long', stickLength, params) ;
+
+    var speakerScore = sParams.speakerLevel == 'S2' ?
+          sParams.getS2Score(speakerStick, speakerOptions, sParams) :
+                       sParams.speakerLevel == 'S1' ?
+          sParams.getS1Score(speakerStick, speakerOptions, sParams) :
+          - Math.log(sParams.nSticks);
+
+    factor(speakerScore);
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
@@ -77,9 +93,15 @@ var rsaHom = function(obs, output_handle) {
       getJ1Score: shared.getJ1Score_generator(raw_params)
     });
 
+    var raw_sParams = _.set(JSON.parse(JSON.stringify(raw_params)), 'nSticks', 5);
+    var sParams = extend(raw_sParams, {
+      getS1Score: shared.getS1Score_generator(raw_sParams),
+      getS2Score: shared.getS2Score_generator(raw_sParams)
+    });
+
     globalStore.totalScore = 0;
     mapData({data: obs}, function(datum) {
-      observe_fn(datum, params);
+      observe_fn(datum, params, sParams);
     });
 
     return raw_params
@@ -87,11 +109,11 @@ var rsaHom = function(obs, output_handle) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-hom-data.csv').slice(1, -1);
+var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-hom-pointScores.csv");
-csv.writeLine("nSticks,agentBias,logitSigma,levelMixture,stickLength,subjectBelief,score", output_handle);
+csv.writeLine("nSticks,agentBias,logitSigma,judgeLevel,speakerLevel,biasPenalty,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
 
 // write posterior distribution to new file
 csv.writeJoint(rsaHom(obs, output_handle), inferenceParams.out + "results/rsa-hom-params-posterior.csv");
