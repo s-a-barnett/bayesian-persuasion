@@ -11,7 +11,7 @@ var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speaker-poin
 csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,biasPenalty,level,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function(group) {
+var groupPrior = function() {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
     agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
@@ -20,26 +20,17 @@ var groupPrior = function(group) {
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
-// choice of sticks for speaker trial in experiment
-var speakerOptions = [0.2, 0.4, 0.7, 0.8, 0.9];
-
 var rsaHet = function(obs, output_handle) {
 
-  var observe_fn = function(datum, params, sParams) {
+  var observe_fn = function(datum, params) {
     // read single observation from overall observations
     var stickLength   = _.toNumber(datum[1]);
     var subjectBelief = _.toNumber(datum[2]);
     var speakerStick  = _.toNumber(datum[3]);
 
-    var speakerScore = sParams.level == 'J1' ?
-        sParams.getS2Score(speakerStick, speakerOptions, sParams) :
-        sParams.getS1Score(speakerStick, speakerOptions, sParams) ;
-
-    factor(speakerScore);
-
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
-        params.getJ1Score('long', stickLength, params) :
+        params.getJ1Score('long', stickLength, extend(params, {agentBias: speakerStick * params.agentBias})) :
         shared.getJ0Score('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
@@ -59,7 +50,7 @@ var rsaHet = function(obs, output_handle) {
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
       csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
-                    datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + datum[3] +"," + pointScore,
+                    datum.toString() + "," + pointScore,
                     output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
@@ -81,8 +72,8 @@ var rsaHet = function(obs, output_handle) {
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
-        'J0' : groupPrior('J0'),
-        'J1' : groupPrior('J1')
+        'J0' : groupPrior(),
+        'J1' : groupPrior()
       };
       var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
       globalStore.totalScore = 0;
@@ -90,14 +81,9 @@ var rsaHet = function(obs, output_handle) {
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
-        var speakerParams = _.set(JSON.parse(JSON.stringify(datumParams)), 'nSticks', 5);
-        var speakerParams = extend(speakerParams, {
-          getS1Score: shared.getS1Score_generator(speakerParams),
-          getS2Score: shared.getS2Score_generator(speakerParams)
-        });
 
         query.add('p' + datum[0], level);
-        observe_fn(datum, datumParams, speakerParams);
+        observe_fn(datum, datumParams);
       });
 
       query.add('J0nSticks', groupParams['J0'].nSticks)
@@ -108,6 +94,7 @@ var rsaHet = function(obs, output_handle) {
       query.add('J1biasPenalty', groupParams['J1'].biasPenalty)
       query.add('logitSigma', sharedParams.logitSigma)
       query.add('groupWeight', sharedParams.groupWeight)
+      
       return query;
     }})
 };

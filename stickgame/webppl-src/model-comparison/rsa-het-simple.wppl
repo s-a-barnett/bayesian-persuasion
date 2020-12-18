@@ -11,7 +11,7 @@ var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.
 csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function(group) {
+var groupPrior = function() {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
     agentBias : uniformDrift({a: 0, b: 10, width: 1})   // fixed value of judge for S1 speaker
@@ -70,8 +70,8 @@ var rsaHet = function(obs, output_handle) {
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
-        'J0' : groupPrior('J0'),
-        'J1' : groupPrior('J1')
+        'J0' : groupPrior(),
+        'J1' : groupPrior()
       };
       var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
       globalStore.totalScore = 0;
