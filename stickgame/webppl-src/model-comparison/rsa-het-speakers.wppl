@@ -26,11 +26,10 @@ var rsaHet = function(obs, output_handle) {
     // read single observation from overall observations
     var stickLength   = _.toNumber(datum[1]);
     var subjectBelief = _.toNumber(datum[2]);
-    var speakerStick  = _.toNumber(datum[3]);
-
+           
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
-        params.getJ1Score('long', stickLength, extend(params, {agentBias: speakerStick * params.agentBias})) :
+        params.getJ1Score('long', stickLength, params) :
         shared.getJ0Score('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
@@ -67,15 +66,34 @@ var rsaHet = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
-      var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
-      var sharedParams = {groupWeight, logitSigma};
+      var logitSigma = 1;
+      var sharedParams = {logitSigma};
 
       var groupParams = {
         'J0' : groupPrior(),
         'J1' : groupPrior()
       };
-      var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
+
+      var speakerSticks = map(function(o){return o[3];}, obs);
+      var means = {
+        '0.9' : uniformDrift({a: 0, b: 1, width: .1}),
+        '0.8' : uniformDrift({a: 0, b: 1, width: .1}),
+        '0.7' : uniformDrift({a: 0, b: 1, width: .1}),
+      };
+
+      query.add('J0nSticks', groupParams['J0'].nSticks)
+      query.add('J1nSticks', groupParams['J1'].nSticks)
+      query.add('J0agentBias', groupParams['J0'].agentBias)
+      query.add('J1agentBias', groupParams['J1'].agentBias)
+      query.add('J0biasPenalty', groupParams['J0'].biasPenalty)
+      query.add('J1biasPenalty', groupParams['J1'].biasPenalty)
+      query.add('logitSigma', sharedParams.logitSigma)
+      query.add('groupWeight-0.9', means['0.9'])
+      query.add('groupWeight-0.8', means['0.8'])
+      query.add('groupWeight-0.7', means['0.7'])
+      console.log(query)
+      var levels = map(function(stick){return flip(means[stick]) ? 'J1' : 'J0'}, speakerSticks);
+
       globalStore.totalScore = 0;
 
       mapData({data: obs}, function(datum, i) {
@@ -86,21 +104,12 @@ var rsaHet = function(obs, output_handle) {
         observe_fn(datum, datumParams);
       });
 
-      query.add('J0nSticks', groupParams['J0'].nSticks)
-      query.add('J1nSticks', groupParams['J1'].nSticks)
-      query.add('J0agentBias', groupParams['J0'].agentBias)
-      query.add('J1agentBias', groupParams['J1'].agentBias)
-      query.add('J0biasPenalty', groupParams['J0'].biasPenalty)
-      query.add('J1biasPenalty', groupParams['J1'].biasPenalty)
-      query.add('logitSigma', sharedParams.logitSigma)
-      query.add('groupWeight', sharedParams.groupWeight)
-      
       return query;
     }})
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
 csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-speaker-params-posterior.csv");
