@@ -8,14 +8,13 @@ var inferenceParams = {
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speaker-pointScores.csv");
-csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,biasPenalty,level,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
+csv.writeLine("logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
 
 // prior over rsa het model parameters
 var groupPrior = function() {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
     agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
-    biasPenalty : uniformDrift({a: 0, b: 10, width: 1}) // fixed value of penalty for S2 speaker
   };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
@@ -26,7 +25,7 @@ var rsaHet = function(obs, output_handle) {
     // read single observation from overall observations
     var stickLength   = _.toNumber(datum[1]);
     var subjectBelief = _.toNumber(datum[2]);
-           
+
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
@@ -79,19 +78,21 @@ var rsaHet = function(obs, output_handle) {
         '0.9' : uniformDrift({a: 0, b: 1, width: .1}),
         '0.8' : uniformDrift({a: 0, b: 1, width: .1}),
         '0.7' : uniformDrift({a: 0, b: 1, width: .1}),
+        '0.4' : uniformDrift({a: 0, b: 1, width: .1}),
+        '0.2' : uniformDrift({a: 0, b: 1, width: .1}),
       };
 
-      query.add('J0nSticks', groupParams['J0'].nSticks)
-      query.add('J1nSticks', groupParams['J1'].nSticks)
-      query.add('J0agentBias', groupParams['J0'].agentBias)
-      query.add('J1agentBias', groupParams['J1'].agentBias)
-      query.add('J0biasPenalty', groupParams['J0'].biasPenalty)
-      query.add('J1biasPenalty', groupParams['J1'].biasPenalty)
-      query.add('logitSigma', sharedParams.logitSigma)
-      query.add('groupWeight-0.9', means['0.9'])
-      query.add('groupWeight-0.8', means['0.8'])
-      query.add('groupWeight-0.7', means['0.7'])
-      console.log(query)
+      query.add('J0nSticks', groupParams['J0'].nSticks);
+      query.add('J1nSticks', groupParams['J1'].nSticks);
+      query.add('J0agentBias', groupParams['J0'].agentBias);
+      query.add('J1agentBias', groupParams['J1'].agentBias);
+      query.add('logitSigma', sharedParams.logitSigma);
+      query.add('groupWeight-0.9', means['0.9']);
+      query.add('groupWeight-0.8', means['0.8']);
+      query.add('groupWeight-0.7', means['0.7']);
+      query.add('groupWeight-0.4', means['0.4']);
+      query.add('groupWeight-0.2', means['0.2']);
+
       var levels = map(function(stick){return flip(means[stick]) ? 'J1' : 'J0'}, speakerSticks);
 
       globalStore.totalScore = 0;
@@ -109,7 +110,7 @@ var rsaHet = function(obs, output_handle) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
+var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
 csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-speaker-params-posterior.csv");

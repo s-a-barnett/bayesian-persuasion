@@ -243,6 +243,35 @@ var getS2Score_generator = function(params) {
   return getS2Score;
 };
 
+var getJ2Score_generator = function(params) {
+  var getS2Score = getS2Score_generator(params);
+  var getJ2Score = function(target, obs, params) {
+    var key = params.nSticks + '_' + params.agentBias + '_' + obs + '_' + target;
+    if (getJ2Score[key]) {
+      return getJ2Score[key];
+    };
+
+    var possibleStickSamples = repeated_k_combinations(possibleSticks, params.nSticks-1);
+
+    var truth = -Infinity;
+    var sum   = -Infinity;
+    for (var i = 0; i < possibleStickSamples.length; i++) {
+      var evidence = _.concat(obs, possibleStickSamples[i]);
+      var speakerScore = getS2Score(obs, evidence, params);
+      sum = numeric.logaddexp(sum, speakerScore);
+      var isLong = _.mean(evidence);
+      if (meetsTarget(isLong, target)) {
+        truth = numeric.logaddexp(truth, speakerScore);
+      };
+    };
+
+    var score = truth - sum;
+    getJ2Score[key] = score;
+    return score;
+  };
+  return getJ2Score;
+};
+
 // function that returns the number of times it has previously been called
 var iterationTracker = function() {
   if (_.isFinite(iterationTracker['iter'])) {
@@ -261,5 +290,6 @@ var isRecordedIter = function(iter, burn, lag) {
 };
 
 module.exports = {
-  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator, iterationTracker, isRecordedIter, getAAScore
+  getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator,
+  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore
 };
