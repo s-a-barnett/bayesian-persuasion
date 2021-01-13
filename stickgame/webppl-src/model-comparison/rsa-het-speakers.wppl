@@ -8,14 +8,19 @@ var inferenceParams = {
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speaker-pointScores.csv");
-csv.writeLine("logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
+csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function() {
-  var params = {
-    nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
-  };
+var groupPrior = function(model) {
+  var params = model == 'J1' ? {
+      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+      agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+    } :
+    {
+      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+      agentBias : 0,
+    }
+  ;
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
@@ -47,9 +52,7 @@ var rsaHet = function(obs, output_handle) {
 
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
-                    datum.toString() + "," + pointScore,
-                    output_handle);
+      csv.writeLine(datum[0] + "," + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
       };
@@ -69,8 +72,8 @@ var rsaHet = function(obs, output_handle) {
       var sharedParams = {logitSigma};
 
       var groupParams = {
-        'J0' : groupPrior(),
-        'J1' : groupPrior()
+        'J0' : groupPrior('J0'),
+        'J1' : groupPrior('J1')
       };
 
       var speakerSticks = map(function(o){return o[3];}, obs);
@@ -81,17 +84,6 @@ var rsaHet = function(obs, output_handle) {
         '0.4' : uniformDrift({a: 0, b: 1, width: .1}),
         '0.2' : uniformDrift({a: 0, b: 1, width: .1}),
       };
-
-      query.add('J0nSticks', groupParams['J0'].nSticks);
-      query.add('J1nSticks', groupParams['J1'].nSticks);
-      query.add('J0agentBias', groupParams['J0'].agentBias);
-      query.add('J1agentBias', groupParams['J1'].agentBias);
-      query.add('logitSigma', sharedParams.logitSigma);
-      query.add('groupWeight-0.9', means['0.9']);
-      query.add('groupWeight-0.8', means['0.8']);
-      query.add('groupWeight-0.7', means['0.7']);
-      query.add('groupWeight-0.4', means['0.4']);
-      query.add('groupWeight-0.2', means['0.2']);
 
       var levels = map(function(stick){return flip(means[stick]) ? 'J1' : 'J0'}, speakerSticks);
 
@@ -104,6 +96,15 @@ var rsaHet = function(obs, output_handle) {
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
       });
+
+      query.add('J0nSticks', groupParams['J0'].nSticks);
+      query.add('J1nSticks', groupParams['J1'].nSticks);
+      query.add('J1agentBias', groupParams['J1'].agentBias);
+      query.add('groupWeight-0.9', means['0.9']);
+      query.add('groupWeight-0.8', means['0.8']);
+      query.add('groupWeight-0.7', means['0.7']);
+      query.add('groupWeight-0.4', means['0.4']);
+      query.add('groupWeight-0.2', means['0.2']);
 
       return query;
     }})
