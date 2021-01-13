@@ -8,10 +8,7 @@ var inferenceParams = {
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointScores.csv");
-csv.writeLine(
-  "groupWeight_J0S0,groupWeight_J0S1,groupWeight_J0S2,groupWeight_J1S0,groupWeight_J1S1,groupWeight_J1S2," +
-  "logitSigma,nSticks,agentBias,biasPenalty,judgeLevel,speakerLevel,gameid,stickLength,subjectBelief,speakerStick,score",
-  output_handle);
+csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
 var groupPrior = function() {
@@ -67,9 +64,7 @@ var rsaHet = function(obs, output_handle) {
 
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(_.values(_.omit(params, ['level', 'getJ1Score', 'getS1Score', 'getS2Score'])).toString() + "," +
-                    datum.toString() + ',' + pointScore,
-                    output_handle);
+      csv.writeLine(datum[0] + ',' + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
       };
