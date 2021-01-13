@@ -8,14 +8,19 @@ var inferenceParams = {
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
-csv.writeLine("groupWeight,logitSigma,nSticks,agentBias,level,gameid,stickLength,subjectBelief,score", output_handle);
+csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function(group) {
-  var params = {
-    nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : uniformDrift({a: 0, b: 10, width: 1})   // fixed value of judge for S1 speaker
-  };
+var groupPrior = function(model) {
+  var params = model == 'J1' ? {
+      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+      agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+    } :
+    {
+      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+      agentBias : 0,
+    }
+  ;
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
@@ -47,9 +52,7 @@ var rsaHet = function(obs, output_handle) {
 
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(_.values(_.omit(params, ['getJ1Score'])).toString() + "," +
-                    datum[0] + ',' + datum[1] + ',' + datum[2] + ',' + pointScore,
-                    output_handle);
+      csv.writeLine(datum[0] + ',' + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
       };
@@ -66,7 +69,7 @@ var rsaHet = function(obs, output_handle) {
     verbose: inferenceParams.verbose,
     model: function() {
       var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
-      var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
+      var logitSigma = 1;
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
@@ -85,9 +88,7 @@ var rsaHet = function(obs, output_handle) {
 
       query.add('J0nSticks', groupParams['J0'].nSticks)
       query.add('J1nSticks', groupParams['J1'].nSticks)
-      query.add('J0agentBias', groupParams['J0'].agentBias)
       query.add('J1agentBias', groupParams['J1'].agentBias)
-      query.add('logitSigma', sharedParams.logitSigma)
       query.add('groupWeight', sharedParams.groupWeight)
       return query;
     }})

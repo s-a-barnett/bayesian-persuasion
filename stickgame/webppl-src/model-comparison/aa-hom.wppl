@@ -13,7 +13,7 @@ var paramsPrior = function() {
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = 0.5;
   // variance for mean noise
-  var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
+  var logitSigma = 1;
   return {
     'gradient': gradient,
     'threshold': threshold,
@@ -47,9 +47,7 @@ var aaHom = function(obs, output_handle) {
 
     // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(_.values(params).toString() + "," +
-                    datum.toString() + "," + pointScore,
-                    output_handle);
+      csv.writeLine(datum[0] + "," + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         // console.log(globalStore.totalScore);
       };
@@ -81,7 +79,7 @@ var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
 var output_handle = csv.open(inferenceParams.out + "results/aa-hom-pointScores.csv");
-csv.writeLine("gradient,threshold,logitSigma,gameid,stickLength,subjectBelief,speakerStick,score", output_handle);
+csv.writeLine("gameid,score", output_handle);
 
 // write posterior distribution to new file
 csv.writeJoint(aaHom(obs, output_handle), inferenceParams.out + "results/aa-hom-params-posterior.csv");
