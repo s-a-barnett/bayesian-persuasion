@@ -456,3 +456,4 @@ vignettes/*.pdf
 
 # Parameter files
 exp0*.csv
+waic-scores.csv

@@ -7,7 +7,7 @@ var inferenceParams = {
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-simple-pointScores.csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
@@ -110,5 +110,5 @@ var rsaHet = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-params-posterior.csv");
+csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-simple-params-posterior.csv");
 csv.close(output_handle);

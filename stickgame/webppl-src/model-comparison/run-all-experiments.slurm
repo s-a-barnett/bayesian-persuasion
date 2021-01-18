@@ -20,5 +20,10 @@ mkdir -p /tigress/samuelab/bper/model-comparison/results/
 
 while IFS="," read -r model
 do
-  srun sh infer-params.sh -m $model -s 10000 -b 1000 -l 200 -v false -o /tigress/samuelab/bper/model-comparison/
+  if [ $model != "rsa-hom" ]
+  then
+    srun sh infer-params.sh -m $model -s 10000 -b 1000 -l 200 -v false -o /tigress/samuelab/bper/model-comparison/
+  else
+    srun sh infer-params.sh -m $model -s 10000 -b 1000 -l 20 -v false -o /tigress/samuelab/bper/model-comparison/
+  fi
 done < <(cut -d "," -f$SLURM_ARRAY_TASK_ID model-list.csv)
