@@ -7,20 +7,21 @@ var inferenceParams = {
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-simple-pointScores.csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
-      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-      agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
-    } :
-    {
-      nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-      agentBias : 0,
-    }
-  ;
+              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+              agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+            } : model == 'J0' ? {
+              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+              agentBias : 0,
+            } : {
+              nSticks: 5,
+              agentBias: 0,
+            };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
@@ -34,13 +35,17 @@ var rsaHet = function(obs, output_handle) {
     // compute belief in idealized model
     var mean = params.level == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
-        shared.getJ0Score('long', stickLength, params) ;
+               params.level == 'J0' ?
+        shared.getJ0Score('long', stickLength, params) :
+        0.5;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
     var mu = mean - Math.log1p(-Math.exp(mean));
 
-    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+    var noiseDist = params.level == 'noise' ?
+      Uniform({a: 0., b: 1.}) :
+      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
@@ -68,15 +73,19 @@ var rsaHet = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = uniformDrift({a: 0, b: 1, width: .1});
+      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data);
       var logitSigma = 1;
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
+        'noise' : groupPrior('noise'),
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      var levels = repeat(obs.length, function(){return flip(groupWeight) ? 'J1' : 'J0'});
+
+      var levels = repeat(obs.length, function() {
+        return categorical({ps: groupWeight, vs: ['noise', 'J0', 'J1']})
+      });
       globalStore.totalScore = 0;
 
       mapData({data: obs}, function(datum, i) {
@@ -86,10 +95,13 @@ var rsaHet = function(obs, output_handle) {
         observe_fn(datum, datumParams);
       });
 
-      query.add('J0nSticks', groupParams['J0'].nSticks)
-      query.add('J1nSticks', groupParams['J1'].nSticks)
-      query.add('J1agentBias', groupParams['J1'].agentBias)
-      query.add('groupWeight', sharedParams.groupWeight)
+      query.add('J0nSticks', groupParams['J0'].nSticks);
+      query.add('J1nSticks', groupParams['J1'].nSticks);
+      query.add('J1agentBias', groupParams['J1'].agentBias);
+      query.add('groupWeight-noise', sharedParams.groupWeight[0]);
+      query.add('groupWeight-J0', sharedParams.groupWeight[1]);
+      query.add('groupWeight-J1', sharedParams.groupWeight[2]);
+
       return query;
     }})
 };
@@ -98,5 +110,5 @@ var rsaHet = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-params-posterior.csv");
+csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-simple-params-posterior.csv");
 csv.close(output_handle);
