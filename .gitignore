@@ -458,3 +458,4 @@ vignettes/*.pdf
 exp0*.csv
 waic-scores.csv
 map-params.csv
+beliefs-J?.csv
