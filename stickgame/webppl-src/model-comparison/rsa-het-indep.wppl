@@ -11,11 +11,11 @@ var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointS
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
-var groupPrior = function() {
+var groupPrior = function(model) {
   var params = {
     nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1 speaker
-    biasPenalty : uniformDrift({a: 0, b: 10, width: 1}) // fixed value of penalty for S2 speaker
+    agentBias : model != 'J0S0' ? uniformDrift({a: 0, b: 10, width: 1}) : 0.,   // fixed value of judge for S1 speaker
+    biasPenalty : _.includes(['J0S2', 'J1S2'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0. // fixed value of penalty for S2 speaker
   };
   return extend(params, {
     getJ1Score: shared.getJ1Score_generator(params),
@@ -85,12 +85,12 @@ var rsaHet = function(obs, output_handle) {
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
-        'J0S0' : groupPrior(),
-        'J0S1' : groupPrior(),
-        'J0S2' : groupPrior(),
-        'J1S0' : groupPrior(),
-        'J1S1' : groupPrior(),
-        'J1S2' : groupPrior()
+        'J0S0' : groupPrior('J0S0'),
+        'J0S1' : groupPrior('J0S1'),
+        'J0S2' : groupPrior('J0S2'),
+        'J1S0' : groupPrior('J1S0'),
+        'J1S1' : groupPrior('J1S1'),
+        'J1S2' : groupPrior('J1S2')
       };
 
       var levels = repeat(obs.length, function() {
@@ -115,18 +115,13 @@ var rsaHet = function(obs, output_handle) {
       query.add('J1S1nSticks', groupParams['J1S1'].nSticks)
       query.add('J1S2nSticks', groupParams['J1S2'].nSticks)
 
-      query.add('J0S0agentBias', groupParams['J0S0'].agentBias)
       query.add('J0S1agentBias', groupParams['J0S1'].agentBias)
       query.add('J0S2agentBias', groupParams['J0S2'].agentBias)
       query.add('J1S0agentBias', groupParams['J1S0'].agentBias)
       query.add('J1S1agentBias', groupParams['J1S1'].agentBias)
       query.add('J1S2agentBias', groupParams['J1S2'].agentBias)
 
-      query.add('J0S0biasPenalty', groupParams['J0S0'].biasPenalty)
-      query.add('J0S1biasPenalty', groupParams['J0S1'].biasPenalty)
       query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty)
-      query.add('J1S0biasPenalty', groupParams['J1S0'].biasPenalty)
-      query.add('J1S1biasPenalty', groupParams['J1S1'].biasPenalty)
       query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty)
 
       query.add('logitSigma', sharedParams.logitSigma)
