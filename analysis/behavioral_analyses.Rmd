@@ -119,6 +119,55 @@ d_het <- d %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
 ```
 
+# Pull MAP levels
+
+```{r}
+d_levels <- read_csv('../stickgame/webppl-src/model-comparison/map-levels.csv') %>%
+  mutate(gameid = substr(param, 2, 100)) %>%
+  select(gameid, val)
+
+gameids_rsa <- d_levels %>%
+  filter(val %in% c("J1", "J0")) %>%
+  pull(gameid)
+
+d_het_rsa <- d_het %>%
+  filter(gameid %in% gameids_rsa) %>%
+  left_join(filter(d_levels, gameid %in% gameids_rsa))
+
+d_rsa <- d_het_rsa %>%
+  select(agent1stick, val, belief) %>%
+  group_by(agent1stick, val) %>%
+  tidyboot::tidyboot_mean(belief) %>%
+  rename(level = val)
+
+beliefs_j1 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J1.csv") %>%
+  mutate(belief = prob / 100) %>%
+  mutate(level = "J1") %>%
+  select(stick, belief, level) %>%
+  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
+
+beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %>%
+  mutate(belief = prob / 100) %>%
+  mutate(level = "J0") %>%
+  select(stick, belief, level) %>%
+  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
+
+model_beliefs <- full_join(beliefs_j0, beliefs_j1)
+```
+
+```{r}
+ggplot() +
+  geom_point(data=d_rsa, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_rsa, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 0.5, linetype = 'dotted') +
+  geom_line(data=(model_beliefs), aes(x=stick, y=belief)) +
+  facet_grid( ~ level) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6,0.9)+
+  ylim(0,1)
+```
+
 ## Inspect frequency of different sequences on speaker trials
 
 ```{r}
