@@ -13,12 +13,13 @@ csv.writeLine("gameid,score", output_handle);
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = {
-    nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-    agentBias : model != 'J0S0' ? uniformDrift({a: 0, b: 10, width: 1}) : 0.,   // fixed value of judge for S1 speaker
-    biasPenalty : _.includes(['J0S2', 'J1S2'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0. // fixed value of penalty for S2 speaker
+    nSticks : model != 'noiseS0' ? uniformDraw([2, 3, 4, 5]) : 5,  // number of sticks modelled by judge
+    agentBias : !_.includes(['noiseS0', 'J0S0'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0.,   // fixed value of judge for S1 speaker
+    biasPenalty : _.includes(['J0S2', 'J1S2', 'J2S0', 'J2S1', 'J2S2'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0. // fixed value of penalty for S2 speaker
   };
   return extend(params, {
     getJ1Score: shared.getJ1Score_generator(params),
+    getJ2Score: shared.getJ2Score_generator(params),
     getS1Score: shared.getS1Score_generator(extend(params, {nSticks: 5})),
     getS2Score: shared.getS2Score_generator(extend(params, {nSticks: 5}))
   });
@@ -44,15 +45,21 @@ var rsaHet = function(obs, output_handle) {
     factor(speakerScore);
 
     // compute belief in idealized model
-    var mean = params.judgeLevel == 'J1' ?
+    var mean = params.judgeLevel == 'J2' ?
+        params.getJ2Score('long', stickLength, params) :
+               params.judgeLevel == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
-        shared.getJ0Score('long', stickLength, params) ;
+               params.judgeLevel == 'J0' ?
+        shared.getJ0Score('long', stickLength, params) :
+        0.5;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
     var mu = mean - Math.log1p(-Math.exp(mean));
 
-    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+    var noiseDist = params.judgeLevel == 'noise' ?
+      Uniform({a: 0., b: 1.}) :
+      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
@@ -80,57 +87,85 @@ var rsaHet = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1])}).data);
+      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])}).data);
       var logitSigma = 1;//uniformDrift({a: 0, b: 2, width: .1});
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
+        'noiseS0' : groupPrior('noiseS0'),
+        'noiseS1' : groupPrior('noiseS1'),
+        'noiseS2' : groupPrior('noiseS2'),
         'J0S0' : groupPrior('J0S0'),
         'J0S1' : groupPrior('J0S1'),
         'J0S2' : groupPrior('J0S2'),
         'J1S0' : groupPrior('J1S0'),
         'J1S1' : groupPrior('J1S1'),
-        'J1S2' : groupPrior('J1S2')
+        'J1S2' : groupPrior('J1S2'),
+        'J2S0' : groupPrior('J2S0'),
+        'J2S1' : groupPrior('J2S1'),
+        'J2S2' : groupPrior('J2S2')
       };
 
       var levels = repeat(obs.length, function() {
-        return categorical({ps: groupWeight, vs: ['J0S0', 'J0S1', 'J0S2', 'J1S0', 'J1S1', 'J1S2']});
+        return categorical({
+          ps: groupWeight,
+          vs: ['noiseS0', 'noiseS1', 'noiseS2', 'J0S0', 'J0S1', 'J0S2', 'J1S0', 'J1S1', 'J1S2', 'J2S0', 'J2S1', 'J2S2']
+        });
       });
 
       globalStore.totalScore = 0;
 
       mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
-        var judgeLevel = level.slice(0, 2);
-        var speakerLevel = level.slice(2);
+        var judgeLevel = level.slice(0, -2);
+        var speakerLevel = level.slice(-2);
         var datumParams = extend(sharedParams, groupParams[level], {judgeLevel, speakerLevel});
         query.add('p' + datum[0], level);
         observe_fn(datum, datumParams);
       });
 
-      query.add('J0S0nSticks', groupParams['J0S0'].nSticks)
-      query.add('J0S1nSticks', groupParams['J0S1'].nSticks)
-      query.add('J0S2nSticks', groupParams['J0S2'].nSticks)
-      query.add('J1S0nSticks', groupParams['J1S0'].nSticks)
-      query.add('J1S1nSticks', groupParams['J1S1'].nSticks)
-      query.add('J1S2nSticks', groupParams['J1S2'].nSticks)
+      query.add('noiseS1nSticks', groupParams['noiseS1'].nSticks);
+      query.add('noiseS2nSticks', groupParams['noiseS2'].nSticks);
+      query.add('J2S0nSticks', groupParams['J0S0'].nSticks);
+      query.add('J0S1nSticks', groupParams['J0S1'].nSticks);
+      query.add('J0S2nSticks', groupParams['J0S2'].nSticks);
+      query.add('J1S0nSticks', groupParams['J1S0'].nSticks);
+      query.add('J1S1nSticks', groupParams['J1S1'].nSticks);
+      query.add('J1S2nSticks', groupParams['J1S2'].nSticks);
+      query.add('J2S0nSticks', groupParams['J2S0'].nSticks);
+      query.add('J2S1nSticks', groupParams['J2S1'].nSticks);
+      query.add('J2S2nSticks', groupParams['J2S2'].nSticks);
 
-      query.add('J0S1agentBias', groupParams['J0S1'].agentBias)
-      query.add('J0S2agentBias', groupParams['J0S2'].agentBias)
-      query.add('J1S0agentBias', groupParams['J1S0'].agentBias)
-      query.add('J1S1agentBias', groupParams['J1S1'].agentBias)
-      query.add('J1S2agentBias', groupParams['J1S2'].agentBias)
+      query.add('noiseS1agentBias', groupParams['noiseS1'].agentBias);
+      query.add('noiseS2agentBias', groupParams['noiseS2'].agentBias);
+      query.add('J0S1agentBias', groupParams['J0S1'].agentBias);
+      query.add('J0S2agentBias', groupParams['J0S2'].agentBias);
+      query.add('J1S0agentBias', groupParams['J1S0'].agentBias);
+      query.add('J1S1agentBias', groupParams['J1S1'].agentBias);
+      query.add('J1S2agentBias', groupParams['J1S2'].agentBias);
+      query.add('J2S0agentBias', groupParams['J2S0'].agentBias);
+      query.add('J2S1agentBias', groupParams['J2S1'].agentBias);
+      query.add('J2S2agentBias', groupParams['J2S2'].agentBias);
 
-      query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty)
-      query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty)
+      query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty);
+      query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty);
+      query.add('J2S0biasPenalty', groupParams['J2S0'].biasPenalty);
+      query.add('J2S1biasPenalty', groupParams['J2S1'].biasPenalty);
+      query.add('J2S2biasPenalty', groupParams['J2S2'].biasPenalty);
 
-      query.add('logitSigma', sharedParams.logitSigma)
-      query.add('groupWeight_J0S0', sharedParams.groupWeight[0])
-      query.add('groupWeight_J0S1', sharedParams.groupWeight[1])
-      query.add('groupWeight_J0S2', sharedParams.groupWeight[2])
-      query.add('groupWeight_J1S0', sharedParams.groupWeight[3])
-      query.add('groupWeight_J1S1', sharedParams.groupWeight[4])
-      query.add('groupWeight_J1S2', sharedParams.groupWeight[5])
+      query.add('groupWeight_noiseS0', sharedParams.groupWeight[0]);
+      query.add('groupWeight_noiseS1', sharedParams.groupWeight[1]);
+      query.add('groupWeight_noiseS2', sharedParams.groupWeight[2]);
+      query.add('groupWeight_J0S0', sharedParams.groupWeight[3]);
+      query.add('groupWeight_J0S1', sharedParams.groupWeight[4]);
+      query.add('groupWeight_J0S2', sharedParams.groupWeight[5]);
+      query.add('groupWeight_J1S0', sharedParams.groupWeight[6]);
+      query.add('groupWeight_J1S1', sharedParams.groupWeight[7]);
+      query.add('groupWeight_J1S2', sharedParams.groupWeight[8]);
+      query.add('groupWeight_J2S0', sharedParams.groupWeight[9]);
+      query.add('groupWeight_J2S1', sharedParams.groupWeight[10]);
+      query.add('groupWeight_J2S2', sharedParams.groupWeight[11]);
+
       return query;
     }})
 };

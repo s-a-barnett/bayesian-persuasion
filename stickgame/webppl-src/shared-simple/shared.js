@@ -94,7 +94,9 @@ var getS1Score_generator = function(params) {
 
     var target = params.agentBias > 0 ? 'long' : 'short';
     var utility = function(possibleStick) {
-      return Math.abs(params.agentBias) * getJ0Score(target, possibleStick, params);
+      var absBias = Math.abs(params.agentBias);
+      // bug fix for case of 0 * -Infinity
+      return absBias > 0 ? Math.abs(params.agentBias) * getJ0Score(target, possibleStick, params) : 0;
     };
     var truth = utility(stick);
 
@@ -103,7 +105,8 @@ var getS1Score_generator = function(params) {
       sum = numeric.logaddexp(sum, utility(sticks[i]));
     };
 
-    var score = truth - sum;
+    // bug fix for nSticks = 2, sticks = [1, 1], agentBias < 0 case
+    var score = ((truth == -Infinity) && (sum == -Infinity)) ? - Math.log(sticks.length) : truth - sum;
     getS1Score[key] = score;
     return score;
   };
@@ -246,7 +249,8 @@ var getS2Score_generator = function(params) {
 var getJ2Score_generator = function(params) {
   var getS2Score = getS2Score_generator(params);
   var getJ2Score = function(target, obs, params) {
-    var key = params.nSticks + '_' + params.agentBias + '_' + obs + '_' + target;
+    var key = params.nSticks + '_' + params.agentBias + '_' + params.biasPenalty + '_' + obs + '_' + target;
+
     if (getJ2Score[key]) {
       return getJ2Score[key];
     };
