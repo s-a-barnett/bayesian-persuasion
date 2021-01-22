@@ -11,18 +11,19 @@ var output_handle = csv.open(inferenceParams.out + "results/rsa-hom-pointScores.
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa hom model parameters
-var paramsPrior = function() {
+var paramsPrior = function(level) {
   // number of sticks modelled by judge
-  var nSticks = uniformDraw([2, 3, 4, 5]);
+  var nSticks = (level != 'noise') ? uniformDraw([2, 3, 4, 5]) : 5;
   // fixed value of judge for S1 speaker
-  var agentBias = uniformDrift({a: 0, b: 10, width: 1});
+  var agentBias = _.includes(['J1', 'J2'], level) ? uniformDrift({a: 0, b: 10, width: 1}) : 0;
+  // fixed value of biasPenalty for S2 speaker
+  var biasPenalty = (level == 'J2') ? uniformDrift({a: 0, b: 10, width: 1}) : 0;
   // variance for mean noise
   var logitSigma = 1;
-  // determines whether population treated as J0 or J1
-  var level = flip(.5) ? 'J1' : 'J0';
   return {
     'nSticks': nSticks,
     'agentBias': agentBias,
+    'biasPenalty': biasPenalty,
     'logitSigma': logitSigma,
     'level': level
   };
@@ -37,15 +38,21 @@ var rsaHom = function(obs, output_handle) {
     var speakerStick  = _.toNumber(datum[3]);
 
     // compute belief in idealized model
-    var mean = params.level == 'J1' ?
+    var mean = params.level == 'J2' ?
+        params.getJ2Score('long', stickLength, params) :
+               params.level == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
-        shared.getJ0Score('long', stickLength, params) ;
+               params.level == 'J0' ?
+        shared.getJ0Score('long', stickLength, params) :
+        0.5;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
     var mu = mean - Math.log1p(-Math.exp(mean));
 
-    var noiseDist = LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+    var noiseDist = params.level == 'noise' ?
+      Uniform({a: 0., b: 1.}) :
+      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
@@ -73,17 +80,26 @@ var rsaHom = function(obs, output_handle) {
                 verbose: inferenceParams.verbose,
                 model: function() {
 
-    var raw_params = paramsPrior();
+    // determines whether population treated as J0, J1, or J2
+    var level = categorical({vs: ['noise', 'J0', 'J1', 'J2']});
+    var raw_params = paramsPrior(level);
+
     var params = extend(raw_params, {
-      getJ1Score: shared.getJ1Score_generator(raw_params)
+      getJ1Score: shared.getJ1Score_generator(raw_params),
+      getJ2Score: shared.getJ2Score_generator(raw_params)
     });
 
     globalStore.totalScore = 0;
     mapData({data: obs}, function(datum) {
+      query.add('p' + datum[0], level);
       observe_fn(datum, params);
     });
 
-    return raw_params
+    query.add('nSticks', params.nSticks);
+    query.add('agentBias', params.agentBias);
+    query.add('biasPenalty', params.biasPenalty);
+
+    return query;
   }})
 };
 
