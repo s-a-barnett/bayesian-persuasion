@@ -126,33 +126,42 @@ d_levels <- read_csv('../stickgame/webppl-src/model-comparison/map-levels.csv') 
   mutate(gameid = substr(param, 2, 100)) %>%
   select(gameid, val)
 
-gameids_rsa <- d_levels %>%
-  filter(val %in% c("J1", "J0")) %>%
-  pull(gameid)
+d_het_all <- d_het %>%
+  left_join(d_levels)
 
-d_het_rsa <- d_het %>%
-  filter(gameid %in% gameids_rsa) %>%
-  left_join(filter(d_levels, gameid %in% gameids_rsa))
-
-d_rsa <- d_het_rsa %>%
+d_all <- d_het_all %>%
   select(agent1stick, val, belief) %>%
   group_by(agent1stick, val) %>%
   tidyboot::tidyboot_mean(belief) %>%
-  rename(level = val)
+  rename(level = val)  
 
-gameids_noise <- d_levels %>%
-  filter(val %in% c("noise")) %>%
-  pull(gameid)
+# gameids_rsa <- d_levels %>%
+#   filter(val %in% c("J1", "J0")) %>%
+#   pull(gameid)
 
-d_het_noise <- d_het %>%
-  filter(gameid %in% gameids_noise) %>%
-  left_join(filter(d_levels, gameid %in% gameids_noise))
-
-d_noise <- d_het_noise %>%
-  select(agent1stick, val, belief) %>%
-  group_by(agent1stick, val) %>%
-  tidyboot::tidyboot_mean(belief) %>%
-  rename(level = val)
+# d_het_rsa <- d_het %>%
+#   filter(gameid %in% gameids_rsa) %>%
+#   left_join(filter(d_levels, gameid %in% gameids_rsa))
+# 
+# d_rsa <- d_het_rsa %>%
+#   select(agent1stick, val, belief) %>%
+#   group_by(agent1stick, val) %>%
+#   tidyboot::tidyboot_mean(belief) %>%
+#   rename(level = val)
+# 
+# gameids_noise <- d_levels %>%
+#   filter(val %in% c("noise")) %>%
+#   pull(gameid)
+# 
+# d_het_noise <- d_het %>%
+#   filter(gameid %in% gameids_noise) %>%
+#   left_join(filter(d_levels, gameid %in% gameids_noise))
+# 
+# d_noise <- d_het_noise %>%
+#   select(agent1stick, val, belief) %>%
+#   group_by(agent1stick, val) %>%
+#   tidyboot::tidyboot_mean(belief) %>%
+#   rename(level = val)
 
 beliefs_j1 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J1.csv") %>%
   mutate(belief = prob / 100) %>%
@@ -182,8 +191,8 @@ ggplot() +
 
 ```{r}
 ggplot() +
-  geom_point(data=d_rsa, aes(x=agent1stick, y=empirical_stat)) +
-  geom_errorbar(data=d_rsa, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_point(data=d_all, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_all, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
   geom_hline(yintercept = 0.5, linetype = 'dotted') +
   geom_line(data=(model_beliefs), aes(x=stick, y=belief)) +
   facet_grid( ~ level) + 
