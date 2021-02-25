@@ -138,19 +138,29 @@ beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %
 model_beliefs <- full_join(beliefs_j0, beliefs_j1)
 ```
 
+
 # Plot human responses by first stick
 
 ```{r}
+d_pp <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/rsa-pp-speakers-params-posterior.csv") %>%
+  rename(gameid = param) %>%
+  rename(genBelief = val) %>%
+  select(gameid, genBelief) %>%
+  full_join(d_het) %>%
+  tail(n=725*10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(genBelief)
+
 d_bystick <- d_het %>%
-  mutate(level = ifelse(firstStick %in% c(0.2, 0.4, 0.9), 'J1', ifelse(firstStick == 0.8, 'J0', 'noise'))) %>% 
-  group_by(agent1stick, firstStick, level) %>%
+  group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(belief)
 
 ggplot() +
   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_point(data=d_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
+  geom_errorbar(data=d_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
   geom_hline(yintercept=0.5, linetype='dotted') + 
-  geom_line(data=model_beliefs, aes(x=stick, y=belief)) +
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
   labs(x = 'agent 1 stick length', y = 'belief about mean') +

@@ -57,11 +57,9 @@ var rsaHet = function(obs) {
       };
     };
 
-    var genBelief = sample(noiseDist);
-
     factor(pointScore);
 
-    return genBelief
+    return noiseDist;
   };
 
   return Infer({
@@ -95,15 +93,18 @@ var rsaHet = function(obs) {
 
       globalStore.totalScore = 0;
 
-      mapData({data: obs}, function(datum, i) {
+      var noiseDists = mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
 
-        var belief = observe_fn(datum, datumParams);
-        query.add(datum[0], belief);
+        var noiseDist = observe_fn(datum, datumParams);
+        return noiseDist;
       });
 
-      return query;
+      var beliefs = map(function(d) {return sample(d)}, noiseDists);
+      var gameids = map(function(o){return o[0];}, obs);
+
+      return _.zipObject(gameids, beliefs);
     }})
 };
 
@@ -111,4 +112,5 @@ var rsaHet = function(obs) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "results/rsa-pp-speakers-params-posterior.csv");
+// csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "results/rsa-pp-speakers-params-posterior.csv");
+csv.writeJoint(rsaHet(obs), inferenceParams.out + "results/rsa-pp-params-posterior.csv");
