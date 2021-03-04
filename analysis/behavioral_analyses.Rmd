@@ -11,6 +11,7 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
+library(coda)
 d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
@@ -142,18 +143,26 @@ model_beliefs <- full_join(beliefs_j0, beliefs_j1)
 # Plot human responses by first stick
 
 ```{r}
-d_pp <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/rsa-pp-speakers-params-posterior.csv") %>%
-  rename(gameid = param) %>%
-  rename(genBelief = val) %>%
+d_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
+  rename(genBelief = belief) %>%
   select(gameid, genBelief) %>%
   full_join(d_het) %>%
-  tail(n=725*10) %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(genBelief)
 
 d_bystick <- d_het %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(belief)
+
+ggplot() +
+  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6, 0.9) + 
+  ylim(0, 1)
 
 ggplot() +
   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +

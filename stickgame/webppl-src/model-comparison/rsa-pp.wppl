@@ -2,7 +2,8 @@ var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
-  verbose: (argv.verbose == 'true'), // converting str to bool
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
 
@@ -82,9 +83,7 @@ var rsaHet = function(obs) {
       var means = {
         '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
         '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data)
       };
 
       var levels = map(function(stick) {
@@ -109,8 +108,8 @@ var rsaHet = function(obs) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
 // csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "results/rsa-pp-speakers-params-posterior.csv");
-csv.writeJoint(rsaHet(obs), inferenceParams.out + "results/rsa-pp-params-posterior.csv");
+csv.writeJoint(rsaHet(obs), inferenceParams.out + "results/rsa-pp-params-posterior_" + inferenceParams.chain + ".csv");
