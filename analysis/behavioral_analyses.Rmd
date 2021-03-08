@@ -139,18 +139,28 @@ beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %
 model_beliefs <- full_join(beliefs_j0, beliefs_j1)
 ```
 
+```{r}
+d_test <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
+  rename(genBelief = belief) %>%
+  select(gameid, genBelief) %>%
+  full_join(d_het_n24) %>%
+  filter(agent1stick == 0.6) %>%
+  filter(firstStick == 0.9)
+```
 
 # Plot human responses by first stick
 
 ```{r}
-d_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
+d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
+
+d_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_mean_beliefs.csv") %>%
   rename(genBelief = belief) %>%
   select(gameid, genBelief) %>%
-  full_join(d_het) %>%
+  full_join(d_het_n24) %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(genBelief)
 
-d_bystick <- d_het %>%
+d_bystick <- d_het_n24 %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(belief)
 
