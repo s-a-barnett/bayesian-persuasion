@@ -12,6 +12,27 @@ library(lme4)
 library(lmerTest)
 library(broom.mixed)
 library(coda)
+library(here)
+
+estimate_mode <- function(s) {
+  d <- density(s)
+  return(d$x[which.max(d$y)])
+}
+
+HPDhi<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","upper"])
+}
+
+HPDlo<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","lower"])
+}
+```
+
+Import data 
+
+```{r}
 d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
@@ -19,7 +40,6 @@ d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.cs
 d_5 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample3.csv')
 d_raw <- rbind(d_1, d_2, d_3, d_4, d_5) %>%   
   rename(agent1stick = agent2stick, agent2stick = agent1stick)
-
 ```
 
 # Implement exclusions, get descriptive stats
@@ -106,72 +126,66 @@ d_het <- d %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
 ```
 
-# Pull MAP levels
+# Derive MAP beliefs & CIs from predictives file
 
 ```{r}
-d_levels <- read_csv('../stickgame/webppl-src/model-comparison/map-levels.csv') %>%
-  mutate(gameid = substr(param, 2, 100)) %>%
-  select(gameid, val)
+d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv") %>%
 
-d_het_all <- d_het %>%
-  left_join(d_levels)
-
-d_all <- d_het_all %>%
-  select(agent1stick, val, belief) %>%
-  group_by(agent1stick, val) %>%
-  tidyboot::tidyboot_mean(belief) %>%
-  rename(level = val)  
-
-beliefs_j1 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J1.csv") %>%
-  mutate(belief = prob / 100) %>%
-  mutate(level = "J1") %>%
-  mutate(firstStick = 0.9) %>%
-  select(stick, belief, level, firstStick) %>%
-  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
-
-beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %>%
-  mutate(belief = prob / 100) %>%
-  mutate(level = "J0") %>%
-  mutate(firstStick = 0.8) %>%
-  select(stick, belief, level, firstStick) %>%
-  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
-
-model_beliefs <- full_join(beliefs_j0, beliefs_j1)
+predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
 ```
 
-# Get MAP beliefs
+Make individual histogram for each participant
 
 ```{r}
-estimate_mode <- function(s) {
-  d <- density(s)
-  return(d$x[which.max(d$y)])
-}
+predictive %>% 
+  gather(gameid, value, -prob, -X1) %>%
+  ggplot(aes(x = value)) +
+    geom_histogram() +
+    facet_wrap(~ gameid)
+
+ggsave('predictiveHistograms.pdf', height = 20, width = 20, units = 'in')
 ```
 
-
-# Plot human responses by first stick
+Make scatter plot of MAP estimate and empirical belief for each individual
 
 ```{r}
-d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
+predictive %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  ggplot(aes(x = MAPmodel, y = belief)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_grid(agent1stick ~ firstStick) +
+    xlim(0,1) +
+    ylim(0,1)
 
-d_rsa_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
-  rename(genBelief = belief) %>%
-  select(gameid, genBelief) %>%
-  full_join(d_het_n24) %>%
-  group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(genBelief)
+```
 
-d_mas_pp <- read_csv("../stickgame/webppl-src/model-comparison/mas_pp_map_beliefs.csv") %>%
-  rename(genBelief = belief) %>%
-  select(gameid, genBelief) %>%
-  full_join(d_het_n24) %>%
-  group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(genBelief) %>%
-  drop_na()
+summarize means for each condition
 
-d_bystick <- d_het_n24 %>%
-  group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(belief)
+```{r}
+# d_rsa_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
+#   rename(genBelief = belief) %>%
+#   select(gameid, genBelief) %>%
+#   full_join(d_het_n24) %>%
+#   group_by(agent1stick, firstStick) %>%
+#   tidyboot::tidyboot_mean(genBelief)
+# 
+# d_mas_pp <- read_csv("../stickgame/webppl-src/model-comparison/mas_pp_map_beliefs.csv") %>%
+#   rename(genBelief = belief) %>%
+#   select(gameid, genBelief) %>%
+#   full_join(d_het_n24) %>%
+#   group_by(agent1stick, firstStick) %>%
+#   tidyboot::tidyboot_mean(genBelief) %>%
+#   drop_na()
+
+# d_bystick <- d_het_n24 %>%
+#   group_by(agent1stick, firstStick) %>%
+#   tidyboot::tidyboot_mean(belief)
 
 # ggplot() +
 #   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
@@ -184,12 +198,12 @@ d_bystick <- d_het_n24 %>%
 #   ylim(0, 1)
 
 ggplot() +
-  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
-  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
-  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
-  geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
-  geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
-  geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
+  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat)) +
+  # geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=MAPmodel), colour="red") +
+  # geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
+  # geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
+  # geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
   geom_hline(yintercept=0.5, linetype='dotted') + 
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
