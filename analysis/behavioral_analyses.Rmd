@@ -139,46 +139,57 @@ beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %
 model_beliefs <- full_join(beliefs_j0, beliefs_j1)
 ```
 
+# Get MAP beliefs
+
 ```{r}
-d_test <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
-  rename(genBelief = belief) %>%
-  select(gameid, genBelief) %>%
-  full_join(d_het_n24) %>%
-  filter(agent1stick == 0.6) %>%
-  filter(firstStick == 0.9)
+estimate_mode <- function(s) {
+  d <- density(s)
+  return(d$x[which.max(d$y)])
+}
 ```
+
 
 # Plot human responses by first stick
 
 ```{r}
 d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
 
-d_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_mean_beliefs.csv") %>%
+d_rsa_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
   rename(genBelief = belief) %>%
   select(gameid, genBelief) %>%
   full_join(d_het_n24) %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(genBelief)
 
+d_mas_pp <- read_csv("../stickgame/webppl-src/model-comparison/mas_pp_map_beliefs.csv") %>%
+  rename(genBelief = belief) %>%
+  select(gameid, genBelief) %>%
+  full_join(d_het_n24) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(genBelief) %>%
+  drop_na()
+
 d_bystick <- d_het_n24 %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(belief)
 
-ggplot() +
-  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
-  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
-  geom_hline(yintercept=0.5, linetype='dotted') + 
-  facet_grid( ~ firstStick) +
-  ggthemes::theme_few() + 
-  labs(x = 'agent 1 stick length', y = 'belief about mean') +
-  xlim(0.6, 0.9) + 
-  ylim(0, 1)
+# ggplot() +
+#   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+#   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+#   geom_hline(yintercept=0.5, linetype='dotted') + 
+#   facet_grid( ~ firstStick) +
+#   ggthemes::theme_few() + 
+#   labs(x = 'agent 1 stick length', y = 'belief about mean') +
+#   xlim(0.6, 0.9) + 
+#   ylim(0, 1)
 
 ggplot() +
   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
-  geom_point(data=d_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
-  geom_errorbar(data=d_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
+  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
+  geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
+  geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
+  geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
   geom_hline(yintercept=0.5, linetype='dotted') + 
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
