@@ -70,7 +70,7 @@ var rsaHet = function(obs) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var logitSigma = 1;
+      var logitSigma = uniformDrift({a: 0., b: 1.5, width: 0.1});
       var sharedParams = {logitSigma};
 
       var groupParams = {
@@ -103,7 +103,7 @@ var rsaHet = function(obs) {
       var beliefs = map(function(d) {return sample(d)}, noiseDists);
       var gameids = map(function(o){return o[0];}, obs);
 
-      return _.zipObject(gameids, beliefs);
+      return extend(_.zipObject(gameids, beliefs), {logitSigma});
     }})
 };
 
