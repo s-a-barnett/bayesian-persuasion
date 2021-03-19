@@ -2,12 +2,13 @@ var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
-  verbose: (argv.verbose == 'true'), // converting str to bool
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speakers-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speakers-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
@@ -73,7 +74,7 @@ var rsaHet = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var logitSigma = 1;
+      var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
       var sharedParams = {logitSigma};
 
       var groupParams = {
@@ -127,6 +128,8 @@ var rsaHet = function(obs, output_handle) {
       query.add('groupWeight-J1-0.4', means['0.4'][2]);
       query.add('groupWeight-J1-0.2', means['0.2'][2]);
 
+      query.add('logitSigma', logitSigma);
+
       return query;
     }})
 };
@@ -135,5 +138,5 @@ var rsaHet = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-speakers-params-posterior.csv");
+csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-speakers-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);

@@ -7,22 +7,19 @@ var inferenceParams = {
   out: argv.out
 };
 
-// prior over rsa hom model parameters
+// prior over quantum hom model parameters
 var paramsPrior = function() {
-  // steepness of logistic stick-to-strength curve
-  var gradient = exponential({a: 0.01});
-  // prior threshold of confidence (fixed at 0.5 for simple A&A)
-  var threshold = uniform({a: 0, b: 1});
+  // qr(shiftMatrix + I).Q gives the perspective shift
+  var shiftMatrix = repeat(20, function() {repeat(20, function() {uniformDrift({a: -1, b: 1, width: 0.1})})});
   // variance for mean noise
   var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
   return {
-    'gradient': gradient,
-    'threshold': threshold,
+    'shiftMatrix': shiftMatrix,
     'logitSigma': logitSigma
   };
 };
 
-var masHom = function(obs, output_handle) {
+var quantumHom = function(obs, output_handle) {
 
   var observe_fn = function(datum, params) {
     // read single observation from overall observations
@@ -30,7 +27,7 @@ var masHom = function(obs, output_handle) {
     var subjectBelief = _.toNumber(datum[2]);
 
     // compute belief in idealized model
-    var mean = shared.getAAScore('long', stickLength, params) ;
+    var mean = shared.getQuantumScore('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
@@ -50,7 +47,7 @@ var masHom = function(obs, output_handle) {
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
       csv.writeLine(datum[0] + "," + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
-        // console.log(globalStore.totalScore);
+        console.log(globalStore.totalScore);
       };
     };
 
@@ -79,9 +76,9 @@ var masHom = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/mas-hom-pointScores_" + inferenceParams.chain + ".csv");
+var output_handle = csv.open(inferenceParams.out + "results/quantum-hom-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // write posterior distribution to new file
-csv.writeJoint(masHom(obs, output_handle), inferenceParams.out + "results/mas-hom-params-posterior_" + inferenceParams.chain + ".csv");
+csv.writeJoint(quantumHom(obs, output_handle), inferenceParams.out + "results/quantum-hom-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);

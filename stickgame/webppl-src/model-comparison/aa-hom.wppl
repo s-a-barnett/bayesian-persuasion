@@ -2,7 +2,8 @@ var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
-  verbose: (argv.verbose == 'true'), // converting str to bool
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
 
@@ -13,7 +14,7 @@ var paramsPrior = function() {
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = 0.5;
   // variance for mean noise
-  var logitSigma = 1;
+  var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
   return {
     'gradient': gradient,
     'threshold': threshold,
@@ -70,7 +71,7 @@ var aaHom = function(obs, output_handle) {
       observe_fn(datum, params);
     });
 
-    return params
+    return params;
   }})
 };
 
@@ -78,9 +79,9 @@ var aaHom = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/aa-hom-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/aa-hom-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // write posterior distribution to new file
-csv.writeJoint(aaHom(obs, output_handle), inferenceParams.out + "results/aa-hom-params-posterior.csv");
+csv.writeJoint(aaHom(obs, output_handle), inferenceParams.out + "results/aa-hom-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);

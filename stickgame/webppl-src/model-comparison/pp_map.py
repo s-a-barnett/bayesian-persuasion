@@ -3,7 +3,8 @@ import pandas as pd
 from sklearn.neighbors import KernelDensity
 import matplotlib.pyplot as plt
 
-df_pp = pd.read_csv("results/cluster/results/rsa-pp-params-posterior.csv")
+# df_pp = pd.read_csv("results/cluster/results/rsa-pp-params-posterior.csv")
+df_pp = pd.read_csv("results/cluster/results/mas-pp-params-posterior.csv")
 
 gameids = list(df_pp.columns)[:-1]
 
@@ -25,4 +26,4 @@ df = pd.DataFrame(
     }
 )
 
-df.to_csv("pp_map_beliefs.csv", index=False)
+df.to_csv("mas_pp_map_beliefs.csv", index=False)

@@ -2,7 +2,8 @@ var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
-  verbose: (argv.verbose == 'true'), // converting str to bool
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
 
@@ -12,12 +13,9 @@ var paramsPrior = function() {
   var gradient = exponential({a: 0.01});
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = 0.5;
-  // variance for mean noise
-  var logitSigma = 1;
   return {
     'gradient': gradient,
-    'threshold': threshold,
-    'logitSigma': logitSigma
+    'threshold': threshold
   };
 };
 
@@ -64,13 +62,16 @@ var aaInd = function(obs, output_handle) {
                 model: function() {
 
     var params = repeat(obs.length, paramsPrior);
+    var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
 
     globalStore.totalScore = 0;
     mapData({data: obs}, function(datum, i) {
       var datumParams = params[i];
       query.add('p' + datum[0] + '_gradient', datumParams.gradient);
-      observe_fn(datum, datumParams);
+      observe_fn(datum, extend(datumParams, {logitSigma}));
     });
+
+    query.add('logitSigma', logitSigma);
 
     return query;
   }})
@@ -80,9 +81,9 @@ var aaInd = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/aa-ind-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/aa-ind-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // write posterior distribution to new file
-csv.writeDistTable(aaInd(obs, output_handle), "param,val", inferenceParams.out + "results/aa-ind-params-posterior.csv");
+csv.writeDistTable(aaInd(obs, output_handle), "param,val", inferenceParams.out + "results/aa-ind-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);

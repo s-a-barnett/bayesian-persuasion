@@ -129,16 +129,17 @@ d_het <- d %>%
 # Derive MAP beliefs & CIs from predictives file
 
 ```{r}
-d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv") %>%
+d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
 
-predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
+# predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
+predictive <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/rsa-pp-params-posterior.csv")
 ```
 
 Make individual histogram for each participant
 
 ```{r}
 predictive %>% 
-  gather(gameid, value, -prob, -X1) %>%
+  gather(gameid, value, -prob, -X1, -logitSigma) %>%
   ggplot(aes(x = value)) +
     geom_histogram() +
     facet_wrap(~ gameid)
@@ -168,6 +169,16 @@ predictive %>%
 summarize means for each condition
 
 ```{r}
+d_rsa_pp <- predictive %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel)
+
 # d_rsa_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
 #   rename(genBelief = belief) %>%
 #   select(gameid, genBelief) %>%
@@ -183,9 +194,9 @@ summarize means for each condition
 #   tidyboot::tidyboot_mean(genBelief) %>%
 #   drop_na()
 
-# d_bystick <- d_het_n24 %>%
-#   group_by(agent1stick, firstStick) %>%
-#   tidyboot::tidyboot_mean(belief)
+d_bystick <- d_het_n24 %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(belief)
 
 # ggplot() +
 #   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
@@ -198,10 +209,10 @@ summarize means for each condition
 #   ylim(0, 1)
 
 ggplot() +
-  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat)) +
-  # geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
-  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=MAPmodel), colour="red") +
-  # geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
+  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
+  geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
   # geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
   # geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
   geom_hline(yintercept=0.5, linetype='dotted') + 

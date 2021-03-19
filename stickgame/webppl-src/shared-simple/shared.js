@@ -1,3 +1,5 @@
+var math = require('mathjs');
+
 // lists ways of drawing k items with replacement
 function repeated_k_combinations(set, k) {
   var i, combs, head, appendHead;
@@ -50,6 +52,47 @@ var getAAScore = function(target, obs, params) {
   var pLong = 0.5 + 0.5 * (strength - params.threshold);
   var logProb = target == 'long' ? Math.log(pLong) : Math.log(1-pLong);
   return logProb;
+};
+
+var getOrthogonal = function(matrix) {
+  var qr = math.qr(matrix);
+  return qr.Q;
+};
+
+var getQuantumScore = function(target, obs, params) {
+
+  var key = String(params.shiftMatrix);
+  if (getQuantumScore[key]) {
+    return getQuantumScore[key];
+  }
+
+  var preshift = math.add(params.shiftMatrix, math.identity(20));
+  var shift = getOrthogonal(preshift);
+
+  // get prior vector
+  var prior = math.multiply(1 / math.sqrt(20), math.ones(20));
+
+  // transform with shift
+  var shiftPrior = math.multiply(shift, prior);
+
+  // project based on observed stick
+  var stickIdx = Math.floor(obs * 10) - 1;
+
+  var projMatrix = math.zeros(20, 20);
+  projMatrix.subset(math.index(stickIdx, stickIdx), 1);
+  projMatrix.subset(math.index(stickIdx+10, stickIdx+10), 1);
+
+  var posterior = math.multiply(projMatrix, shiftPrior);
+  posterior     = math.multiply(1 / math.norm(posterior), posterior);
+
+  // normalize and take appropriate hypothesis as final value
+  var targetIdx = target == 'long' ? 0 : 10;
+  var prob = Math.pow(math.subset(posterior, math.index(stickIdx+targetIdx)), 2);
+  var score = Math.log(prob);
+
+  getQuantumScore[key] = score;
+
+  return score;
 };
 
 // target is 'long' or 'short'
@@ -295,5 +338,5 @@ var isRecordedIter = function(iter, burn, lag) {
 
 module.exports = {
   getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator,
-  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore
+  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore, getQuantumScore
 };
