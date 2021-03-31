@@ -132,7 +132,8 @@ d_het <- d %>%
 d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
 
 # predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
-predictive <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/rsa-pp-params-posterior.csv")
+predictive_rsa <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/rsa-pp-params-posterior.csv")
+predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/mas-pp-params-posterior.csv")
 ```
 
 Make individual histogram for each participant
@@ -166,10 +167,26 @@ predictive %>%
 
 ```
 
+```{r}
+d_notbystick <- d_het_n24 %>%
+  group_by(agent1stick) %>%
+  tidyboot::tidyboot_mean(belief)
+
+ggplot() +
+  geom_point(data=d_notbystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_notbystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  # facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6, 0.9) + 
+  ylim(0, 1)
+```
+
 summarize means for each condition
 
 ```{r}
-d_rsa_pp <- predictive %>%
+d_rsa_pp <- predictive_rsa %>%
   gather(gameid, value, -prob, -X1) %>%
   group_by(gameid) %>%
   summarize(MAPmodel = estimate_mode(value),
@@ -179,20 +196,15 @@ d_rsa_pp <- predictive %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(MAPmodel)
 
-# d_rsa_pp <- read_csv("../stickgame/webppl-src/model-comparison/pp_map_beliefs.csv") %>%
-#   rename(genBelief = belief) %>%
-#   select(gameid, genBelief) %>%
-#   full_join(d_het_n24) %>%
-#   group_by(agent1stick, firstStick) %>%
-#   tidyboot::tidyboot_mean(genBelief)
-# 
-# d_mas_pp <- read_csv("../stickgame/webppl-src/model-comparison/mas_pp_map_beliefs.csv") %>%
-#   rename(genBelief = belief) %>%
-#   select(gameid, genBelief) %>%
-#   full_join(d_het_n24) %>%
-#   group_by(agent1stick, firstStick) %>%
-#   tidyboot::tidyboot_mean(genBelief) %>%
-#   drop_na()
+d_mas_pp <- predictive_mas %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel)
 
 d_bystick <- d_het_n24 %>%
   group_by(agent1stick, firstStick) %>%
@@ -213,8 +225,8 @@ ggplot() +
   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
   geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
   geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
-  # geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
-  # geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
+  geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
+  geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
   geom_hline(yintercept=0.5, linetype='dotted') + 
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
