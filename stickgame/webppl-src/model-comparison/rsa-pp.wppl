@@ -7,10 +7,6 @@ var inferenceParams = {
   out: argv.out
 };
 
-// open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-speakers-pointScores_" + inferenceParams.chain + ".csv");
-csv.writeLine("gameid,score", output_handle);
-
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
@@ -26,7 +22,7 @@ var groupPrior = function(model) {
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
-var rsaHet = function(obs, output_handle) {
+var rsaHet = function(obs) {
 
   var observe_fn = function(datum, params) {
     // read single observation from overall observations
@@ -56,15 +52,15 @@ var rsaHet = function(obs, output_handle) {
     var iter = shared.iterationTracker() / obs.length;
     var floor_iter = _.floor(iter);
 
-    // write pointScore into separate external file
     if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(datum[0] + "," + pointScore, output_handle);
       if (floor_iter + 1 == iter + (1/obs.length)) {
         console.log(globalStore.totalScore);
       };
     };
 
     factor(pointScore);
+
+    return noiseDist;
   };
 
   return Infer({
@@ -87,9 +83,7 @@ var rsaHet = function(obs, output_handle) {
       var means = {
         '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
         '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data)
       };
 
       var levels = map(function(stick) {
@@ -98,45 +92,24 @@ var rsaHet = function(obs, output_handle) {
 
       globalStore.totalScore = 0;
 
-      mapData({data: obs}, function(datum, i) {
+      var noiseDists = mapData({data: obs}, function(datum, i) {
         var level = levels[i].toString();
         var datumParams = extend(sharedParams, groupParams[level], {level});
 
-        query.add('p' + datum[0], level);
-        observe_fn(datum, datumParams);
+        var noiseDist = observe_fn(datum, datumParams);
+        return noiseDist;
       });
 
-      query.add('J0nSticks', groupParams['J0'].nSticks);
-      query.add('J1nSticks', groupParams['J1'].nSticks);
-      query.add('J1agentBias', groupParams['J1'].agentBias);
+      var beliefs = map(function(d) {return sample(d)}, noiseDists);
+      var gameids = map(function(o){return o[0];}, obs);
 
-      query.add('groupWeight-noise-0.9', means['0.9'][0]);
-      query.add('groupWeight-noise-0.8', means['0.8'][0]);
-      query.add('groupWeight-noise-0.7', means['0.7'][0]);
-      query.add('groupWeight-noise-0.4', means['0.4'][0]);
-      query.add('groupWeight-noise-0.2', means['0.2'][0]);
-
-      query.add('groupWeight-J0-0.9', means['0.9'][1]);
-      query.add('groupWeight-J0-0.8', means['0.8'][1]);
-      query.add('groupWeight-J0-0.7', means['0.7'][1]);
-      query.add('groupWeight-J0-0.4', means['0.4'][1]);
-      query.add('groupWeight-J0-0.2', means['0.2'][1]);
-
-      query.add('groupWeight-J1-0.9', means['0.9'][2]);
-      query.add('groupWeight-J1-0.8', means['0.8'][2]);
-      query.add('groupWeight-J1-0.7', means['0.7'][2]);
-      query.add('groupWeight-J1-0.4', means['0.4'][2]);
-      query.add('groupWeight-J1-0.2', means['0.2'][2]);
-
-      query.add('logitSigma', logitSigma);
-
-      return query;
+      return _.zipObject(gameids, beliefs);
     }})
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-speakers-params-posterior_" + inferenceParams.chain + ".csv");
-csv.close(output_handle);
+// csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "results/rsa-pp-speakers-params-posterior.csv");
+csv.writeJoint(rsaHet(obs), inferenceParams.out + "results/rsa-pp-params-posterior_" + inferenceParams.chain + ".csv");

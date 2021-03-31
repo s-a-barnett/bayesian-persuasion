@@ -2,12 +2,13 @@ var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
-  verbose: (argv.verbose == 'true'), // converting str to bool
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-hom-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-hom-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa hom model parameters
@@ -17,7 +18,7 @@ var paramsPrior = function() {
   // fixed value of judge for S1 speaker
   var agentBias = uniformDrift({a: 0, b: 10, width: 1});
   // variance for mean noise
-  var logitSigma = 1;
+  var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
   // determines whether population treated as J0 or J1
   var level = flip(.5) ? 'J1' : 'J0';
   return {
@@ -91,5 +92,5 @@ var rsaHom = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeJoint(rsaHom(obs, output_handle), inferenceParams.out + "results/rsa-hom-params-posterior.csv");
+csv.writeJoint(rsaHom(obs, output_handle), inferenceParams.out + "results/rsa-hom-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);

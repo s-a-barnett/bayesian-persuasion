@@ -11,6 +11,28 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
+library(coda)
+library(here)
+
+estimate_mode <- function(s) {
+  d <- density(s)
+  return(d$x[which.max(d$y)])
+}
+
+HPDhi<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","upper"])
+}
+
+HPDlo<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","lower"])
+}
+```
+
+Import data 
+
+```{r}
 d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
@@ -18,7 +40,6 @@ d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.cs
 d_5 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample3.csv')
 d_raw <- rbind(d_1, d_2, d_3, d_4, d_5) %>%   
   rename(agent1stick = agent2stick, agent2stick = agent1stick)
-
 ```
 
 # Implement exclusions, get descriptive stats
@@ -83,20 +104,6 @@ d <- d_raw %>%
   filter(gameid %in% ok_games)
 ```
 
-## Pull table with agent1stick and belief values
-
-```{r}
-d_mc <- d %>%
-  filter(stimulus_type == 'isLong') %>%
-  filter(stimulus_contestant == 'first') %>%
-  mutate(adjResponse = case_when(response == 100 ~ 99,
-                                response == 0 ~ 1,
-                                TRUE ~ response)) %>%
-  mutate(belief = adjResponse / 100) %>%
-  select(agent1stick, belief) %>%
-  write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-hom-data.csv")
-```
-
 ## Pull table with agent1stick, belief values, and first chosen stick
 
 ```{r}
@@ -119,75 +126,115 @@ d_het <- d %>%
   write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
 ```
 
-# Pull MAP levels
+# Derive MAP beliefs & CIs from predictives file
 
 ```{r}
-d_levels <- read_csv('../stickgame/webppl-src/model-comparison/map-levels.csv') %>%
-  mutate(gameid = substr(param, 2, 100)) %>%
-  select(gameid, val)
+d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
 
-d_het_all <- d_het %>%
-  left_join(d_levels)
+# predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
+predictive_rsa <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/rsa-pp-params-posterior.csv")
+predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/mas-pp-params-posterior.csv")
+```
 
-d_all <- d_het_all %>%
-  select(agent1stick, val, belief) %>%
-  group_by(agent1stick, val) %>%
-  tidyboot::tidyboot_mean(belief) %>%
-  rename(level = val)  
+Make individual histogram for each participant
 
-# gameids_rsa <- d_levels %>%
-#   filter(val %in% c("J1", "J0")) %>%
-#   pull(gameid)
+```{r}
+predictive %>% 
+  gather(gameid, value, -prob, -X1, -logitSigma) %>%
+  ggplot(aes(x = value)) +
+    geom_histogram() +
+    facet_wrap(~ gameid)
 
-# d_het_rsa <- d_het %>%
-#   filter(gameid %in% gameids_rsa) %>%
-#   left_join(filter(d_levels, gameid %in% gameids_rsa))
-# 
-# d_rsa <- d_het_rsa %>%
-#   select(agent1stick, val, belief) %>%
-#   group_by(agent1stick, val) %>%
-#   tidyboot::tidyboot_mean(belief) %>%
-#   rename(level = val)
-# 
-# gameids_noise <- d_levels %>%
-#   filter(val %in% c("noise")) %>%
-#   pull(gameid)
-# 
-# d_het_noise <- d_het %>%
-#   filter(gameid %in% gameids_noise) %>%
-#   left_join(filter(d_levels, gameid %in% gameids_noise))
-# 
-# d_noise <- d_het_noise %>%
-#   select(agent1stick, val, belief) %>%
-#   group_by(agent1stick, val) %>%
-#   tidyboot::tidyboot_mean(belief) %>%
-#   rename(level = val)
+ggsave('predictiveHistograms.pdf', height = 20, width = 20, units = 'in')
+```
 
-beliefs_j1 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J1.csv") %>%
-  mutate(belief = prob / 100) %>%
-  mutate(level = "J1") %>%
-  select(stick, belief, level) %>%
-  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
+Make scatter plot of MAP estimate and empirical belief for each individual
 
-beliefs_j0 <- read_csv("../stickgame/webppl-src/judge-beliefs/beliefs-J0.csv") %>%
-  mutate(belief = prob / 100) %>%
-  mutate(level = "J0") %>%
-  select(stick, belief, level) %>%
-  filter(stick %in% c(0.6, 0.7, 0.8, 0.9))
+```{r}
+predictive %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  ggplot(aes(x = MAPmodel, y = belief)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_grid(agent1stick ~ firstStick) +
+    xlim(0,1) +
+    ylim(0,1)
 
-model_beliefs <- full_join(beliefs_j0, beliefs_j1)
 ```
 
 ```{r}
+d_notbystick <- d_het_n24 %>%
+  group_by(agent1stick) %>%
+  tidyboot::tidyboot_mean(belief)
+
 ggplot() +
-  geom_point(data=d_noise, aes(x=agent1stick, y=empirical_stat)) +
-  geom_errorbar(data=d_noise, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
-  geom_hline(yintercept = 0.5, linetype = 'dotted') +
-  ggthemes::theme_few() +
+  geom_point(data=d_notbystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_notbystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  # facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
   labs(x = 'agent 1 stick length', y = 'belief about mean') +
-  xlim(0.6,0.9)+
-  ylim(0,1)
+  xlim(0.6, 0.9) + 
+  ylim(0, 1)
 ```
+
+summarize means for each condition
+
+```{r}
+d_rsa_pp <- predictive_rsa %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel)
+
+d_mas_pp <- predictive_mas %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel)
+
+d_bystick <- d_het_n24 %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(belief)
+
+# ggplot() +
+#   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+#   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+#   geom_hline(yintercept=0.5, linetype='dotted') + 
+#   facet_grid( ~ firstStick) +
+#   ggthemes::theme_few() + 
+#   labs(x = 'agent 1 stick length', y = 'belief about mean') +
+#   xlim(0.6, 0.9) + 
+#   ylim(0, 1)
+
+ggplot() +
+  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
+  geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
+  geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
+  geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6, 0.9) + 
+  ylim(0, 1)
+```
+
 
 ```{r}
 ggplot() +

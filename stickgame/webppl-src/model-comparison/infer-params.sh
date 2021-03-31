@@ -1,5 +1,5 @@
 #!/bin/bash
-while getopts m:s:b:v:l:o: option
+while getopts m:s:b:v:l:o:c: option
 do
   case "${option}"
     in
@@ -9,8 +9,10 @@ do
     v) VERBOSE=${OPTARG};;
     l) LAG=${OPTARG};;
     o) OUT=${OPTARG};;
+    c) CHAIN=${OPTARG};;
   esac
 done
 
 webppl $MODEL.wppl --require ../shared-simple --require webppl-csv \
-  -- --samples $SAMPLES --burn $BURN --verbose $VERBOSE --lag $LAG --out $OUT
+  -- --samples $SAMPLES --burn $BURN --verbose $VERBOSE --lag $LAG --out $OUT \
+  --chain $CHAIN
