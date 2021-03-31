@@ -8,7 +8,7 @@ var inferenceParams = {
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-hi-pointScores.csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
@@ -16,10 +16,13 @@ var groupPrior = function(model) {
   var params = {
     nSticks : model != 'noiseS0' ? uniformDraw([2, 3, 4, 5]) : 5,  // number of sticks modelled by judge
     agentBias : !_.includes(['noiseS0', 'J0S0'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0.,   // fixed value of judge for S1 speaker
+    biasPenalty : _.includes(['J0S2', 'J1S2', 'J2S0', 'J2S1', 'J2S2'], model) ? uniformDrift({a: 0, b: 10, width: 1}) : 0. // fixed value of penalty for S2 speaker
   };
   return extend(params, {
     getJ1Score: shared.getJ1Score_generator(params),
+    getJ2Score: shared.getJ2Score_generator(params),
     getS1Score: shared.getS1Score_generator(extend(params, {nSticks: 5})),
+    getS2Score: shared.getS2Score_generator(extend(params, {nSticks: 5}))
   });
 };
 
@@ -34,14 +37,18 @@ var rsaHetIndep = function(obs, output_handle) {
     var subjectBelief = _.toNumber(datum[2]);
     var speakerStick  = _.toNumber(datum[3]);
 
-    var speakerScore = params.speakerLevel == 'S1' ?
+    var speakerScore = params.speakerLevel == 'S2' ?
+          params.getS2Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
+                       params.speakerLevel == 'S1' ?
           params.getS1Score(speakerStick, speakerOptions, extend(params, {nSticks: 5})) :
           - Math.log(speakerOptions.length);
 
     factor(speakerScore);
 
     // compute belief in idealized model
-    var mean = params.judgeLevel == 'J1' ?
+    var mean = params.judgeLevel == 'J2' ?
+        params.getJ2Score('long', stickLength, params) :
+               params.judgeLevel == 'J1' ?
         params.getJ1Score('long', stickLength, params) :
                params.judgeLevel == 'J0' ?
         shared.getJ0Score('long', stickLength, params) :
@@ -81,23 +88,29 @@ var rsaHetIndep = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1])}).data);
+      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])}).data);
       var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
         'noiseS0' : groupPrior('noiseS0'),
         'noiseS1' : groupPrior('noiseS1'),
+        'noiseS2' : groupPrior('noiseS2'),
         'J0S0' : groupPrior('J0S0'),
         'J0S1' : groupPrior('J0S1'),
+        'J0S2' : groupPrior('J0S2'),
         'J1S0' : groupPrior('J1S0'),
         'J1S1' : groupPrior('J1S1'),
+        'J1S2' : groupPrior('J1S2'),
+        'J2S0' : groupPrior('J2S0'),
+        'J2S1' : groupPrior('J2S1'),
+        'J2S2' : groupPrior('J2S2')
       };
 
       var levels = repeat(obs.length, function() {
         return categorical({
           ps: groupWeight,
-          vs: ['noiseS0', 'noiseS1', 'J0S0', 'J0S1', 'J1S0', 'J1S1']
+          vs: ['noiseS0', 'noiseS1', 'noiseS2', 'J0S0', 'J0S1', 'J0S2', 'J1S0', 'J1S1', 'J1S2', 'J2S0', 'J2S1', 'J2S2']
         });
       });
 
@@ -113,21 +126,46 @@ var rsaHetIndep = function(obs, output_handle) {
       });
 
       query.add('noiseS1nSticks', groupParams['noiseS1'].nSticks);
+      query.add('noiseS2nSticks', groupParams['noiseS2'].nSticks);
+      query.add('J2S0nSticks', groupParams['J0S0'].nSticks);
       query.add('J0S1nSticks', groupParams['J0S1'].nSticks);
+      query.add('J0S2nSticks', groupParams['J0S2'].nSticks);
       query.add('J1S0nSticks', groupParams['J1S0'].nSticks);
       query.add('J1S1nSticks', groupParams['J1S1'].nSticks);
+      query.add('J1S2nSticks', groupParams['J1S2'].nSticks);
+      query.add('J2S0nSticks', groupParams['J2S0'].nSticks);
+      query.add('J2S1nSticks', groupParams['J2S1'].nSticks);
+      query.add('J2S2nSticks', groupParams['J2S2'].nSticks);
 
       query.add('noiseS1agentBias', groupParams['noiseS1'].agentBias);
+      query.add('noiseS2agentBias', groupParams['noiseS2'].agentBias);
       query.add('J0S1agentBias', groupParams['J0S1'].agentBias);
+      query.add('J0S2agentBias', groupParams['J0S2'].agentBias);
       query.add('J1S0agentBias', groupParams['J1S0'].agentBias);
       query.add('J1S1agentBias', groupParams['J1S1'].agentBias);
+      query.add('J1S2agentBias', groupParams['J1S2'].agentBias);
+      query.add('J2S0agentBias', groupParams['J2S0'].agentBias);
+      query.add('J2S1agentBias', groupParams['J2S1'].agentBias);
+      query.add('J2S2agentBias', groupParams['J2S2'].agentBias);
+
+      query.add('J0S2biasPenalty', groupParams['J0S2'].biasPenalty);
+      query.add('J1S2biasPenalty', groupParams['J1S2'].biasPenalty);
+      query.add('J2S0biasPenalty', groupParams['J2S0'].biasPenalty);
+      query.add('J2S1biasPenalty', groupParams['J2S1'].biasPenalty);
+      query.add('J2S2biasPenalty', groupParams['J2S2'].biasPenalty);
 
       query.add('groupWeight_noiseS0', sharedParams.groupWeight[0]);
       query.add('groupWeight_noiseS1', sharedParams.groupWeight[1]);
-      query.add('groupWeight_J0S0', sharedParams.groupWeight[2]);
-      query.add('groupWeight_J0S1', sharedParams.groupWeight[3]);
-      query.add('groupWeight_J1S0', sharedParams.groupWeight[4]);
-      query.add('groupWeight_J1S1', sharedParams.groupWeight[5]);
+      query.add('groupWeight_noiseS2', sharedParams.groupWeight[2]);
+      query.add('groupWeight_J0S0', sharedParams.groupWeight[3]);
+      query.add('groupWeight_J0S1', sharedParams.groupWeight[4]);
+      query.add('groupWeight_J0S2', sharedParams.groupWeight[5]);
+      query.add('groupWeight_J1S0', sharedParams.groupWeight[6]);
+      query.add('groupWeight_J1S1', sharedParams.groupWeight[7]);
+      query.add('groupWeight_J1S2', sharedParams.groupWeight[8]);
+      query.add('groupWeight_J2S0', sharedParams.groupWeight[9]);
+      query.add('groupWeight_J2S1', sharedParams.groupWeight[10]);
+      query.add('groupWeight_J2S2', sharedParams.groupWeight[11]);
 
       query.add('logitSigma', logitSigma);
 
@@ -139,5 +177,5 @@ var rsaHetIndep = function(obs, output_handle) {
 var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeDistTable(rsaHetIndep(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-indep-params-posterior_" + inferenceParams.chain + ".csv");
+csv.writeDistTable(rsaHetIndep(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-indep-hi-params-posterior_" + inferenceParams.chain + ".csv");
 csv.close(output_handle);
