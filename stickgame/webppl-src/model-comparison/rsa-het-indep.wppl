@@ -8,7 +8,7 @@ var inferenceParams = {
 };
 
 // open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointScores.csv");
+var output_handle = csv.open(inferenceParams.out + "results/rsa-het-indep-pointScores_" + inferenceParams.chain + ".csv");
 csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
