@@ -20,7 +20,7 @@ def MAP_levels_from_query(d, num_obs):
 
 def main(args):
     query = pd.concat([pd.read_csv(args.input + args.model + "-params-posterior_{}.csv".format(i)) for i in range(4)])
-    d_map_levels = MAP_levels_from_query(df_het_indep_posterior, args.num_obs)
+    d_map_levels = MAP_levels_from_query(query, args.num_obs)
     d_map_levels['judgeLevel'] = d_map_levels.val.str[:-2]
     d_map_levels['speakerLevel'] = d_map_levels.val.str[-2:]
 

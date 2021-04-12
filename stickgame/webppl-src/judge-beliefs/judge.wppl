@@ -1,20 +1,24 @@
-var outJ0 = csv.open("./beliefs-J0.csv");
-var outJ1 = csv.open("./beliefs-J1.csv");
+var outJ0 = csv.open("./hi-beliefs-J0.csv");
+var outJ1 = csv.open("./hi-beliefs-J1.csv");
+var outJ2 = csv.open("./hi-beliefs-J2.csv");
 
 csv.writeLine("stick,prob", outJ0);
 csv.writeLine("stick,prob", outJ1);
+csv.writeLine("stick,prob", outJ2);
 
-var obs = csv.read('../model-comparison/map-params.csv');
-
-var params_J0 = {nSticks: _.toNumber(obs[1][4])};
-var pre_params_J1 = {nSticks: _.toNumber(obs[3][4]), agentBias: _.toNumber(obs[2][4])};
+var params_J0 = {nSticks: argv.nSticksJ0};
+var pre_params_J1 = {nSticks: argv.nSticksJ1, agentBias: argv.agentBiasJ1};
 var params_J1 = extend(pre_params_J1, {getJ1Score: shared.getJ1Score_generator(pre_params_J1)});
-
+var pre_params_J2 = {nSticks: argv.nSticksJ2, agentBias: argv.agentBiasJ2, biasPenalty: argv.biasPenaltyJ2};
+var params_J2 = extend(pre_params_J2, {getJ2Score: shared.getJ2Score_generator(pre_params_J2)});
 
 var writeBeliefTable = function(sticks, level, params, output_handle) {
   if (!(_.isEmpty(sticks))) {
     var stick = _.toNumber(first(sticks));
-    var score = level == 'J1' ? params.getJ1Score('long', stick, params) : shared.getJ0Score('long', stick, params);
+    var score = level == 'J1' ?
+      params.getJ1Score('long', stick, params)
+      : level == 'J0' ? shared.getJ0Score('long', stick, params)
+      : params.getJ2Score('long', stick, params);
     var belief = 100 * Math.exp(score);
     csv.writeLine(stick + "," + belief, output_handle);
     writeBeliefTable(rest(sticks), level, params, output_handle);
@@ -27,3 +31,4 @@ var possibleSticks = map(function(v) {
 
 writeBeliefTable(possibleSticks, 'J0', params_J0, outJ0);
 writeBeliefTable(possibleSticks, 'J1', params_J1, outJ1);
+writeBeliefTable(possibleSticks, 'J2', params_J2, outJ2);
