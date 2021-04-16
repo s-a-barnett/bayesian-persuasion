@@ -1,3 +1,5 @@
+var modelName = 'rsa-het-simple';
+
 var inferenceParams = {
   samples: argv.samples,
   burn: argv.burn,
@@ -6,10 +8,6 @@ var inferenceParams = {
   chain: _.isFinite(argv.chain) ? argv.chain : 1,
   out: argv.out
 };
-
-// open pointScore file
-var output_handle = csv.open(inferenceParams.out + "results/rsa-het-simple-pointScores_" + inferenceParams.chain + ".csv");
-csv.writeLine("gameid,score", output_handle);
 
 // prior over rsa het model parameters
 var groupPrior = function(model) {
@@ -26,47 +24,80 @@ var groupPrior = function(model) {
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
-var rsaHet = function(obs, output_handle) {
+var getScore = function(datum, params) {
+  // read single observation from overall observations
+  var stickLength   = _.toNumber(datum[1]);
+  var subjectBelief = _.toNumber(datum[2]);
 
-  var observe_fn = function(datum, params) {
-    // read single observation from overall observations
-    var stickLength   = _.toNumber(datum[1]);
-    var subjectBelief = _.toNumber(datum[2]);
+  // compute belief in idealized model
+  var mean = params.level == 'J1' ?
+      params.getJ1Score('long', stickLength, params) :
+             params.level == 'J0' ?
+      shared.getJ0Score('long', stickLength, params) :
+      0.5;
 
-    // compute belief in idealized model
-    var mean = params.level == 'J1' ?
-        params.getJ1Score('long', stickLength, params) :
-               params.level == 'J0' ?
-        shared.getJ0Score('long', stickLength, params) :
-        0.5;
+  // mu represents the mean of the normal distribution given by the logit
+  //   of the model belief
+  var mu = mean - Math.log1p(-Math.exp(mean));
 
-    // mu represents the mean of the normal distribution given by the logit
-    //   of the model belief
-    var mu = mean - Math.log1p(-Math.exp(mean));
+  var noiseDist = params.level == 'noise' ?
+    Uniform({a: 0., b: 1.}) :
+    LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
 
-    var noiseDist = params.level == 'noise' ?
-      Uniform({a: 0., b: 1.}) :
-      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+  // in Gelman et al. notation, this is log(p(y_i | θ^s))
+  //   for i-th observation, s-th posterior sample
+  var pointScore = noiseDist.score(subjectBelief);
 
-    // in Gelman et al. notation, this is log(p(y_i | θ^s))
-    //   for i-th observation, s-th posterior sample
-    var pointScore = noiseDist.score(subjectBelief);
-    globalStore.totalScore += pointScore;
+  return pointScore;
+};
 
-    var iter = shared.iterationTracker() / obs.length;
-    var floor_iter = _.floor(iter);
+var getLevels = function(groupWeight, obs) {
+  var levels = repeat(obs.length, function() {
+    return categorical({ps: groupWeight, vs: ['noise', 'J0', 'J1']})
+  });
+  return levels;
+};
 
-    // write pointScore into separate external file
-    if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-      csv.writeLine(datum[0] + ',' + pointScore, output_handle);
-      if (floor_iter + 1 == iter + (1/obs.length)) {
-        console.log(globalStore.totalScore);
+var levelDist = function(groupWeight, obs) {
+  return Infer({
+    method: 'forward',
+    samples: 10000,
+    model: function() {
+      return getLevels(groupWeight, obs);
+    }
+  })
+};
+
+var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
+  var pointScores = mapData({data: obs}, function(datum, i) {
+    var level = levels[i].toString();
+    var datumParams = extend(sharedParams, groupParams[level], {level});
+    var pointScore = getScore(datum, datumParams);
+
+    if (!test) {
+      query.add('p' + datum[0], level);
+      globalStore.totalScore += pointScore;
+      factor(pointScore);
+
+      var iter = shared.iterationTracker() / obs.length;
+      var floor_iter = _.floor(iter);
+
+      // write pointScore into separate external file
+      if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
+        csv.writeLine(datum[0] + "," + pointScore, output_handle);
+        if (floor_iter + 1 == iter + (1/obs.length)) {
+          console.log(globalStore.totalScore);
+        };
       };
     };
 
-    factor(pointScore);
-  };
+    return pointScore;
+  });
 
+  return sum(pointScores);
+};
+
+var train = function(obs, output_handle) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -84,17 +115,11 @@ var rsaHet = function(obs, output_handle) {
         'J1' : groupPrior('J1')
       };
 
-      var levels = repeat(obs.length, function() {
-        return categorical({ps: groupWeight, vs: ['noise', 'J0', 'J1']})
-      });
+      var levels = getLevels(groupWeight, obs);
+
       globalStore.totalScore = 0;
 
-      mapData({data: obs}, function(datum, i) {
-        var level = levels[i].toString();
-        var datumParams = extend(sharedParams, groupParams[level], {level});
-        query.add('p' + datum[0], level);
-        observe_fn(datum, datumParams);
-      });
+      batchScore(levels, sharedParams, groupParams, obs, false, output_handle);
 
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
@@ -104,13 +129,43 @@ var rsaHet = function(obs, output_handle) {
       query.add('groupWeight-J1', sharedParams.groupWeight[2]);
       query.add('logitSigma', logitSigma);
 
+      query.add('score', globalStore.totalScore);
+      query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));
+
       return query;
     }})
 };
 
-// read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data.csv').slice(1, -1);
+if (argv.test == 'true') {
+  var obs = csv.read('data/data_test_' + argv.fold + '.csv').slice(1, -1);
 
-// write posterior distribution to new file
-csv.writeDistTable(rsaHet(obs, output_handle), "param,val", inferenceParams.out + "results/rsa-het-simple-params-posterior_" + inferenceParams.chain + ".csv");
-csv.close(output_handle);
+  var mleString = argv.mleString;
+  var mleParams = JSON.parse(mleString);
+
+  var groupParams = {
+    'noise': extend(mleParams.groupParams.noise, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.noise)}),
+    'J0': extend(mleParams.groupParams.J0, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J0)}),
+    'J1': extend(mleParams.groupParams.J1, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J1)}),
+  };
+
+  var sharedParams = mleParams.sharedParams;
+
+  var batchPartial = function(levels) {
+    return batchScore(levels, sharedParams, groupParams, obs, true, {})
+  };
+
+  var expectedScore = expectation(levelDist(sharedParams.groupWeight, obs), batchPartial);
+
+  console.log(expectedScore);
+
+} else {
+  var data = _.isEmpty(argv.fold) ? 'rsa-het-data.csv' : 'data_train_' + argv.fold + '.csv';
+  var obs = csv.read('data/' + data).slice(1, -1);
+  // open pointScore file
+  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + inferenceParams.chain + ".csv");
+  csv.writeLine("gameid,score", output_handle);
+
+  // write posterior distribution to new file
+  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + inferenceParams.chain + ".csv");
+  csv.close(output_handle);
+};
