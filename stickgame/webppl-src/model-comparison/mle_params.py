@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 
 def main(args):
-    posterior_ = [f'{args.input}/{args.model}-params-posterior_{i}.csv' for i in range(3)]
+    posterior_ = [f'{args.input}/{args.model}-params-posterior_c{i}f{args.fold}.csv' for i in range(3)]
 
     df = pd.concat([pd.read_csv(posterior_[i], delimiter=' ') for i in range(3)])
     d1 = df[list(df.columns)[0]].str.rsplit(pat=',', n=1, expand=True)
@@ -18,7 +18,8 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, default="./results/", help="location of input files")
     parser.add_argument("-m", "--model", type=str, help="name of model")
+    parser.add_argument("-f", "--fold", type=int, help="fold number")
+    parser.add_argument("-i", "--input", type=str, default="./results/", help="location of input files")
     args = parser.parse_args()
     main(args)

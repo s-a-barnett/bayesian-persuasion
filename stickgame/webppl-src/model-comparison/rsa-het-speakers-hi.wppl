@@ -222,13 +222,14 @@ if (argv.test == 'true') {
   console.log(expectedScore);
 
 } else {
-  var data = _.isEmpty(argv.fold) ? 'rsa-het-data.csv' : 'data_train_' + argv.fold + '.csv';
+  var data = _.isFinite(argv.fold) ? 'data_train_' + argv.fold + '.csv' : 'rsa-het-data.csv';
   var obs = csv.read('data/' + data).slice(1, -1);
   // open pointScore file
-  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + inferenceParams.chain + ".csv");
+  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold;
+  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + chainFold + ".csv");
   csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + inferenceParams.chain + ".csv");
+  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + chainFold + ".csv");
   csv.close(output_handle);
 };

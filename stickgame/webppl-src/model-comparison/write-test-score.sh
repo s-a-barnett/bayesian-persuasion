@@ -10,7 +10,7 @@ do
   esac
 done
 
-mleString=$(python mle_params.py -m $MODEL -i $INPUT)
+mleString=$(python mle_params.py -m $MODEL -f $FOLD -i $INPUT)
 score=$(webppl $MODEL.wppl --require ../shared-simple --require webppl-csv \
   -- --test true --mleString $mleString --fold $FOLD | head -n 1)
 
