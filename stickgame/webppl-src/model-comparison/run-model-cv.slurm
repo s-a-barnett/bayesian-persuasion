@@ -16,7 +16,7 @@
 module load anaconda3
 
 # Change to current directory
-cd /home/samuelab/bayesian-persuasion/stickgame/webppl-src/model-comparison/cv/
+cd /home/samuelab/bayesian-persuasion/stickgame/webppl-src/model-comparison/
 
 # Create scratch and tigress directories to record results
 mkdir -p /tigress/samuelab/bper/model-comparison/cv/results/

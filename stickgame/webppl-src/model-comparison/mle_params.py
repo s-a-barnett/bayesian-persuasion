@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 
 def main(args):
-    posterior_ = [f'{args.input}/{args.model}-params-posterior_c{i}f{args.fold}.csv' for i in range(3)]
+    posterior_ = [f'{args.input}/{args.model}-params-posterior_c{i}f{args.fold}.csv' for i in range(4)]
 
     df = pd.concat([pd.read_csv(posterior_[i], delimiter=' ') for i in range(3)])
     d1 = df[list(df.columns)[0]].str.rsplit(pat=',', n=1, expand=True)

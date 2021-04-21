@@ -9,6 +9,8 @@ var inferenceParams = {
   out: argv.out
 };
 
+var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
+
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J2' ? {
@@ -76,7 +78,7 @@ var getLevels = function(means, obs) {
 var levelDist = function(means, obs) {
   return Infer({
     method: 'forward',
-    samples: 10000,
+    samples: testSamples,
     model: function() {
       return getLevels(means, obs);
     }
@@ -213,13 +215,20 @@ if (argv.test == 'true') {
 
   var sharedParams = mleParams.sharedParams;
 
-  var batchPartial = function(levels) {
-    return batchScore(levels, sharedParams, groupParams, obs, true, {})
+  if (argv.maxScore == 'true') {
+    var drawScore = function() {
+      var levels = getLevels(mleParams.means, obs);
+      return batchScore(levels, sharedParams, groupParams, obs, true, {});
+    };
+    var maxScore = _.max(repeat(testSamples, drawScore))
+    console.log(maxScore);
+  } else {
+    var batchPartial = function(levels) {
+      return batchScore(levels, sharedParams, groupParams, obs, true, {});
+    };
+    var expectedScore = expectation(levelDist(mleParams.means, obs), batchPartial);
+    console.log(expectedScore);
   };
-
-  var expectedScore = expectation(levelDist(mleParams.means, obs), batchPartial);
-
-  console.log(expectedScore);
 
 } else {
   var data = _.isFinite(argv.fold) ? 'data_train_' + argv.fold + '.csv' : 'rsa-het-data.csv';
