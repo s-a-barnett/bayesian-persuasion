@@ -1,5 +1,10 @@
 // contains cached versions of J0 and J1 for efficient re-use
 
+var JudgeMixture = function(stick, mixtureProbs) {
+  return Mixture({dists: [noise(stick), J0(stick), J1(stick)],
+                  ps: mixtureProbs});
+};
+
 var getJ0Score = cache(function(target, obs, params) {
   return shared.getJ0Score(target, obs, params);
 });
