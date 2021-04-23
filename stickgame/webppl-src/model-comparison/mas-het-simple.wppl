@@ -66,6 +66,20 @@ var levelDist = function(groupWeight, obs) {
   })
 };
 
+var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
+  var pointScores = mapData({data: obs}, function(datum) {
+    var pointLevelScores = map2(function(level, idx) {
+      var datumParams = extend(sharedParams, groupParams[level], {level});
+      var pointLevelScore = getScore(datum, datumParams);
+      var levelPriorScore = Math.log(groupWeight[idx]);
+      return pointLevelScore + levelPriorScore;
+    }, ['noise', 'aa', 'mas'], [0, 1, 2]);
+
+    return shared.logSumExp(pointLevelScores);
+  });
+  return sum(pointScores);
+};
+
 var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
   var pointScores = mapData({data: obs}, function(datum, i) {
     var level = levels[i].toString();
@@ -152,10 +166,7 @@ if (argv.test == 'true') {
     var maxScore = _.max(repeat(testSamples, drawScore))
     console.log(maxScore);
   } else {
-    var batchPartial = function(levels) {
-      return batchScore(levels, sharedParams, groupParams, obs, true, {});
-    };
-    var expectedScore = expectation(levelDist(sharedParams.groupWeight, obs), batchPartial);
+    var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs);
     console.log(expectedScore);
   };
 
