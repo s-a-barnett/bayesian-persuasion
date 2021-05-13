@@ -336,7 +336,12 @@ var isRecordedIter = function(iter, burn, lag) {
   return (cond1 && cond2);
 };
 
+var logSumExp = function(array) {
+  return _.reduce(array, function(sum, x) {return numeric.logaddexp(sum, x)}, -Infinity);
+};
+
 module.exports = {
   getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator,
-  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore, getQuantumScore
+  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore, getQuantumScore,
+  logSumExp
 };
