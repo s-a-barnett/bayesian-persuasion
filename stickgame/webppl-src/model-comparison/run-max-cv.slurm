@@ -29,5 +29,5 @@ num_fold=$(($SLURM_ARRAY_TASK_ID%10))
 
 while IFS="," read -r model
 do
-    srun sh write-test-score.sh -m $model -f $num_fold -i /tigress/samuelab/bper/model-comparison/cv/results/ -t 1000000 -x true
+    srun sh write-test-score.sh -m $model -f $num_fold -i /tigress/samuelab/bper/model-comparison/cv/results/ 
 done < <(cut -d "," -f$num_model het-model-list.csv)
