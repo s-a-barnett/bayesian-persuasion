@@ -193,22 +193,28 @@ d_rsa_pp <- predictive_rsa %>%
             upper_ci_model = HPDhi(value),
             lower_ci_model = HPDlo(value)) %>%
   left_join(d_het_n24) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
   group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(MAPmodel)
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'predicted')
 
-d_mas_pp <- predictive_mas %>%
-  gather(gameid, value, -prob, -X1) %>%
-  group_by(gameid) %>%
-  summarize(MAPmodel = estimate_mode(value),
-            upper_ci_model = HPDhi(value),
-            lower_ci_model = HPDlo(value)) %>%
-  left_join(d_het_n24) %>%
-  group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(MAPmodel)
+# d_mas_pp <- predictive_mas %>%
+#   gather(gameid, value, -prob, -X1) %>%
+#   group_by(gameid) %>%
+#   summarize(MAPmodel = estimate_mode(value),
+#             upper_ci_model = HPDhi(value),
+#             lower_ci_model = HPDlo(value)) %>%
+#   left_join(d_het_n24) %>%
+#   group_by(agent1stick, firstStick) %>%
+#   tidyboot::tidyboot_mean(MAPmodel)
 
 d_bystick <- d_het_n24 %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
   group_by(agent1stick, firstStick) %>%
-  tidyboot::tidyboot_mean(belief)
+  tidyboot::tidyboot_mean(belief) %>%
+  mutate(group = 'actual')
 
 # ggplot() +
 #   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
@@ -220,19 +226,24 @@ d_bystick <- d_het_n24 %>%
 #   xlim(0.6, 0.9) + 
 #   ylim(0, 1)
 
-ggplot() +
-  geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
-  geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
-  geom_point(data=d_rsa_pp, aes(x=agent1stick, y=empirical_stat), colour="red") +
-  geom_errorbar(data=d_rsa_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="red") +
-  geom_point(data=d_mas_pp, aes(x=agent1stick, y=empirical_stat), colour="blue") +
-  geom_errorbar(data=d_mas_pp, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=1, colour="blue") +
+d_ppcomp <- d_bystick %>%
+  full_join(d_rsa_pp)
+```
+
+```{r}
+pd <- position_dodge(0.2)
+
+ggplot(d_ppcomp, aes(x=agent1stick, y=empirical_stat, colour=group)) + 
+  geom_point(position=pd) + 
+  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7) + 
   geom_hline(yintercept=0.5, linetype='dotted') + 
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
-  labs(x = 'agent 1 stick length', y = 'belief about mean') +
-  xlim(0.6, 0.9) + 
-  ylim(0, 1)
+  labs(x = 'judge stick', y = 'belief about mean') +
+  xlim(5.5, 9.5) + 
+  scale_y_continuous(breaks=seq(0, 1.1, 0.1), limits = c(0, 1))
+
+# ggsave("ppcheck.png", plot = p1, width = 8, height = 4)
 ```
 
 
