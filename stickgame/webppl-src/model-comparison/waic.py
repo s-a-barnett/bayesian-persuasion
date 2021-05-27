@@ -23,7 +23,7 @@ def main(args):
     if args.verbose:
         print("importing data...")
     # dfs = [pd.read_csv(args.input + model + "-pointScores.csv") for model in models]
-    dfs = [pd.concat([pd.read_csv(args.input + model + "-pointScores_{}ftrue.csv".format(i)) for i in range(4)]) for model in models]
+    dfs = [pd.concat([pd.read_csv(args.input + model + "-pointScores_c{}ftrue.csv".format(i)) for i in range(4)]) for model in models]
 
     if args.verbose:
         print("computing lppds...")
