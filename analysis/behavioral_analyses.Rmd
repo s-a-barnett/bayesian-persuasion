@@ -132,15 +132,16 @@ d_het <- d %>%
 d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
 
 # predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
-predictive_rsa <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/rsa-pp-params-posterior.csv")
-predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/mas-pp-params-posterior.csv")
+predictive_rsa <- read_csv("../stickgame/webppl-src/model-comparison/results/rsa-pp-params-posterior.csv")
+# predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/mas-pp-params-posterior.csv")
+predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/mas-pp-params-posterior_new.csv")
 ```
 
 Make individual histogram for each participant
 
 ```{r}
-predictive %>% 
-  gather(gameid, value, -prob, -X1, -logitSigma) %>%
+predictive_mas %>% 
+  gather(gameid, value, -prob, -X1) %>%
   ggplot(aes(x = value)) +
     geom_histogram() +
     facet_wrap(~ gameid)
@@ -197,17 +198,20 @@ d_rsa_pp <- predictive_rsa %>%
   mutate(firstStick = firstStick * 10) %>%
   group_by(agent1stick, firstStick) %>%
   tidyboot::tidyboot_mean(MAPmodel) %>%
-  mutate(group = 'predicted')
+  mutate(group = 'rsa')
 
-# d_mas_pp <- predictive_mas %>%
-#   gather(gameid, value, -prob, -X1) %>%
-#   group_by(gameid) %>%
-#   summarize(MAPmodel = estimate_mode(value),
-#             upper_ci_model = HPDhi(value),
-#             lower_ci_model = HPDlo(value)) %>%
-#   left_join(d_het_n24) %>%
-#   group_by(agent1stick, firstStick) %>%
-#   tidyboot::tidyboot_mean(MAPmodel)
+d_mas_pp <- predictive_mas %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'mas')
 
 d_bystick <- d_het_n24 %>%
   mutate(agent1stick = agent1stick * 10) %>%
@@ -227,16 +231,20 @@ d_bystick <- d_het_n24 %>%
 #   ylim(0, 1)
 
 d_ppcomp <- d_bystick %>%
-  full_join(d_rsa_pp)
+  full_join(d_rsa_pp) %>%
+  full_join(d_mas_pp)
 ```
 
 ```{r}
-pd <- position_dodge(0.2)
+pd <- position_dodge(0.4)
 
 ggplot(d_ppcomp, aes(x=agent1stick, y=empirical_stat, colour=group)) + 
+  scale_color_manual(values=c('black', 'red', 'blue')) +
   geom_point(position=pd) + 
-  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7) + 
+  # scale_size_manual(values=c(10, 1, 1)) +
+  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7, width=0) + 
   geom_hline(yintercept=0.5, linetype='dotted') + 
+  geom_line(data = full_join(d_rsa_pp, d_mas_pp)) +
   facet_grid( ~ firstStick) +
   ggthemes::theme_few() + 
   labs(x = 'judge stick', y = 'belief about mean') +
