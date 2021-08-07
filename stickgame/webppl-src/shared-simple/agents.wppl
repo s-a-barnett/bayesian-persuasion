@@ -1,0 +1,9 @@
+// contains cached versions of J0 and J1 for efficient re-use
+
+var getJ0Score = cache(function(target, obs, params) {
+  return shared.getJ0Score(target, obs, params);
+});
+
+var getJ1Score = cache(function(target, obs, params) {
+  return shared.getJ1Score(target, obs, params);
+});

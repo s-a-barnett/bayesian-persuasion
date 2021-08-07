@@ -1,0 +1,109 @@
+var possibleSticks = _.range(1, 11, 1);
+var availableSticks = [4, 7, 8];
+var nSticks = 2;
+
+var S0 = function(sticks) {
+  return Infer({model: function(){
+    var stick = categorical({vs: sticks});
+    return {stick};
+  }})
+};
+
+var J0 = cache(function(stick) {
+  return Infer({model: function(){
+    var sample = repeat(nSticks, function() {return categorical({vs: possibleSticks})});
+    condition(_.includes(sample, stick));
+    var isLong = _.mean(sample) > 5 ? "long" : "short";
+    return {isLong};
+  }})
+});
+
+var S1 = cache(function(bias, sticks) {
+  return Infer({model: function(){
+    var stick = categorical({vs: sticks});
+    var desiredOutcome = bias > 0 ? "long" : "short";
+    factor(Math.abs(bias) * marginalize(J0(stick), "isLong").score(desiredOutcome));
+    return {stick};
+  }})
+});
+
+// Remove first instance of element found in l
+var removeSingleElement = function(element, l) {
+  var i = _.indexOf(l, element);
+  return l.slice(0, i).concat(l.slice(i+1));
+};
+
+var extremeS1 = cache(function(bias, sticks) {
+  return Infer({model: function(){
+    var stick = bias > 0 ? _.max(sticks) : _.min(sticks);
+    return {stick}
+  }})
+});
+
+var extremeJ1 = function(stick, bias) {
+  return Infer({model: function(){
+    var sample = repeat(nSticks, function() {return categorical({vs: possibleSticks})});
+    observe(marginalize(extremeS1(bias, sample), "stick"), stick)
+//     var speakerScore = marginalize(extremeS1(bias, sample), "stick").score(stick);
+//     factor(_.includes(sample, stick) ? speakerScore : -1000);
+    var isLong = _.mean(sample) > 5 ? "long" : "short";
+    var stick2 = _.includes(sample, stick) ? removeSingleElement(stick, sample)[0] : 0;
+    return {isLong, stick2};
+  }})
+};
+
+var J1 = function(stick, bias) {
+  return Infer({model: function(){
+    var sample = repeat(nSticks, function() {return categorical({vs: possibleSticks})});
+    var speakerScore = marginalize(S1(bias, sample), "stick").score(stick);
+    factor(_.includes(sample, stick) ? speakerScore : -1000);
+    var isLong = _.mean(sample) > 5 ? "long" : "short";
+    var stick2 = _.includes(sample, stick) ? removeSingleElement(stick, sample)[0] : 0;
+    return {isLong, stick2};
+  }})
+};
+
+// viz(marginalize(J1(7, 5), "stick2"))
+
+// var printProbs = function(sticks, probs) {
+//   if (_.isEmpty(sticks)) {
+//     return probs;
+//   } else {
+//     var stick = first(sticks);
+//     var prob = Math.exp(marginalize(J0(stick), "isLong").score("long"));
+//     printProbs(rest(sticks), probs.concat(prob))
+//   }
+// };
+
+// var printProbs = function(sticks, probs, bias) {
+//   if (_.isEmpty(sticks)) {
+//     return probs;
+//   } else {
+//     var stick = first(sticks);
+//     var prob = Math.exp(marginalize(J1(stick, bias), "isLong").score("long"));
+//     printProbs(rest(sticks), probs.concat(prob), bias)
+//   }
+// };
+
+var printProbs = function(sticks, probs, bias) {
+  if (_.isEmpty(sticks)) {
+    return probs;
+  } else {
+    var stick = first(sticks);
+    var prob = Math.exp(marginalize(extremeJ1(7, bias), "stick2").score(stick));
+    printProbs(rest(sticks), probs.concat(prob), bias)
+  }
+};
+
+// console.log(Math.exp(marginalize(J1(7, 0), "stick2").score(1)))
+// printProbs(possibleSticks, []);
+printProbs(possibleSticks, [], 10)
+// console.log(printProbs(possibleSticks, [], 1));
+// console.log(printProbs(possibleSticks, [], 10));
+
+// viz(S0(availableSticks));
+// viz(J0(9));
+// viz(S1(1, availableSticks));
+// viz(S1(-1, availableSticks));
+// viz(S1(10, availableSticks));
+// viz(J1(6, 0));

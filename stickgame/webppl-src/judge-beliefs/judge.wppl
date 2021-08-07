@@ -1,0 +1,25 @@
+var modelName = _.isFinite(argv.model) ? argv.model : 'rsa-het-speakers-hi';
+
+var possibleSticks = map(function(v) {return _.round(v, 3)}, _.range(0.0, 1.1, 0.1));
+
+var levels = ['J0', 'J1', 'J2'];
+
+var mleParams = JSON.parse(argv.mleString);
+var scoreFns = {
+	'J0': shared.getJ0Score,
+	'J1': shared.getJ1Score_generator(mleParams.groupParams.J1),
+	'J2': shared.getJ2Score_generator(mleParams.groupParams.J2)
+};
+
+var params = {
+	'J0': mleParams.groupParams.J0,
+	'J1': mleParams.groupParams.J1,
+	'J2': mleParams.groupParams.J2,
+};
+
+map(function(level) {
+	map(function(stick) {
+		var belief = Math.exp(scoreFns[level]('long', stick, params[level]));
+		console.log(level + ',' + stick + ',' + belief);
+	}, possibleSticks)
+}, levels);

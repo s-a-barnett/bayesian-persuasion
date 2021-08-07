@@ -1,0 +1,15 @@
+{
+  "name": "shared",
+  "main": "shared.js",
+  "webppl": {
+    "wppl": [
+      "agents.wppl"
+    ]
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.13.10",
+    "babyparse": "*",
+    "lodash": ">=4.17.13",
+    "mathjs": "*"
+  }
+}

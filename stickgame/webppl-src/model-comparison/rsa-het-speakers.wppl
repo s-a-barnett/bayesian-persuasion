@@ -1,0 +1,219 @@
+var modelName = 'rsa-het-speakers';
+
+var inferenceParams = {
+  samples: argv.samples,
+  burn: argv.burn,
+  lag: argv.lag,
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
+  out: argv.out
+};
+
+var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
+
+// prior over rsa het model parameters
+var groupPrior = function(model) {
+  var params = model == 'J1' ? {
+              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+              agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+            } : model == 'J0' ? {
+              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
+              agentBias : 0,
+            } : {
+              nSticks: 5,
+              agentBias: 0,
+            };
+  return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
+};
+
+var getScore = function(datum, params) {
+  // read single observation from overall observations
+  var stickLength   = _.toNumber(datum[1]);
+  var subjectBelief = _.toNumber(datum[2]);
+
+  // compute belief in idealized model
+  var mean = params.level == 'J1' ?
+      params.getJ1Score('long', stickLength, params) :
+             params.level == 'J0' ?
+      shared.getJ0Score('long', stickLength, params) :
+      0.5;
+
+  // mu represents the mean of the normal distribution given by the logit
+  //   of the model belief
+  var mu = mean - Math.log1p(-Math.exp(mean));
+
+  var noiseDist = params.level == 'noise' ?
+    Uniform({a: 0., b: 1.}) :
+    LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+
+  // in Gelman et al. notation, this is log(p(y_i | θ^s))
+  //   for i-th observation, s-th posterior sample
+  var pointScore = noiseDist.score(subjectBelief);
+
+  return pointScore;
+};
+
+var getLevels = function(means, obs) {
+  var speakerSticks = map(function(o){return o[3];}, obs);
+
+  var levels = map(function(stick) {
+    return categorical({ps: means[stick], vs: ['noise', 'J0', 'J1']})
+  }, speakerSticks);
+
+  return levels;
+};
+
+var levelDist = function(means, obs) {
+  return Infer({
+    method: 'forward',
+    samples: testSamples,
+    model: function() {
+      return getLevels(means, obs);
+    }
+  })
+};
+
+var mixtureScore = function(means, sharedParams, groupParams, obs) {
+  var pointScores = mapData({data: obs}, function(datum) {
+    var speakerStick = datum[3];
+    var pointLevelScores = map2(function(level, idx) {
+      var datumParams = extend(sharedParams, groupParams[level], {level});
+      var pointLevelScore = getScore(datum, datumParams);
+      var levelPriorScore = Math.log(means[speakerStick][idx]);
+      return pointLevelScore + levelPriorScore;
+    }, ['noise', 'J0', 'J1'], [0, 1, 2]);
+
+    return shared.logSumExp(pointLevelScores);
+  });
+  return sum(pointScores);
+};
+
+var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
+  var pointScores = mapData({data: obs}, function(datum, i) {
+    var level = levels[i].toString();
+    var datumParams = extend(sharedParams, groupParams[level], {level});
+    var pointScore = getScore(datum, datumParams);
+
+    if (!test) {
+      query.add('p' + datum[0], level);
+      globalStore.totalScore += pointScore;
+      factor(pointScore);
+
+      var iter = shared.iterationTracker() / obs.length;
+      var floor_iter = _.floor(iter);
+
+      // write pointScore into separate external file
+      if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
+        csv.writeLine(datum[0] + "," + pointScore, output_handle);
+        if (floor_iter + 1 == iter + (1/obs.length)) {
+          console.log(globalStore.totalScore);
+        };
+      };
+    };
+
+    return pointScore;
+  });
+
+  return sum(pointScores);
+};
+
+var train = function(obs, output_handle) {
+  return Infer({
+    method: 'MCMC',
+    samples: inferenceParams.samples,
+    burn: inferenceParams.burn,
+    lag: inferenceParams.lag,
+    verbose: inferenceParams.verbose,
+    model: function() {
+      var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
+      var sharedParams = {logitSigma};
+
+      var groupParams = {
+        'noise' : groupPrior('noise'),
+        'J0' : groupPrior('J0'),
+        'J1' : groupPrior('J1')
+      };
+
+      var means = {
+        '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+      };
+
+      var levels = getLevels(means, obs);
+
+      globalStore.totalScore = 0;
+
+      batchScore(levels, sharedParams, groupParams, obs, false, output_handle);
+
+      query.add('J0nSticks', groupParams['J0'].nSticks);
+      query.add('J1nSticks', groupParams['J1'].nSticks);
+      query.add('J1agentBias', groupParams['J1'].agentBias);
+
+      query.add('groupWeight-noise-0.9', means['0.9'][0]);
+      query.add('groupWeight-noise-0.8', means['0.8'][0]);
+      query.add('groupWeight-noise-0.7', means['0.7'][0]);
+      query.add('groupWeight-noise-0.4', means['0.4'][0]);
+      query.add('groupWeight-noise-0.2', means['0.2'][0]);
+
+      query.add('groupWeight-J0-0.9', means['0.9'][1]);
+      query.add('groupWeight-J0-0.8', means['0.8'][1]);
+      query.add('groupWeight-J0-0.7', means['0.7'][1]);
+      query.add('groupWeight-J0-0.4', means['0.4'][1]);
+      query.add('groupWeight-J0-0.2', means['0.2'][1]);
+
+      query.add('groupWeight-J1-0.9', means['0.9'][2]);
+      query.add('groupWeight-J1-0.8', means['0.8'][2]);
+      query.add('groupWeight-J1-0.7', means['0.7'][2]);
+      query.add('groupWeight-J1-0.4', means['0.4'][2]);
+      query.add('groupWeight-J1-0.2', means['0.2'][2]);
+
+      query.add('logitSigma', logitSigma);
+
+      query.add('score', globalStore.totalScore);
+      query.add('params', JSON.stringify(extend({sharedParams}, {groupParams}, {means})));
+
+      return query;
+    }})
+};
+
+if (argv.test == 'true') {
+  var obs = csv.read('data/data_test_' + argv.fold + '.csv').slice(1, -1);
+
+  var mleString = argv.mleString;
+  var mleParams = JSON.parse(mleString);
+
+  var groupParams = {
+    'noise': extend(mleParams.groupParams.noise, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.noise)}),
+    'J0': extend(mleParams.groupParams.J0, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J0)}),
+    'J1': extend(mleParams.groupParams.J1, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J1)}),
+  };
+
+  var sharedParams = mleParams.sharedParams;
+
+  if (argv.maxScore == 'true') {
+    var drawScore = function() {
+      var levels = getLevels(mleParams.means, obs);
+      return batchScore(levels, sharedParams, groupParams, obs, true, {});
+    };
+    var maxScore = _.max(repeat(testSamples, drawScore))
+    console.log(maxScore);
+  } else {
+    var expectedScore = mixtureScore(mleParams.means, sharedParams, groupParams, obs);
+    console.log(expectedScore);
+  };
+
+} else {
+  var data = _.isFinite(argv.fold) ? 'data_train_' + argv.fold + '.csv' : 'rsa-het-data.csv';
+  var obs = csv.read('data/' + data).slice(1, -1);
+  // open pointScore file
+  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold;
+  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + chainFold + ".csv");
+  csv.writeLine("gameid,score", output_handle);
+
+  // write posterior distribution to new file
+  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + chainFold + ".csv");
+  csv.close(output_handle);
+};

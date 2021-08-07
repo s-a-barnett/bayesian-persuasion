@@ -11,6 +11,28 @@ library(tidyboot)
 library(lme4)
 library(lmerTest)
 library(broom.mixed)
+library(coda)
+library(here)
+
+estimate_mode <- function(s) {
+  d <- density(s)
+  return(d$x[which.max(d$y)])
+}
+
+HPDhi<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","upper"])
+}
+
+HPDlo<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","lower"])
+}
+```
+
+Import data 
+
+```{r}
 d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
 d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
 d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
@@ -18,7 +40,6 @@ d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.cs
 d_5 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample3.csv')
 d_raw <- rbind(d_1, d_2, d_3, d_4, d_5) %>%   
   rename(agent1stick = agent2stick, agent2stick = agent1stick)
-
 ```
 
 # Implement exclusions, get descriptive stats
@@ -75,11 +96,176 @@ passed_speaker_criterion <- speaker_criterion %>%
 cat(length(passed_speaker_criterion), 'participants passed speaker exclusion \n')
 
 # ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check) )
-ok_games  <- intersect(passed_speaker_criterion, passed_manip_check)
+# ok_games  <- intersect(passed_speaker_criterion, passed_manip_check)
+ok_games  <- passed_manip_check
 cat(length(ok_games), 'participants passed all criteria \n')
 
 d <- d_raw %>%
   filter(gameid %in% ok_games)
+```
+
+## Pull table with agent1stick, belief values, and first chosen stick
+
+```{r}
+d_cs <- d %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  filter(stimulus_contestant == 'first') %>%
+  mutate(firstStick = as.numeric(substring(chosenStick, 0, 1)) / 10) %>%
+  select(gameid, firstStick) 
+
+d_het <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  mutate(adjResponse = case_when(response == 100 ~ 99,
+                                response == 0 ~ 1,
+                                TRUE ~ response)) %>%
+  mutate(belief = adjResponse / 100) %>%
+  select(gameid, agent1stick, belief) %>%
+  left_join(d_cs) %>%
+  select(gameid, agent1stick, belief, firstStick) %>%
+  write_csv(., "../stickgame/webppl-src/model-comparison/data/rsa-het-data.csv")
+```
+
+# Derive MAP beliefs & CIs from predictives file
+
+```{r}
+d_het_n24 <- read_csv("../stickgame/webppl-src/model-comparison/data/rsa-het-data_no0.2_0.4.csv")
+
+# predictive <- read_csv(here("analysis/rsa-pp-params-posterior.csv"))
+predictive_rsa <- read_csv("../stickgame/webppl-src/model-comparison/results/rsa-pp-params-posterior.csv")
+# predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/cluster/results/run14/mas-pp-params-posterior.csv")
+predictive_mas <- read_csv("../stickgame/webppl-src/model-comparison/results/mas-pp-params-posterior_new.csv")
+```
+
+Make individual histogram for each participant
+
+```{r}
+predictive_mas %>% 
+  gather(gameid, value, -prob, -X1) %>%
+  ggplot(aes(x = value)) +
+    geom_histogram() +
+    facet_wrap(~ gameid)
+
+ggsave('predictiveHistograms.pdf', height = 20, width = 20, units = 'in')
+```
+
+Make scatter plot of MAP estimate and empirical belief for each individual
+
+```{r}
+predictive %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  ggplot(aes(x = MAPmodel, y = belief)) +
+    geom_point() +
+    geom_abline(intercept = 0, slope = 1) +
+    facet_grid(agent1stick ~ firstStick) +
+    xlim(0,1) +
+    ylim(0,1)
+
+```
+
+```{r}
+d_notbystick <- d_het_n24 %>%
+  group_by(agent1stick) %>%
+  tidyboot::tidyboot_mean(belief)
+
+ggplot() +
+  geom_point(data=d_notbystick, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_notbystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  # facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6, 0.9) + 
+  ylim(0, 1)
+```
+
+summarize means for each condition
+
+```{r}
+d_rsa_pp <- predictive_rsa %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'rsa')
+
+d_mas_pp <- predictive_mas %>%
+  gather(gameid, value, -prob, -X1) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'mas')
+
+d_bystick <- d_het_n24 %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(belief) %>%
+  mutate(group = 'actual')
+
+# ggplot() +
+#   geom_point(data=d_bystick, aes(x=agent1stick, y=empirical_stat)) +
+#   geom_errorbar(data=d_bystick, aes(x=agent1stick, ymin=ci_lower, ymax=ci_upper), width=0) +
+#   geom_hline(yintercept=0.5, linetype='dotted') + 
+#   facet_grid( ~ firstStick) +
+#   ggthemes::theme_few() + 
+#   labs(x = 'agent 1 stick length', y = 'belief about mean') +
+#   xlim(0.6, 0.9) + 
+#   ylim(0, 1)
+
+d_ppcomp <- d_bystick %>%
+  full_join(d_rsa_pp) %>%
+  full_join(d_mas_pp)
+```
+
+```{r}
+pd <- position_dodge(0.4)
+
+ggplot(d_ppcomp, aes(x=agent1stick, y=empirical_stat, colour=group)) + 
+  scale_color_manual(values=c('black', 'red', 'blue')) +
+  geom_point(position=pd) + 
+  # scale_size_manual(values=c(10, 1, 1)) +
+  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7, width=0) + 
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  geom_line(data = full_join(d_rsa_pp, d_mas_pp)) +
+  facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'judge stick', y = 'belief about mean') +
+  xlim(5.5, 9.5) + 
+  scale_y_continuous(breaks=seq(0, 1.1, 0.1), limits = c(0, 1))
+
+# ggsave("ppcheck.png", plot = p1, width = 8, height = 4)
+```
+
+
+```{r}
+ggplot() +
+  geom_point(data=d_all, aes(x=agent1stick, y=empirical_stat)) +
+  geom_errorbar(data=d_all, aes(x=agent1stick, ymin = ci_lower, ymax = ci_upper), width = 0) +
+  geom_hline(yintercept = 0.5, linetype = 'dotted') +
+  geom_line(data=(model_beliefs), aes(x=stick, y=belief)) +
+  facet_grid( ~ level) + 
+  ggthemes::theme_few() +
+  labs(x = 'agent 1 stick length', y = 'belief about mean') +
+  xlim(0.6,0.9)+
+  ylim(0,1)
 ```
 
 ## Inspect frequency of different sequences on speaker trials
