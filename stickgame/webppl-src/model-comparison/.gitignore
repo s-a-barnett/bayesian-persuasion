@@ -1,2 +1,4 @@
 *.csv
 !model-list.csv
+!cv-scores.csv
+!waic-scores.csv
