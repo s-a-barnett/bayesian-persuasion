@@ -1,0 +1,67 @@
+var possibleSticks = _.range(1, 11, 1);
+var availableSticks = [4, 7, 8];
+var nSticks = 3;
+
+var S0 = function(sticks) {
+  return Infer({model: function(){
+    var stick = categorical({vs: sticks});
+    return {stick};
+  }})
+};
+
+var J0 = cache(function(stick) {
+  return Infer({model: function(){
+    var sample = repeat(nSticks, function() {return categorical({vs: possibleSticks})});
+    condition(_.includes(sample, stick));
+    var isLong = _.mean(sample) > 5 ? "long" : "short";
+    return {isLong};
+  }})
+});
+
+var S1 = cache(function(bias, sticks) {
+  return Infer({model: function(){
+    var stick = categorical({vs: sticks});
+    var desiredOutcome = bias > 0 ? "long" : "short";
+    factor(Math.abs(bias) * marginalize(J0(stick), "isLong").score(desiredOutcome));
+    return {stick};
+  }})
+});
+
+var J1 = function(stick, bias) {
+  return Infer({model: function(){
+    var sample = repeat(nSticks, function() {return categorical({vs: possibleSticks})});
+    var speakerScore = marginalize(S1(bias, sample), "stick").score(stick);
+    factor(_.includes(sample, stick) ? speakerScore : -1000);
+    var isLong = _.mean(sample) > 5 ? "long" : "short";
+    return {isLong};
+  }})
+}
+
+var printProbsJ0 = function(sticks, probs) {
+  if (_.isEmpty(sticks)) {
+    return probs;
+  } else {
+    var stick = first(sticks);
+    var prob = Math.exp(marginalize(J0(stick), "isLong").score("long"));
+    printProbsJ0(rest(sticks), probs.concat(prob))
+  }
+};
+
+var printProbsJ1 = function(sticks, probs, bias) {
+  if (_.isEmpty(sticks)) {
+    return probs;
+  } else {
+    var stick = first(sticks);
+    var prob = Math.exp(marginalize(J1(stick, bias), "isLong").score("long"));
+    printProbsJ1(rest(sticks), probs.concat(prob), bias)
+  }
+};
+
+console.log('J0:')
+console.log(printProbsJ0(possibleSticks, []));
+console.log('J1: bias = 1\n')
+console.log(printProbsJ1(possibleSticks, [], 1));
+console.log('J1: bias = 10\n')
+console.log(printProbsJ1(possibleSticks, [], 10));
+console.log('J1: bias = 100\n')
+console.log(printProbsJ1(possibleSticks, [], 100));
