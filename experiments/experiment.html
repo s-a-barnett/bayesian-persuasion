@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Experiment 2</title>
+    <title>Experiment 1</title>
     <script src="/socket.io/socket.io.js" type="text/javascript"></script>
     <script src="jspsych-6.1.0/jspsych.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-html-keyboard-response.js"></script>
@@ -9,7 +9,6 @@
     <script src="jspsych-6.1.0/plugins/jspsych-html-button-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-image-button-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-image-slider-response.js"></script>
-    <script src="jspsych-6.1.0/plugins/jspsych-image-keyboard-response.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-survey-multi-choice.js"></script>
     <script src="jspsych-6.1.0/plugins/jspsych-survey-text.js"></script>
     <link href="jspsych-6.1.0/css/jspsych.css" rel="stylesheet" type="text/css"></link>
@@ -68,7 +67,7 @@
       // failing three quiz attempts.
       var pComplete = jsPsych.progress()['percent_complete'];
       var trialType = jsPsych.currentTrial()['type'];
-      if ((pComplete != 100) & ((Math.round(pComplete) != 39) || (trialType != 'survey-multi-choice'))) {
+      if ((!turkInfo.previewMode) & (pComplete != 100) & ((Math.round(pComplete) != 33) || (trialType != 'survey-multi-choice'))) {
         return "Data will be lost if you leave the page, are you sure?";
       }
     };
@@ -78,7 +77,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'sample2'
+      var iterationName = 'prolificSample3'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -104,75 +103,84 @@
 
         var instructions_1 = {
           type: "image-button-response",
-          stimulus: "figures/twopeople.png",
+          stimulus: "static/twopeople.png",
           prompt:
-            "<p> In this HIT, you will serve as the judge for a game " +
-            "with these two contestants.</p>",
-          choices: ['Continue']
+            "<p> In this HIT, you will serve as the judge for a heated game " +
+            "between these two contestants.</p>",
+          choices: ['Continue'],
+          force_wait: 3000
         };
 
         timeline.push(instructions_1);
 
         var instructions_2 = {
           type: "image-button-response",
-          stimulus: "figures/stickExampleBlackControl.png",
+          stimulus: "static/stickExampleBlack.png",
           prompt:
             "<p> The two contestants in this game have been given a " +
-            "transparent box with sticks ranging in length from very long ones to very short" +
+            "set of sticks ranging in length from very long ones to very short" +
             " ones.</p>",
-          choices: ['Continue']
+          choices: ['Continue'],
+          force_wait: 3000
         };
 
         timeline.push(instructions_2);
 
         var instructions_3 = {
           type: "image-button-response",
-          stimulus: "figures/exampleBlueHighlightControl.png",
+          stimulus: "static/exampleRedHighlight.png",
           prompt:
-            "<p> One contestant (shown in blue) will draw a stick at random " +
-            "from the box to show you.</p>",
-          choices: ['Continue']
+            "<p> One contestant (shown in red) will be rewarded handsomely " +
+            "if they can convince you that the average length of these sticks is " +
+            "<strong> shorter than 5in (see dotted line)</strong>.</p>",
+          choices: ['Continue'],
+          force_wait: 3000
         };
 
         timeline.push(instructions_3);
 
         var instructions_4 = {
           type: "image-button-response",
-          stimulus: "figures/exampleRedHighlightControl.png",
+          stimulus: "static/exampleBlueHighlight.png",
           prompt:
-            "<p> The other (shown in red) will then draw a second stick at " +
-            "random from the box to show you.</p>",
-          choices: ['Continue']
+            "<p> The other (shown in blue) will get paid if " +
+            "if they can convince you that the average length of these sticks is " +
+            "<strong> longer than 5in (see dotted line)</strong>. " +
+            "In this case, the average length is 6in, so the position that " +
+            "this person was arguing for was true.</p>",
+          choices: ['Continue'],
+          force_wait: 3000
         };
 
         timeline.push(instructions_4);
 
         var instructions_5 = {
           type: "image-button-response",
-          stimulus: "figures/exampleAllGreyControl.png",
+          stimulus: "static/exampleAllGrey.png",
           prompt:
-            "<p>As the judge, you will not be able to see the full " +
-            "set of sticks: you will only see what the contestants have " +
-            "shown you. They will each get to show <strong>exactly one " +
-            "of the five sticks</strong>.</p>",
-          choices: ['Continue']
+            "<p>As the judge, however, you will not be able to see the full " +
+            "set of sticks: you will only see what the contestants choose " +
+            "to show you. They will each get to show <strong>exactly one " +
+            "of the five sticks</strong> to convince you.</p>",
+          choices: ['Continue'],
+          force_wait: 3000
         };
 
         timeline.push(instructions_5);
 
         var instructions_6 = {
           type: "image-slider-response",
-          stimulus: "figures/stick8Control.png",
+          stimulus: "static/stick8.png",
           prompt:
             "<p>After you see each stick, you will use this slider to report " +
-            "your belief about the <strong>average length</strong> of all " +
-            "five sticks. If you think this " +
+            "how strongly you are leaning in your decision. If you think the stick " +
             "average is more likely to be <strong>shorter than 5in</strong>, " +
             "click further to the left. If you think it is more likely to be " +
             "<strong>longer than 5in</strong>, click further to the right.</p>" +
             "<p>Please press 'Continue'.</p>",
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
+          force_wait: 3000,
           data: {
             stimulus_type: 'practice'
           }
@@ -187,7 +195,8 @@
           stimulus: "<p>Before we begin, you must complete a short quiz to " +
           "show that you understand the task. You must pass the quiz within " +
           maxQuizAttempts + " attempts to continue.</p>",
-          choices: ['Continue']
+          choices: ['Continue'],
+          force_wait: 1000
         }
 
         timeline.push(preQuiz);
@@ -200,7 +209,7 @@
             		options: ["You", "The contestants", "You and the contestants", "Nobody"],
             		required:true},
                {prompt: "How are the sticks revealed to you?",
-            		options: ["A contestant <i>deliberately</i> chooses a stick to show you", "A contestant <i>randomly</i> chooses a stick to show you", "You choose a stick to be revealed"],
+            		options: ["A contestant chooses a stick to show you", "At random", "You choose a stick to be revealed"],
             	  required: true},
                {prompt: "How many contestants are there?",
           		  options: ["0", "1", "2"],
@@ -219,9 +228,9 @@
             loop_function: function(data){
               	resp = JSON.parse(data.values()[0]['responses']);
               	if ((resp["Q0"] == 'The contestants') &&
-                   (resp["Q1"] == 'A contestant <i>randomly</i> chooses a stick to show you') &&
+                   (resp["Q1"] == 'A contestant chooses a stick to show you') &&
                    (resp["Q2"] == '2') && (resp["Q3"] == 'Average') &&
-                   (resp["Q4"] == 'False')){
+                   (resp["Q4"] == 'True')){
               	    return false;
               	} else {
                     if (quizAttempts < maxQuizAttempts) {
@@ -234,12 +243,12 @@
             on_finish: function(data) {
               resp = JSON.parse(data.responses);
               if ((resp["Q0"] != 'The contestants') ||
-                 (resp["Q1"] != 'A contestant <i>randomly</i> chooses a stick to show you') ||
+                 (resp["Q1"] != 'A contestant chooses a stick to show you') ||
                  (resp["Q2"] != '2') || (resp["Q3"] != 'Average') ||
-                 (resp["Q4"] != 'False')) {
+                 (resp["Q4"] != 'True')) {
                 if (quizAttempts >= maxQuizAttempts) {
-                  // console.log(jsPsych.progress()['percent_complete']);
-                  alert('Experiment terminated: too many failed quiz attempts.');
+                  alert('Experiment terminated: too many failed quiz attempts. ' +
+                  'You will still be paid for participating in this study.');
                   jsPsych.endExperiment()
                 }
               }
@@ -248,11 +257,143 @@
 
         timeline.push(loopNode);
 
+        var preSpeakerTrials = {
+          type: "html-button-response",
+          stimulus:
+            "<p> You have passed the quiz!</p>" +
+            "<p> To help you understand what it's like to be a contestant, " +
+            "you will begin by selecting sticks to show another judge.</p>" +
+            "<p> You will see the full set of sticks, and for four turns you will choose one " +
+            "to show to the judge. You will also be told how much you will " +
+            "(fictionally) earn if the judge gives a certain verdict.</p>",
+          choices: ['Continue'],
+          force_wait: 3000
+        };
+
+        timeline.push(preSpeakerTrials);
+
+        var stickChoice = ['2in', '4in', '7in', '8in', '9in'];
+        var chosenStick = ''; // Initialise as empty string
+
+        var speakerTrial_1 = {
+          type: "image-button-response",
+          stimulus: 'static/speakerTaskBlue.png',
+          prompt:
+            "<p> You are the blue speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'first'
+          }
+        }
+
+        timeline.push(speakerTrial_1);
+
+        var speakerTrial_2 = {
+          type: "image-button-response",
+          stimulus: function(){
+            return 'static/speakerTaskRed' + chosenStick + '.png';
+          },
+          prompt:
+            "<p> Now, you are the red speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'second'
+          }
+        }
+
+        timeline.push(speakerTrial_2);
+
+        var speakerTrial_3 = {
+          type: "image-button-response",
+          stimulus: function(){
+            return 'static/speakerTaskBlue' + chosenStick + '.png';
+          },
+          prompt:
+            "<p> Now, you are the blue speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'third'
+          }
+        }
+
+        timeline.push(speakerTrial_3);
+
+        var speakerTrial_4 = {
+          type: "image-button-response",
+          stimulus: function(){
+            return 'static/speakerTaskRed' + chosenStick + '.png';
+          },
+          prompt:
+            "<p> Finally, you are the red speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "5in. The true average stick length is <strong>6in</strong>. " +
+            "Which stick do you show to the judge?</p>",
+          choices: stickChoice,
+          on_finish: function(data) {
+            data.chosenStick = stickChoice[parseInt(data.button_pressed)];
+            chosenStick = chosenStick + stickChoice[parseInt(data.button_pressed)];
+            stickChoice.splice(parseInt(data.button_pressed), 1);
+          },
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'speakerTrial',
+            stimulus_contestant: 'fourth'
+          }
+        }
+
+        timeline.push(speakerTrial_4);
+
+        var postSpeakerSurvey = {
+          type: 'survey-text',
+          questions: [
+            {prompt: "What was your strategy for selecting sticks as a speaker? " +
+                      "Please describe it briefly."}
+          ],
+          force_wait: 10000,
+          data: {
+            stimulus_type: 'speakerSurvey'
+          }
+        };
+
+        timeline.push(postSpeakerSurvey);
+
         var ready_screen = {
           type: "html-button-response",
           stimulus:
-            "<p>You have passed the quiz! Press 'Begin' to start the game.</p>",
-          choices: ['Begin']
+            "<p>Ready to play as the judge? Remember, each contestant now " +
+            "only gets <strong>one</strong> turn to send you a stick.</p>",
+          choices: ['Begin'],
+          force_wait: 3000
         }
 
         timeline.push(ready_screen);
@@ -260,7 +401,7 @@
         // Make the choices feel more realistic by adding arbitrary delay.
         var pre_first_move = {
           type: "html-keyboard-response",
-          stimulus: "<p> Blue contestant drawing stick... </p>",
+          stimulus: "<p> Blue contestant choosing move... </p>",
           choices: jsPsych.NO_KEYS,
           trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
         }
@@ -269,7 +410,7 @@
 
         var first_move = {
           type: "image-slider-response",
-          stimulus: "figures/stick" + (10 * agent2stick) + "Control.png",
+          stimulus: "static/stick" + (10 * agent2stick) + ".png",
           prompt:
             "<p>The blue contestant shows a stick of length " + (10 * agent2stick) +
             "in from the set.</p>" +
@@ -278,6 +419,7 @@
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
           require_movement: true,
+          force_wait: 5000,
           data: {
             stimulus_type: 'isLong',
             stimulus_contestant: 'first'
@@ -289,7 +431,7 @@
         // Make the choices feel more realistic by adding arbitrary delay.
         var pre_second_move = {
           type: "html-keyboard-response",
-          stimulus: "<p> Red contestant drawing stick... </p>",
+          stimulus: "<p> Red contestant choosing move... </p>",
           choices: jsPsych.NO_KEYS,
           trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
         }
@@ -298,7 +440,7 @@
 
         var second_move = {
           type: "image-slider-response",
-          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "Control.png",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
             "<p>Now, the red contestant shows a stick of length " +
             (10 * agent1stick) + "in from the set.</p>" +
@@ -306,6 +448,7 @@
             "be longer or shorter than 5in?</p>",
           labels: ['Definitely shorter', 'Definitely longer'],
           slider_width: sliderWidthScale * screen.width,
+          force_wait: 5000,
           require_movement: true,
           data: {
             stimulus_type: 'isLong',
@@ -315,13 +458,28 @@
 
         timeline.push(second_move);
 
+        var postJudgeSurvey = {
+          type: 'survey-text',
+          questions: [
+            {prompt: "How did you reach your decisions? " +
+                      "Please describe your thinking briefly."}
+          ],
+          force_wait: 10000,
+          data: {
+            stimulus_type: 'judgeSurvey'
+          }
+        };
+
+        timeline.push(postJudgeSurvey);
+
         var final_decision = {
           type: "image-button-response",
-          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "Control.png",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
             "<p>Do you think that the average of the five sticks is longer than " +
             "or shorter than 5in?</p>",
           choices: ['Shorter than 5in', 'Longer than 5in'],
+          force_wait: 5000,
           data: {
             stimulus_type: '2afc'
           }
@@ -340,13 +498,14 @@
 
         var meanGuess = {
           type: "image-slider-response",
-          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "Control.png",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
             "<p>What do you think is the average length of all five sticks? " +
             "Use the slider to record your answer.</p>",
           labels: ['0in', '5in', '10in'],
           slider_width: sliderWidthScale * screen.width,
           require_movement: true,
+          force_wait: 5000,
           data: {
             stimulus_type: 'meanSlider'
           }
@@ -356,7 +515,7 @@
 
         var genSticks = {
           type: 'image-button-response',
-          stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "Control.png",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           choices: ['1in', '2in', '3in', '4in', '5in', '6in', '7in', '8in', '9in', '10in'],
           timeline: [
             {prompt:
@@ -369,6 +528,7 @@
               '<p> What do you think the length of the fifth stick is?</p>',
              data: {stimulus_contestant: 'fifth'}}
           ],
+          force_wait: 3000,
           data: {
             stimulus_type: 'genModel'
           }
@@ -376,43 +536,45 @@
 
         timeline.push(genSticks);
 
-        // // Allows us to measure the strong evidence effect for listeners.
-        // var post_first_move = {
-        //   type: "image-slider-response",
-        //   stimulus: "figures/stick" + (10 * agent2stick) + "grey.png",
-        //   prompt:
-        //     "<p>How biased is the blue contestant?</p>",
-        //   labels: ['Biased towards showing shorter sticks',
-        //             'Showing sticks at random',
-        //             'Biased towards showing longer sticks'],
-        //   slider_width: sliderWidthScale * screen.width,
-        //   require_movement: true,
-        //   data: {
-        //     stimulus_type: 'bias',
-        //     stimulus_contestant: 'first'
-        //   }
-        // };
-        //
-        // timeline.push(post_first_move);
-        //
-        // // Allows us to measure the strong evidence effect for listeners.
-        // var post_second_move = {
-        //   type: "image-slider-response",
-        //   stimulus: "figures/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "grey.png",
-        //   prompt:
-        //     "<p>How biased is the red contestant?</p>",
-        //   labels: ['Biased towards showing shorter sticks',
-        //             'Showing sticks at random',
-        //             'Biased towards showing longer sticks'],
-        //   slider_width: sliderWidthScale * screen.width,
-        //   require_movement: true,
-        //   data: {
-        //     stimulus_type: 'bias',
-        //     stimulus_contestant: 'second'
-        //   }
-        // };
-        //
-        // timeline.push(post_second_move);
+        // Allows us to measure the strong evidence effect for listeners.
+        var post_first_move = {
+          type: "image-slider-response",
+          stimulus: "static/stick" + (10 * agent2stick) + "grey.png",
+          prompt:
+            "<p>How biased is the blue contestant?</p>",
+          labels: ['Biased towards showing shorter sticks',
+                    'Showing sticks at random',
+                    'Biased towards showing longer sticks'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'first'
+          }
+        };
+
+        timeline.push(post_first_move);
+
+        // Allows us to measure the strong evidence effect for listeners.
+        var post_second_move = {
+          type: "image-slider-response",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "grey.png",
+          prompt:
+            "<p>How biased is the red contestant?</p>",
+          labels: ['Biased towards showing shorter sticks',
+                    'Showing sticks at random',
+                    'Biased towards showing longer sticks'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'second'
+          }
+        };
+
+        timeline.push(post_second_move);
 
         var exit_survey = {
           type: 'survey-text',
@@ -428,8 +590,9 @@
 
         var goodbye = {
           type: 'html-keyboard-response',
-          stimulus: 'Thank you for participating! Press any key to exit.'
-        }
+          stimulus: 'Thank you for participating! Press any key to to be ' +
+                    'redirected to the completion page.'
+        };
 
         timeline.push(goodbye);
 
@@ -447,18 +610,21 @@
             // At the end of the experiment, submit to turk
             // Record number of quiz attempts
             jsPsych.data.addProperties({quizAttempts: quizAttempts});
-            console.log('sending data to mturk');
-            jsPsych.turk.submitToTurk({'value': 0});
+            console.log('sending data to prolific');
+            window.location.replace("https://app.prolific.co/submissions/complete?cc=394CC1E4")
             // jsPsych.data.displayData(); // Uncomment this line to debug
           },
           on_trial_finish: function(trialData) {
             // At the end of each trial, send data to server
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+
             var packet = Object.assign({}, mongoData, trialData, {
               dbname: 'bayesian-persuasion',
-              colname: 'experiment2',
-              wID: turkInfo.workerId,
-              aID: turkInfo.assignmentId,
-              hitID: turkInfo.hitId,
+              colname: 'experiment1',
+              wID: urlParams.get('PROLIFIC_PID'),
+              aID: urlParams.get('STUDY_ID'),
+              hitID: urlParams.get('SESSION_ID'),
               iterationName: iterationName
             })
             socket.emit('currentData', packet);
