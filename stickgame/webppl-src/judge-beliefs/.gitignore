@@ -1,2 +1,3 @@
 *.csv
 !judge-beliefs.csv
+!judge-heatmap.csv

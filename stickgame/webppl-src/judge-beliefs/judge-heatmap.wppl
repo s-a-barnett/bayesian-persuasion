@@ -1,0 +1,16 @@
+var possibleSticks = map(function(v) {return _.round(v, 3)}, _.range(0.0, 1.1, 0.1));
+var agentBiases = [0, 1, 3, 10, 30, 100];
+var nStickses = [3, 4, 5];
+
+console.log('nSticks,agentBias,stick,belief');
+
+map(function(nSticks) {
+	map(function(bias) {
+        map(function(stick) {
+            var pre_params = {nSticks: nSticks, agentBias: bias};
+            var params = extend(pre_params, {getJ1Score: shared.getJ1Score_generator(pre_params)});
+		    var belief = Math.exp(params.getJ1Score('long', stick, params));
+		    console.log(nSticks + ',' + bias + ',' + stick + ',' + belief);
+        }, possibleSticks)
+	}, agentBiases)
+}, nStickses);
