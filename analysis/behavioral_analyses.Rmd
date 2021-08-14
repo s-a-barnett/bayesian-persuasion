@@ -33,13 +33,9 @@ HPDlo<- function(s){
 Import data 
 
 ```{r}
-d_1 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot1.csv')
-d_2 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificPilot2.csv')
-d_3 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample1.csv')
-d_4 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample2.csv')
-d_5 <- read_csv('../stickgame/human-experiments/dataFromMongo_prolificSample3.csv')
-d_raw <- rbind(d_1, d_2, d_3, d_4, d_5) %>%   
-  rename(agent1stick = agent2stick, agent2stick = agent1stick)
+d_raw <- read_csv('../data/prolificData.csv') %>%
+  select(iterationName, gameid,rt,agent1stick,agent2stick,button_pressed,response,stimulus_type,stimulus_contestant,chosenStick,responses) %>%
+  filter(!is.na(stimulus_type))
 ```
 
 # Implement exclusions, get descriptive stats
@@ -52,6 +48,7 @@ complete_games <- d_raw %>%
   filter(n == 2) %>%
   pull(gameid)
 
+cat(length(unique(d_raw$gameid)))
 cat(length(complete_games), 'participants completed both isLong trials \n')
 
 passed_manip_check <- d_raw %>%
@@ -59,49 +56,30 @@ passed_manip_check <- d_raw %>%
   filter(stimulus_type == 'bias') %>%
   select(stimulus_contestant, response, gameid, agent1stick) %>%
   spread(stimulus_contestant, response) %>%
-  # filter(first > 60 & second < 40) %>%
   filter(first >= 50 & second <= 50) %>%
   pull(gameid) %>%
   unique()
 
 cat(length(passed_manip_check), 'participants passed bias manipulation check \n')
 
-passed_rt_criterion <- d_raw %>%
-  filter(stimulus_type == 'isLong') %>%
-  mutate(log_rt = log(rt),
-         lower = mean(log_rt) - 2*sd(log_rt),
-         upper = mean(log_rt) + 2*sd(log_rt)) %>%
-  filter(log_rt > lower, log_rt < upper) %>%
-  # filter(rt > 8000, rt < 40000) %>%
-  group_by(gameid) %>%
-  tally() %>%
-  filter(n == 2) %>%
-  pull(gameid) %>%
-  unique()
-
-cat(length(passed_rt_criterion), 'participants passed RT exclusion \n')
-
-speaker_criterion <- d_raw %>%
-  filter((gameid %in% complete_games)) %>%
-  filter(stimulus_type == 'speakerTrial') %>%
-  select(stimulus_contestant, button_pressed, gameid) %>%
-  group_by(gameid) %>%
-  spread(stimulus_contestant, button_pressed) 
-
-passed_speaker_criterion <- speaker_criterion %>%
-  filter(first %in% c(2,3,4) & second %in% c(0,1)) %>% 
-  pull(gameid) %>%
-  unique()
-
-cat(length(passed_speaker_criterion), 'participants passed speaker exclusion \n')
-
-# ok_games  <- intersect(passed_rt_criterion, intersect(passed_speaker_criterion, passed_manip_check) )
-# ok_games  <- intersect(passed_speaker_criterion, passed_manip_check)
-ok_games  <- passed_manip_check
-cat(length(ok_games), 'participants passed all criteria \n')
+# passed_rt_criterion <- d_raw %>%
+#   filter(stimulus_type == 'isLong') %>%
+#   mutate(log_rt = log(rt),
+#          lower = mean(log_rt) - 2*sd(log_rt),
+#          upper = mean(log_rt) + 2*sd(log_rt)) %>%
+#   filter(log_rt > lower, log_rt < upper) %>%
+#   # filter(rt > 8000, rt < 40000) %>%
+#   group_by(gameid) %>%
+#   tally() %>%
+#   filter(n == 2) %>%
+#   pull(gameid) %>%
+#   unique()
+# 
+# cat(length(passed_rt_criterion), 'participants passed RT exclusion \n')
+cat(length(passed_manip_check), 'of those participants passed attention check \n')
 
 d <- d_raw %>%
-  filter(gameid %in% ok_games)
+  filter(gameid %in% passed_manip_check)
 ```
 
 ## Pull table with agent1stick, belief values, and first chosen stick
@@ -282,6 +260,13 @@ d_raw %>%
   group_by(sequence) %>%
   tally() %>%
   arrange(-n)
+
+speaker_criterion <- d_raw %>%
+  filter((gameid %in% complete_games)) %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  select(stimulus_contestant, button_pressed, gameid) %>%
+  group_by(gameid) %>%
+  spread(stimulus_contestant, button_pressed) 
 ```
 
 ```{r}
@@ -451,15 +436,6 @@ beliefChange.d %>%
   mutate(agent1stick = agent1stick - 0.5) %>%
   lm(diff ~ agent1stick, data = .) %>%
   tidy()
-
-# a slightly weirder alternative...
-# d %>%
-#   filter(gameid %in% complete_games) %>%
-#   filter(gameid %in% intersect(passed_manip_check, passed_rt_criterion)) %>%
-#   filter(stimulus_type == 'isLong') %>%
-#   mutate(agent1stick = agent1stick - 0.5) %>%
-#   lmer(response ~ agent1stick + stimulus_contestant + (1 | gameid), data = .) %>%
-#   tidy()
 ```
 
 # Supplemental: examine survey responses
