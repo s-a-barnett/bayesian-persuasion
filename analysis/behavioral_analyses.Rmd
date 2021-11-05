@@ -81,7 +81,22 @@ speaker_criterion <- d_raw %>%
   select(stimulus_contestant, button_pressed, gameid) %>%
   group_by(gameid) %>%
   spread(stimulus_contestant, button_pressed) 
+```
 
+```{r}
+d_raw %>%
+  filter((gameid %in% complete_games)) %>%
+  filter((gameid %in% passed_manip_check)) %>%
+  filter(stimulus_type == 'speakerTrial') %>%
+  select(stimulus_contestant, gameid, chosenStick) %>%
+  group_by(gameid) %>%
+  spread(stimulus_contestant, chosenStick) %>%
+  group_by(first) %>%
+  tally() %>%
+  arrange(-n)
+```
+
+```{r}
 d_raw %>%
   filter((gameid %in% complete_games)) %>%
   filter((gameid %in% passed_manip_check)) %>%
@@ -117,7 +132,10 @@ d %>%
     theme(aspect.ratio = 1.5) +
     xlim(0.5,1)+
     ylim(0,100)
+
+ggsave('speaker_dependence.pdf', units = 'in', height = 4, width = 8)
 ```
+
 
 ## Statistics
 
@@ -128,8 +146,30 @@ d %>%
   filter(stimulus_contestant == 'first') %>%
   left_join(speaker_criterion) %>%
   mutate(first = ifelse(first < 2, 2, first),
-         agent1stick = agent1stick - 0.5) %>%
+         first = first - 3,
+         agent1stick = 10 * (agent1stick - .5)) %>%
   lm(response ~ agent1stick * first, data = .) %>%
+  summary()
+```
+
+```{r}
+# This seems like the most obvious way to run the regression...?
+d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  left_join(speaker_criterion) %>%
+  filter(agent1stick == 0.6) %>%
+  filter(first <3) %>%
+  pull(response) %>%
+  t.test(mu = 50, alternative = 'two.sided')
+
+d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  left_join(speaker_criterion) %>%
+  filter(agent1stick == 0.6) %>%
+  mutate(first = ifelse(first < 4, 0, 1)) %>%
+  lm(response ~ first, data = .) %>%
   summary()
 ```
 
