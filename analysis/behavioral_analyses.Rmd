@@ -152,27 +152,41 @@ d %>%
   summary()
 ```
 
-```{r}
-# This seems like the most obvious way to run the regression...?
-d %>%
-  filter(stimulus_type == 'isLong') %>%
-  filter(stimulus_contestant == 'first') %>%
-  left_join(speaker_criterion) %>%
-  filter(agent1stick == 0.6) %>%
-  filter(first <3) %>%
-  pull(response) %>%
-  t.test(mu = 50, alternative = 'two.sided')
 
-d %>%
-  filter(stimulus_type == 'isLong') %>%
-  filter(stimulus_contestant == 'first') %>%
+## Examine post-test values
+
+```{r}
+d_raw %>%
   left_join(speaker_criterion) %>%
-  filter(agent1stick == 0.6) %>%
-  mutate(first = ifelse(first < 4, 0, 1)) %>%
-  lm(response ~ first, data = .) %>%
-  summary()
+  filter(stimulus_type %in% c('2afc', 'meanSlider')) %>%
+  mutate(response = ifelse(is.na(response), button_pressed, response)) %>%
+  mutate(first = ifelse(first < 2, 2, first)) %>%
+  select(-chosenStick, -responses, -button_pressed, -rt) %>%
+  arrange(gameid) %>%
+  pivot_wider(names_from = stimulus_type, values_from = response) %>%
+  ggplot(aes(x = as.factor(`2afc`), y = meanSlider, group = as.factor(`2afc`), color = meanSlider >= 50)) +
+    geom_jitter(alpha = 0.25, height = 0, data = . %>% filter(`2afc` == 0 & meanSlider <= 50)) +
+    geom_jitter(alpha = 0.25, height = 0, data = . %>% filter(`2afc` == 1 & meanSlider >= 50)) +
+    geom_jitter(data = . %>% filter(`2afc` == 0 & meanSlider > 50), color = 'black') +
+    geom_jitter(data = . %>% filter(`2afc` == 1 & meanSlider < 50), color = 'black') +
+    facet_wrap(~ as.factor(first)) +
+    theme_few()
 ```
 
+```{r}
+d %>%
+  left_join(speaker_criterion) %>%
+  filter(stimulus_type %in% c('2afc', 'meanSlider')) %>%
+  group_by(gameid, stimulus_type) %>%
+  mutate(response = ifelse(is.na(response), button_pressed, response)) %>%
+  select(-chosenStick, -responses, -button_pressed, -rt) %>%
+  arrange(gameid) %>%
+  pivot_wider(names_from = stimulus_type, values_from = response) %>%
+  group_by(`2afc`, meanSlider > 50) %>%
+  tally()
+```
+
+## Examine second stick
 
 ```{r}
 beliefChange.d <- d %>%
