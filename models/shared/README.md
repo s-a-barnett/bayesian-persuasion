@@ -1,1 +1,1 @@
-This folder contains the node package with the agents defined via WebPPL. While more interpretable, we do not use this model to make our predictions.
+This folder contains the Node package containing our implementations of various models, including the RSA and A&A models. These are implemented directly through the `shared.js` JavaScript file, which contains other helper functions in addition to the score functions for each model.

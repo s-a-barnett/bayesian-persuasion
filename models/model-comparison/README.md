@@ -1,3 +1,13 @@
+# Model comparisons
+
+## Instructions
+
+Run `data/splits.py` to produce different folds of the data for cross-validation.
+
+NB: it will be necessary to change the directory references within these files
+so that they are specific to your file storage structure.
+
+
 # Guide to files
 
 * `*.wppl`: fits model parameters to passed-in data via WebPPL's MCMC. Produces a `pointScores.csv` file giving the score of each sample generated in the chain, and a `params-posterior.csv` file giving the posterior over the parameters.

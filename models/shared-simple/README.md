@@ -1,1 +1,0 @@
-This folder contains the Node package containing our implementations of various models, including the RSA and A&A models. These are implemented directly through the `shared.js` JavaScript file, which contains other helper functions in addition to the score functions for each model.
