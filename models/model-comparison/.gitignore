@@ -1,7 +1,0 @@
-*.csv
-!model-list.csv
-!cv-scores.csv
-!waic-scores.csv
-!rsa-het-indepcontingency.csv
-!cv-model-comparison.csv
-!data/*.csv
