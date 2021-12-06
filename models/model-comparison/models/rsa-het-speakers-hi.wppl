@@ -204,7 +204,7 @@ var train = function(obs, output_handle) {
 };
 
 if (argv.test == 'true') {
-  var obs = csv.read('data/data_test_' + argv.fold + '.csv').slice(1, -1);
+  var obs = csv.read('input/data_test_' + argv.fold + '.csv').slice(1, -1);
 
   var mleString = argv.mleString;
   var mleParams = JSON.parse(mleString);
@@ -244,13 +244,13 @@ if (argv.test == 'true') {
 
 } else {
   var data = _.isFinite(argv.fold) ? 'data_train_' + argv.fold + '.csv' : 'rsa-het-data.csv';
-  var obs = csv.read('data/' + data).slice(1, -1);
+  var obs = csv.read('input/' + data).slice(1, -1);
   // open pointScore file
   var chainFold = "c" + inferenceParams.chain + "f" + argv.fold;
-  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + chainFold + ".csv");
+  var output_handle = csv.open(inferenceParams.out + "/" + modelName + "-pointScores_" + chainFold + ".csv");
   csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + chainFold + ".csv");
+  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
   csv.close(output_handle);
 };

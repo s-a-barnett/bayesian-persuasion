@@ -40,7 +40,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, default="./results/", help="location of input file")
+    parser.add_argument("-i", "--input", type=str, default="./output/", help="location of input file")
     parser.add_argument("-n", "--num_obs", type=int, default=725, help="number of experiment participants")
     parser.add_argument("-o", "--output", type=str, default="./", help="location of output table")
     args = parser.parse_args()

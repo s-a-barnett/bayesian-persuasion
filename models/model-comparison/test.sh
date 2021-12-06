@@ -12,8 +12,8 @@ do
   esac
 done
 
-mleString=$(python mle_params.py -m $MODEL -f $FOLD -i $INPUT)
-score=$(webppl $MODEL.wppl --require ../shared --require webppl-csv \
+mleString=$(python scripts/mle_params.py -m $MODEL -f $FOLD -i $INPUT)
+score=$(webppl models/$MODEL.wppl --require ../shared --require webppl-csv \
   -- --test true --mleString $mleString --fold $FOLD --testSamples $TESTSAMPLES --maxScore $MAXSCORE \
   | head -n 1)
 

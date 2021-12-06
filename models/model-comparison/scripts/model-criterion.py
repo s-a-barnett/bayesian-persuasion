@@ -36,7 +36,7 @@ def compute_elpd_aic(d_scores, d_params):
 def main(args):
 
     if args.type == 'waic' :
-        models = np.loadtxt("./model-list.csv", dtype=str, delimiter=",")
+        models = np.loadtxt("/input/model-list.csv", dtype=str, delimiter=",")
         dfs = [pd.concat([pd.read_csv(args.input + model + "-pointScores_c{}ftrue.csv".format(i))
                           for i in range(4)])
                for model in models]
@@ -78,7 +78,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, default="./results/", help="location of input files")
+    parser.add_argument("-i", "--input", type=str, default="./output/", help="location of input files")
     parser.add_argument("-o", "--output", type=str, default="./", help="location of output table")
     parser.add_argument("-v", "--verbose", action="store_true", default=True)
     args = parser.parse_args()

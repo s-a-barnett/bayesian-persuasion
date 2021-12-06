@@ -104,7 +104,7 @@ var masPP = function(obs) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
+var obs = csv.read('input/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeJoint(masPP(obs), inferenceParams.out + "results/mas-pp-params-posterior_" + inferenceParams.chain + ".csv");
+csv.writeJoint(masPP(obs), inferenceParams.out + "/mas-pp-params-posterior_" + inferenceParams.chain + ".csv");

@@ -108,8 +108,8 @@ var rsaHet = function(obs) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('data/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
+var obs = csv.read('input/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
-// csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "results/rsa-pp-speakers-params-posterior.csv");
-csv.writeJoint(rsaHet(obs), inferenceParams.out + "results/rsa-pp-params-posterior_" + inferenceParams.chain + ".csv");
+// csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "/rsa-pp-speakers-params-posterior.csv");
+csv.writeJoint(rsaHet(obs), inferenceParams.out + "/rsa-pp-params-posterior_" + inferenceParams.chain + ".csv");

@@ -26,5 +26,5 @@ num_chain=$(($SLURM_ARRAY_TASK_ID%4))
 
 while IFS="," read -r model
 do
-    srun sh infer-params.sh -m $model -s 2500 -b 20000 -l 1999 -v false -o /tigress/samuelab/bper/model-comparison/waic/ -c $num_chain
-done < <(cut -d "," -f$num_model model-list.csv)
+    srun sh train.sh -m $model -s 2500 -b 20000 -l 1999 -v false -o /tigress/samuelab/bper/model-comparison/waic/ -c $num_chain
+done < <(cut -d "," -f$num_model ../input/model-list.csv)
