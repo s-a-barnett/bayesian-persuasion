@@ -118,7 +118,7 @@ var train = function(obs, output_handle) {
                 model: function() {
 
     var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data);
-    var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
+    var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
     var sharedParams = {groupWeight, logitSigma};
 
     var groupParams = {
