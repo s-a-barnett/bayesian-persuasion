@@ -456,3 +456,10 @@ vignettes/*.pdf
 
 # Parameter files
 exp0*.csv
+
+!model-list.csv
+!cv-scores.csv
+!waic-scores.csv
+!rsa-het-indepcontingency.csv
+!cv-model-comparison.csv
+!data/*.csv
