@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-df = pd.read_csv("rsa-het-data.csv").query('firstStick == 0.9')[['agent1stick', 'belief']]
+df = pd.read_csv("input/rsa-het-data.csv").query('firstStick == 0.9')[['agent1stick', 'belief']]
 obs = df.to_numpy()
 
 def ls_point(stick, belief, params):

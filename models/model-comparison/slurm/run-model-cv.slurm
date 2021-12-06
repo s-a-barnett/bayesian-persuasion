@@ -18,8 +18,8 @@ module load anaconda3
 # Change to current directory
 cd /home/samuelab/bayesian-persuasion/stickgame/webppl-src/model-comparison/
 
-# Create scratch and tigress directories to record results
-mkdir -p /tigress/samuelab/bper/model-comparison/cv/results/
+# Create scratch and tigress directories to record output
+mkdir -p /tigress/samuelab/bper/model-comparison/cv/output/
 
 # 8 models, 4 chains, 10 folds
 num_fold=$(($SLURM_ARRAY_TASK_ID%10))
@@ -30,13 +30,13 @@ num_model=$(($SLURM_ARRAY_TASK_ID/40))
 
 while IFS="," read -r model
 do
-    srun sh infer-params.sh -m $model -s 1000 -b 20000 -l 1999 -v false -o /tigress/samuelab/bper/model-comparison/cv/ -c $num_chain -f $num_fold
+    srun sh train.sh -m $model -s 1000 -b 20000 -l 1999 -v false -o /tigress/samuelab/bper/model-comparison/cv/ -c $num_chain -f $num_fold
 
     # if all the chains have run, compute likelihood of test data
-    if [[ -f /tigress/samuelab/bper/model-comparison/cv/results/$model-params-posterior_c0f$num_fold.csv && \
-          -f /tigress/samuelab/bper/model-comparison/cv/results/$model-params-posterior_c1f$num_fold.csv && \
-          -f /tigress/samuelab/bper/model-comparison/cv/results/$model-params-posterior_c2f$num_fold.csv && \
-          -f /tigress/samuelab/bper/model-comparison/cv/results/$model-params-posterior_c3f$num_fold.csv ]]; then
-          srun sh write-test-score.sh -m $model -f $num_fold -i /tigress/samuelab/bper/model-comparison/cv/results/
+    if [[ -f /tigress/samuelab/bper/model-comparison/cv/output/$model-params-posterior_c0f$num_fold.csv && \
+          -f /tigress/samuelab/bper/model-comparison/cv/output/$model-params-posterior_c1f$num_fold.csv && \
+          -f /tigress/samuelab/bper/model-comparison/cv/output/$model-params-posterior_c2f$num_fold.csv && \
+          -f /tigress/samuelab/bper/model-comparison/cv/output/$model-params-posterior_c3f$num_fold.csv ]]; then
+          srun sh test.sh -m $model -f $num_fold -i /tigress/samuelab/bper/model-comparison/cv/output/
     fi
-done < <(cut -d "," -f$num_model model-list.csv)
+done < <(cut -d "," -f$num_model ../input/model-list.csv)

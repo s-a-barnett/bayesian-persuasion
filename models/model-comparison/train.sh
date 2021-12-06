@@ -14,6 +14,6 @@ do
   esac
 done
 
-webppl $MODEL.wppl --require ../shared --require webppl-csv \
+webppl models/$MODEL.wppl --require ../shared --require webppl-csv \
   -- --samples $SAMPLES --burn $BURN --verbose $VERBOSE --lag $LAG --out $OUT \
   --chain $CHAIN --fold $FOLD
