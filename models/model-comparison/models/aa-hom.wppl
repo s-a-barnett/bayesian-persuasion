@@ -1,0 +1,122 @@
+var modelName = 'aa-hom';
+
+var inferenceParams = {
+  samples: argv.samples,
+  burn: argv.burn,
+  lag: argv.lag,
+  verbose: (argv.verbose == 'true'), // converting str to bool,
+  chain: _.isFinite(argv.chain) ? argv.chain : 1,
+  out: argv.out
+};
+
+// prior over rsa hom model parameters
+var paramsPrior = function() {
+  // steepness of logistic stick-to-strength curve
+  var gradient = exponential({a: 0.01});
+  // prior threshold of confidence (fixed at 0.5 for simple A&A)
+  var threshold = 0.5;
+  // variance for mean noise
+  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+  return {
+    'gradient': gradient,
+    'threshold': threshold,
+    'logitSigma': logitSigma
+  };
+};
+
+var getScore = function(datum, params) {
+  // read single observation from overall observations
+  var stickLength   = _.toNumber(datum[1]);
+  var subjectBelief = _.toNumber(datum[2]);
+
+  // compute belief in idealized model
+  var mean = shared.getAAScore('long', stickLength, params);
+
+  // mu represents the mean of the normal distribution given by the logit
+  //   of the model belief
+  var mu = mean - Math.log1p(-Math.exp(mean));
+
+  var noiseDist = params.level == 'noise' ?
+    Uniform({a: 0., b: 1.}) :
+    LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+
+  // in Gelman et al. notation, this is log(p(y_i | θ^s))
+  //   for i-th observation, s-th posterior sample
+  var pointScore = noiseDist.score(subjectBelief);
+
+  return pointScore;
+};
+
+var batchScore = function(params, obs, test, output_handle) {
+  var pointScores = mapData({data: obs}, function(datum) {
+    var pointScore = getScore(datum, params);
+
+    if (!test) {
+      globalStore.totalScore += pointScore;
+      factor(pointScore);
+
+      var iter = shared.iterationTracker() / obs.length;
+      var floor_iter = _.floor(iter);
+
+      // write pointScore into separate external file
+      if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
+        csv.writeLine(datum[0] + "," + pointScore, output_handle);
+        if (floor_iter + 1 == iter + (1/obs.length)) {
+          console.log(globalStore.totalScore);
+        };
+      };
+    };
+
+    return pointScore;
+  });
+
+  return sum(pointScores);
+};
+
+var train = function(obs, output_handle) {
+  return Infer({method: 'MCMC',
+                samples: inferenceParams.samples,
+                burn: inferenceParams.burn,
+                lag: inferenceParams.lag,
+                verbose: inferenceParams.verbose,
+                model: function() {
+
+    var params = paramsPrior();
+
+    globalStore.totalScore = 0;
+
+    batchScore(params, obs, false, output_handle);
+
+    query.add('gradient', params.gradient);
+    query.add('threshold', params.threshold);
+    query.add('logitSigma', params.logitSigma);
+
+    query.add('score', globalStore.totalScore);
+    query.add('params', JSON.stringify(params));
+
+    return query;
+  }})
+};
+
+if (argv.test == 'true') {
+  var obs = csv.read('data/data_test_' + argv.fold + '.csv').slice(1, -1);
+
+  var mleString = argv.mleString;
+  var mleParams = JSON.parse(mleString);
+
+  var expectedScore = batchScore(mleParams, obs, true, {})
+
+  console.log(expectedScore);
+
+} else {
+  var data = _.isFinite(argv.fold) ? 'data_train_' + argv.fold + '.csv' : 'rsa-het-data.csv';
+  var obs = csv.read('data/' + data).slice(1, -1);
+  // open pointScore file
+  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold;
+  var output_handle = csv.open(inferenceParams.out + "results/" + modelName + "-pointScores_" + chainFold + ".csv");
+  csv.writeLine("gameid,score", output_handle);
+
+  // write posterior distribution to new file
+  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "results/" + modelName + "-params-posterior_" + chainFold + ".csv");
+  csv.close(output_handle);
+};
