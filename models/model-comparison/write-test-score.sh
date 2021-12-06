@@ -13,7 +13,7 @@ do
 done
 
 mleString=$(python mle_params.py -m $MODEL -f $FOLD -i $INPUT)
-score=$(webppl $MODEL.wppl --require ../shared-simple --require webppl-csv \
+score=$(webppl $MODEL.wppl --require ../shared --require webppl-csv \
   -- --test true --mleString $mleString --fold $FOLD --testSamples $TESTSAMPLES --maxScore $MAXSCORE \
   | head -n 1)
 

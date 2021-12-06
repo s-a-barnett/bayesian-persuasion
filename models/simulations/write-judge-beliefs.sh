@@ -5,6 +5,6 @@ for FOLD in {0..9}
 do
 	echo $FOLD
 	mleString=$(python ../model-comparison/mle_params.py -m $MODEL -f $FOLD -i $INPUT)
-	webppl judge.wppl --require ../shared-simple -- --mleString $mleString | head -n 33 >> judge-beliefs.csv
+	webppl judge.wppl --require ../shared -- --mleString $mleString | head -n 33 >> judge-beliefs.csv
 done
 exit 0
