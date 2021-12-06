@@ -16,7 +16,7 @@ var paramsPrior = function() {
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = 0.5;
   // variance for mean noise
-  var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
+  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
   return {
     'gradient': gradient,
     'threshold': threshold,

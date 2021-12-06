@@ -120,7 +120,7 @@ var train = function(obs, output_handle) {
                 lag: inferenceParams.lag,
                 verbose: inferenceParams.verbose,
                 model: function() {
-    var logitSigma = uniformDrift({a: 0, b: 1, width: 0.1});
+    var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
     var sharedParams = {logitSigma};
 
     var groupParams = {
