@@ -7,7 +7,7 @@ Run `input/splits.py` to produce different folds of the data for cross-validatio
 Run `train.sh` to fit model on train split:
 
 ```
-sh train.sh -m rsa-het-speakers -s 1000 -b 1000 -l 1 -v false -c 1 -f 1 -o ./
+sh train.sh -m rsa-het-speakers -s 1000 -b 1000 -l 1 -v false -c 1 -f 1 -o ./output/
 ```
 
 Run `test.sh` to test performance on test split:
