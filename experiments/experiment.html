@@ -34,8 +34,8 @@
       type: 'html-button-response',
       stimulus:
         "<font size='2'><p align='left'>This research is being conducted by Samuel Barnett, a graduate student, " +
-        "Robert Hawkins and Mark Ho, postdoctoral " +
-        "research fellows, and Tom Griffiths, a faculty member, at Princeton " +
+        "Robert Hawkins, a postdoctoral " +
+        "research fellow, and Tom Griffiths, a faculty member, at Princeton " +
         "University. This study takes approximately 5-10 minutes to complete.</p>" +
         "<p align='left'>If you agree to take part in the research, you will make a series " +
         "of judgments about a game: at each stage you will be " +
@@ -77,7 +77,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'prolificSample3'
+      var iterationName = 'prolificReplication1'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -92,6 +92,7 @@
         // Extract stick data from mongo
         var agent1stick = mongoData.agent1stick
         var agent2stick = mongoData.agent2stick
+        var firstContestant = mongoData.firstContestant
 
         // if still in preview mode, tell them to accept first, otherwise show first slide
         if (!turkInfo.previewMode) {
@@ -130,7 +131,7 @@
           type: "image-button-response",
           stimulus: "static/exampleRedHighlight.png",
           prompt:
-            "<p> One contestant (shown in red) will be rewarded handsomely " +
+            "<p> One contestant (shown in pink) will be rewarded handsomely " +
             "if they can convince you that the average length of these sticks is " +
             "<strong> shorter than 5in (see dotted line)</strong>.</p>",
           choices: ['Continue'],
@@ -265,7 +266,9 @@
             "you will begin by selecting sticks to show another judge.</p>" +
             "<p> You will see the full set of sticks, and for four turns you will choose one " +
             "to show to the judge. You will also be told how much you will " +
-            "(fictionally) earn if the judge gives a certain verdict.</p>",
+            "(fictionally) earn if the judge gives a certain verdict.</p>" +
+            "<p> The judge believes that sticks of any length are equally likely " +
+            "to be initially present in the set.</p>",
           choices: ['Continue'],
           force_wait: 3000
         };
@@ -304,7 +307,7 @@
             return 'static/speakerTaskRed' + chosenStick + '.png';
           },
           prompt:
-            "<p> Now, you are the red speaker. You will be paid $10 if the judge's " +
+            "<p> Now, you are the pink speaker. You will be paid $10 if the judge's " +
             "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
@@ -354,7 +357,7 @@
             return 'static/speakerTaskRed' + chosenStick + '.png';
           },
           prompt:
-            "<p> Finally, you are the red speaker again. You will be paid $10 if the judge's " +
+            "<p> Finally, you are the pink speaker again. You will be paid $10 if the judge's " +
             "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
@@ -399,16 +402,21 @@
         timeline.push(ready_screen);
 
         // Make the choices feel more realistic by adding arbitrary delay.
-        var pre_first_move = {
+        var pre_blue_move = {
           type: "html-keyboard-response",
           stimulus: "<p> Blue contestant choosing move... </p>",
           choices: jsPsych.NO_KEYS,
           trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
         }
 
-        timeline.push(pre_first_move);
+        var pre_pink_move = {
+          type: "html-keyboard-response",
+          stimulus: "<p> Pink contestant choosing move... </p>",
+          choices: jsPsych.NO_KEYS,
+          trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
+        }
 
-        var first_move = {
+        var blue_first_move = {
           type: "image-slider-response",
           stimulus: "static/stick" + (10 * agent2stick) + ".png",
           prompt:
@@ -426,23 +434,47 @@
           }
         };
 
-        timeline.push(first_move);
+        var pink_first_move = {
+          type: "image-slider-response",
+          stimulus: "static/stick" + (10 * agent1stick) + ".png",
+          prompt:
+            "<p>The pink contestant shows a stick of length " + (10 * agent1stick) +
+            "in from the set.</p>" +
+            "<p>Is the average stick length for all five sticks more likely to " +
+            "be longer or shorter than 5in?</p>",
+          labels: ['Definitely shorter', 'Definitely longer'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'isLong',
+            stimulus_contestant: 'first'
+          }
+        };
 
-        // Make the choices feel more realistic by adding arbitrary delay.
-        var pre_second_move = {
-          type: "html-keyboard-response",
-          stimulus: "<p> Red contestant choosing move... </p>",
-          choices: jsPsych.NO_KEYS,
-          trial_duration: jsPsych.randomization.sampleWithReplacement([3000, 4000, 5000], 1)[0]
-        }
-
-        timeline.push(pre_second_move);
-
-        var second_move = {
+        var blue_second_move = {
           type: "image-slider-response",
           stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
-            "<p>Now, the red contestant shows a stick of length " +
+            "<p>Now, the blue contestant shows a stick of length " +
+            (10 * agent2stick) + "in from the set.</p>" +
+            "<p>Is the average stick length for all five sticks more likely to " +
+            "be longer or shorter than 5in?</p>",
+          labels: ['Definitely shorter', 'Definitely longer'],
+          slider_width: sliderWidthScale * screen.width,
+          force_wait: 5000,
+          require_movement: true,
+          data: {
+            stimulus_type: 'isLong',
+            stimulus_contestant: 'second'
+          }
+        };
+
+        var pink_second_move = {
+          type: "image-slider-response",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
+          prompt:
+            "<p>Now, the pink contestant shows a stick of length " +
             (10 * agent1stick) + "in from the set.</p>" +
             "<p>Is the average stick length for all five sticks more likely to " +
             "be longer or shorter than 5in?</p>",
@@ -456,7 +488,39 @@
           }
         };
 
-        timeline.push(second_move);
+        var long_moves = {
+            timeline: [pre_blue_move, blue_first_move]
+        };
+
+        var short_moves = {
+            timeline: [pre_pink_move, pink_second_move]
+        };
+
+        var long_first_judgment_procedure = {
+            timeline: [pre_blue_move, blue_first_move, pre_pink_move, pink_second_move],
+            conditional_function: function(){
+                if(firstContestant == 'long'){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        timeline.push(long_first_judgment_procedure);
+
+        var short_first_judgment_procedure = {
+            timeline: [pre_pink_move, pink_first_move, pre_blue_move, blue_second_move],
+            conditional_function: function(){
+                if(firstContestant == 'short'){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        timeline.push(short_first_judgment_procedure);
 
         var postJudgeSurvey = {
           type: 'survey-text',
@@ -537,7 +601,8 @@
         timeline.push(genSticks);
 
         // Allows us to measure the strong evidence effect for listeners.
-        var post_first_move = {
+
+        var post_blue_first_move = {
           type: "image-slider-response",
           stimulus: "static/stick" + (10 * agent2stick) + "grey.png",
           prompt:
@@ -554,14 +619,28 @@
           }
         };
 
-        timeline.push(post_first_move);
-
-        // Allows us to measure the strong evidence effect for listeners.
-        var post_second_move = {
+        var post_pink_first_move = {
           type: "image-slider-response",
-          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "grey.png",
+          stimulus: "static/stick" + (10 * agent1stick) + "grey.png",
           prompt:
-            "<p>How biased is the red contestant?</p>",
+            "<p>How biased is the pink contestant?</p>",
+          labels: ['Biased towards showing shorter sticks',
+                    'Showing sticks at random',
+                    'Biased towards showing longer sticks'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'first'
+          }
+        };
+
+        var post_blue_second_move = {
+          type: "image-slider-response",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "bluegrey.png",
+          prompt:
+            "<p>How biased is the blue contestant?</p>",
           labels: ['Biased towards showing shorter sticks',
                     'Showing sticks at random',
                     'Biased towards showing longer sticks'],
@@ -574,7 +653,48 @@
           }
         };
 
-        timeline.push(post_second_move);
+        var post_pink_second_move = {
+          type: "image-slider-response",
+          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "redgrey.png",
+          prompt:
+            "<p>How biased is the pink contestant?</p>",
+          labels: ['Biased towards showing shorter sticks',
+                    'Showing sticks at random',
+                    'Biased towards showing longer sticks'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'bias',
+            stimulus_contestant: 'second'
+          }
+        };
+
+        var long_first_bias_procedure = {
+            timeline: [post_blue_first_move, post_pink_second_move],
+            conditional_function: function(){
+                if(firstContestant == 'long'){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        timeline.push(long_first_bias_procedure);
+
+        var short_first_bias_procedure = {
+            timeline: [post_pink_first_move, post_blue_second_move],
+            conditional_function: function(){
+                if(firstContestant == 'short'){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        };
+
+        timeline.push(short_first_bias_procedure);
 
         var exit_survey = {
           type: 'survey-text',
@@ -601,7 +721,8 @@
           numSticks: numSticks,
           agentBias: agentBias,
           agent1stick: agent1stick,
-          agent2stick: agent2stick
+          agent2stick: agent2stick,
+          firstContestant: firstContestant
         });
 
         jsPsych.init({

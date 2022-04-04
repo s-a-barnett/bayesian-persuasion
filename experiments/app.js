@@ -163,7 +163,8 @@ function initializeWithTrials(socket) {
       socket.emit('onConnected', {
 	gameid: gameid,
 	agent1stick: .1,
-	agent2stick: .7
+	agent2stick: .7,
+    firstContestant: 'short'
       });
     }
   });
