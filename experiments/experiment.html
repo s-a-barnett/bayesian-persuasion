@@ -120,7 +120,9 @@
           prompt:
             "<p> The two contestants in this game have been given a " +
             "set of sticks ranging in length from very long ones to very short" +
-            " ones.</p>",
+            " ones.</p>" +
+            "<p> Sticks ranging in length from 1 to 9 inches are equally likely " +
+            "to appear in the set.</p>",
           choices: ['Continue'],
           force_wait: 3000
         };
@@ -258,17 +260,26 @@
 
         timeline.push(loopNode);
 
+        var youPassed = {
+          type: "html-button-response",
+          stimulus:
+            "<p> You have passed the quiz!</p>",
+          choices: ['Continue'],
+          force_wait: 3000
+        };
+
+        timeline.push(youPassed);
+
         var preSpeakerTrials = {
           type: "html-button-response",
           stimulus:
-            "<p> You have passed the quiz!</p>" +
             "<p> To help you understand what it's like to be a contestant, " +
             "you will begin by selecting sticks to show another judge.</p>" +
             "<p> You will see the full set of sticks, and for four turns you will choose one " +
             "to show to the judge. You will also be told how much you will " +
             "(fictionally) earn if the judge gives a certain verdict.</p>" +
-            "<p> The judge believes that sticks of any length are equally likely " +
-            "to be initially present in the set.</p>",
+            "<p> Remember that the judge does not have any initial expectation over " +
+            "what the lengths of the sticks in the set will be.</p>",
           choices: ['Continue'],
           force_wait: 3000
         };
