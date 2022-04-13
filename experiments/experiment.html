@@ -286,15 +286,31 @@
 
         timeline.push(preSpeakerTrials);
 
+        if(firstContestant == 'long'){
+            var colorUpperFirst = 'Blue';
+            var colorLowerFirst = 'blue';
+            var comparativeFirst = 'longer';
+            var colorUpperSecond = 'Red';
+            var colorLowerSecond = 'pink';
+            var comparativeSecond = 'shorter';
+        } else {
+            var colorUpperFirst = 'Red';
+            var colorLowerFirst = 'pink';
+            var comparativeFirst = 'shorter';
+            var colorUpperSecond = 'Blue';
+            var colorLowerSecond = 'blue';
+            var comparativeSecond = 'longer';
+        };
+
         var stickChoice = ['2in', '4in', '7in', '8in', '9in'];
         var chosenStick = ''; // Initialise as empty string
 
         var speakerTrial_1 = {
           type: "image-button-response",
-          stimulus: 'static/speakerTaskBlue.png',
+          stimulus: 'static/speakerTask' + colorUpperFirst + '.png',
           prompt:
-            "<p> You are the blue speaker. You will be paid $10 if the judge's " +
-            "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
+            "<p> You are the " + colorLowerFirst + " speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>" + comparativeFirst + "</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
@@ -315,11 +331,11 @@
         var speakerTrial_2 = {
           type: "image-button-response",
           stimulus: function(){
-            return 'static/speakerTaskRed' + chosenStick + '.png';
+            return 'static/speakerTask' + colorUpperSecond + chosenStick + '.png';
           },
           prompt:
-            "<p> Now, you are the pink speaker. You will be paid $10 if the judge's " +
-            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "<p> Now, you are the " + colorLowerSecond + " speaker. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>" + comparativeSecond + "</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
@@ -340,11 +356,11 @@
         var speakerTrial_3 = {
           type: "image-button-response",
           stimulus: function(){
-            return 'static/speakerTaskBlue' + chosenStick + '.png';
+            return 'static/speakerTask' + colorUpperFirst + chosenStick + '.png';
           },
           prompt:
-            "<p> Now, you are the blue speaker again. You will be paid $10 if the judge's " +
-            "verdict is that the average length of all five sticks is <strong>longer</strong> than " +
+            "<p> Now, you are the " + colorLowerFirst + " speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>" + comparativeFirst + "</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
@@ -365,11 +381,11 @@
         var speakerTrial_4 = {
           type: "image-button-response",
           stimulus: function(){
-            return 'static/speakerTaskRed' + chosenStick + '.png';
+            return 'static/speakerTask' + colorUpperSecond + chosenStick + '.png';
           },
           prompt:
-            "<p> Finally, you are the pink speaker again. You will be paid $10 if the judge's " +
-            "verdict is that the average length of all five sticks is <strong>shorter</strong> than " +
+            "<p> Finally, you are the " + colorLowerSecond + " speaker again. You will be paid $10 if the judge's " +
+            "verdict is that the average length of all five sticks is <strong>" + comparativeSecond + "</strong> than " +
             "5in. The true average stick length is <strong>6in</strong>. " +
             "Which stick do you show to the judge?</p>",
           choices: stickChoice,
