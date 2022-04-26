@@ -222,6 +222,9 @@
                 required: true},
                {prompt: "Contestants will be rewarded based on your judgment.",
                 options: ["True", "False"],
+                required: true},
+               {prompt: "If the five sticks are of lengths 1in, 1in, 2in, 7in 9in, is the average stick length shorter or longer than 5 inches?",
+                options: ["Shorter", "Longer"],
                 required: true}
               ]
         };
@@ -233,7 +236,7 @@
               	if ((resp["Q0"] == 'The contestants') &&
                    (resp["Q1"] == 'A contestant chooses a stick to show you') &&
                    (resp["Q2"] == '2') && (resp["Q3"] == 'Average') &&
-                   (resp["Q4"] == 'True')){
+                   (resp["Q4"] == 'True') && (resp["Q5"] == 'Shorter')){
               	    return false;
               	} else {
                     if (quizAttempts < maxQuizAttempts) {
@@ -248,7 +251,7 @@
               if ((resp["Q0"] != 'The contestants') ||
                  (resp["Q1"] != 'A contestant chooses a stick to show you') ||
                  (resp["Q2"] != '2') || (resp["Q3"] != 'Average') ||
-                 (resp["Q4"] != 'True')) {
+                 (resp["Q4"] != 'True') || (resp["Q5"] != 'Shorter')) {
                 if (quizAttempts >= maxQuizAttempts) {
                   alert('Experiment terminated: too many failed quiz attempts. ' +
                   'You will still be paid for participating in this study.');
