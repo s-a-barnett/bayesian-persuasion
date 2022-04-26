@@ -77,7 +77,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'prolificReplication1'
+      var iterationName = 'prolificReplication_pilot'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -769,7 +769,7 @@
 
             var packet = Object.assign({}, mongoData, trialData, {
               dbname: 'bayesian-persuasion',
-              colname: 'experiment1',
+              colname: 'experiment1_replication',
               wID: urlParams.get('PROLIFIC_PID'),
               aID: urlParams.get('STUDY_ID'),
               hitID: urlParams.get('SESSION_ID'),
