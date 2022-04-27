@@ -77,7 +77,7 @@
       var timeline = [];
 
       // Values fixed for human experiments.
-      var iterationName = 'prolificReplication1'
+      var iterationName = 'prolificReplication2'
       var numSticks = 5
       var agentBias = 10
       var sliderWidthScale = 0.7
@@ -502,7 +502,7 @@
 
         var pink_second_move = {
           type: "image-slider-response",
-          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
+          stimulus: "static/sticks" + (10 * agent2stick) + "and" + (10 * agent1stick) + ".png",
           prompt:
             "<p>Now, the pink contestant shows a stick of length " +
             (10 * agent1stick) + "in from the set.</p>" +
@@ -566,7 +566,20 @@
 
         timeline.push(postJudgeSurvey);
 
-        var final_decision = {
+        var final_decision_blue_first = {
+          type: "image-button-response",
+          stimulus: "static/sticks" + (10 * agent2stick) + "and" + (10 * agent1stick) + ".png",
+          prompt:
+            "<p>Do you think that the average of the five sticks is longer than " +
+            "or shorter than 5in?</p>",
+          choices: ['Shorter than 5in', 'Longer than 5in'],
+          force_wait: 5000,
+          data: {
+            stimulus_type: '2afc'
+          }
+        };
+
+        var final_decision_pink_first = {
           type: "image-button-response",
           stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
@@ -579,8 +592,6 @@
           }
         };
 
-        timeline.push(final_decision);
-
         var thankYouVerdict = {
           type: "html-button-response",
           stimulus: "<p>Thank you for your verdict! Before you go, " +
@@ -590,7 +601,22 @@
 
         timeline.push(thankYouVerdict);
 
-        var meanGuess = {
+        var meanGuessBlueFirst = {
+          type: "image-slider-response",
+          stimulus: "static/sticks" + (10 * agent2stick) + "and" + (10 * agent1stick) + ".png",
+          prompt:
+            "<p>What do you think is the average length of all five sticks? " +
+            "Use the slider to record your answer.</p>",
+          labels: ['1in', '5in', '9in'],
+          slider_width: sliderWidthScale * screen.width,
+          require_movement: true,
+          force_wait: 5000,
+          data: {
+            stimulus_type: 'meanSlider'
+          }
+        };
+
+        var meanGuessPinkFirst = {
           type: "image-slider-response",
           stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           prompt:
@@ -605,9 +631,28 @@
           }
         };
 
-        timeline.push(meanGuess);
+        var genSticksBlueFirst = {
+          type: 'image-button-response',
+          stimulus: "static/sticks" + (10 * agent2stick) + "and" + (10 * agent1stick) + ".png",
+          choices: ['1in', '2in', '3in', '4in', '5in', '6in', '7in', '8in', '9in'],
+          timeline: [
+            {prompt:
+              '<p> What do you think the length of the third stick is?</p>',
+             data: {stimulus_contestant: 'third'}},
+            {prompt:
+              '<p> What do you think the length of the fourth stick is?</p>',
+             data: {stimulus_contestant: 'fourth'}},
+            {prompt:
+              '<p> What do you think the length of the fifth stick is?</p>',
+             data: {stimulus_contestant: 'fifth'}}
+          ],
+          force_wait: 3000,
+          data: {
+            stimulus_type: 'genModel'
+          }
+        };
 
-        var genSticks = {
+        var genSticksPinkFirst = {
           type: 'image-button-response',
           stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + ".png",
           choices: ['1in', '2in', '3in', '4in', '5in', '6in', '7in', '8in', '9in'],
@@ -627,8 +672,6 @@
             stimulus_type: 'genModel'
           }
         };
-
-        timeline.push(genSticks);
 
         // Allows us to measure the strong evidence effect for listeners.
 
@@ -685,7 +728,7 @@
 
         var post_pink_second_move = {
           type: "image-slider-response",
-          stimulus: "static/sticks" + (10 * agent1stick) + "and" + (10 * agent2stick) + "redgrey.png",
+          stimulus: "static/sticks" + (10 * agent2stick) + "and" + (10 * agent1stick) + "redgrey.png",
           prompt:
             "<p>How biased is the pink contestant?</p>",
           labels: ['Motivated to show shorter sticks',
@@ -701,7 +744,7 @@
         };
 
         var long_first_bias_procedure = {
-            timeline: [post_blue_first_move, post_pink_second_move],
+            timeline: [final_decision_blue_first, meanGuessBlueFirst, genSticksBlueFirst, post_blue_first_move, post_pink_second_move],
             conditional_function: function(){
                 if(firstContestant == 'long'){
                     return true;
@@ -714,7 +757,7 @@
         timeline.push(long_first_bias_procedure);
 
         var short_first_bias_procedure = {
-            timeline: [post_pink_first_move, post_blue_second_move],
+            timeline: [final_decision_pink_first, meanGuessPinkFirst, genSticksPinkFirst, post_pink_first_move, post_blue_second_move],
             conditional_function: function(){
                 if(firstContestant == 'short'){
                     return true;
