@@ -84,7 +84,7 @@ function serve() {
       const query = request.body.query;
       const projection = request.body.projection;
 
-      var collectionList = ['experiment1', 'experiment2'];
+      var collectionList = ['experiment1', 'experiment2', 'experiment1_replication'];
 
       function checkCollectionForHits(collectionName, query, projection, callback) {
         const collection = database.collection(collectionName);

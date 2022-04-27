@@ -27,10 +27,10 @@ if(argv.gameport) {
 let server;
 let io;
 try {
-  const privateKey  = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.key'),
-        certificate = fs.readFileSync('/etc/apache2/ssl/stanford-cogsci.org.crt'),
-        intermed    = fs.readFileSync('/etc/apache2/ssl/intermediate.crt'),
-        options     = {key: privateKey, cert: certificate, ca: intermed};
+  var pathToCerts = '/etc/letsencrypt/live/cogtoolslab.org/';
+  var privateKey = fs.readFileSync(pathToCerts + 'privkey.pem'),
+      certificate = fs.readFileSync(pathToCerts + 'cert.pem'),
+      options = { key: privateKey, cert: certificate };
   server            = require('https').createServer(options,app).listen(gameport),
   io                = require('socket.io')(server);
 } catch (err) {
@@ -145,7 +145,7 @@ function initializeWithTrials(socket) {
   sendPostRequest('http://localhost:6004/db/getstims', {
     json: {
       dbname: 'bayesian-persuasion',
-      colname: 'experiment1_stimuli',
+      colname: 'replication_stimuli',
       gameid: gameid
     }
   }, (error, res, body) => {
@@ -162,9 +162,9 @@ function initializeWithTrials(socket) {
       console.log('returning hard-coded sticks');
       socket.emit('onConnected', {
 	gameid: gameid,
-	agent1stick: .1,
+	agent1stick: .4,
 	agent2stick: .7,
-    firstContestant: 'short'
+	firstContestant: 'short'
       });
     }
   });
