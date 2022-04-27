@@ -463,3 +463,4 @@ exp0*.csv
 !rsa-het-indepcontingency.csv
 !cv-model-comparison.csv
 !data/*.csv
+.DS_Store
