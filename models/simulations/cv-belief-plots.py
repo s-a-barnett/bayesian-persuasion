@@ -12,3 +12,4 @@ for experiment in ['original', 'replication']:
     plt.plot([0, 10], [0.5, 0.5], ls='--', color="white")
     sns.lineplot(x='stick', y='belief', data=df, hue='level', err_style="bars", ci=95);
     plt.savefig(f'mle-beliefs-{experiment}.png')
+    plt.clf();
