@@ -1,10 +1,13 @@
 #!/bin/bash
-MODEL=rsa-het-speakers-hi
-INPUT=/tigress/samuelab/bper/model-comparison/cv/results/
+MODEL=rsa-het-speakers
+INPUT=/scratch/gpfs/samuelab/bper/cv/
 for FOLD in {0..9}
 do
-	echo $FOLD
-	mleString=$(python ../model-comparison/mle_params.py -m $MODEL -f $FOLD -i $INPUT)
-	webppl judge.wppl --require ../shared -- --mleString $mleString | head -n 33 >> judge-beliefs.csv
+    for EXPERIMENT in original replication
+    do
+        echo $FOLD
+        mleString=$(python ../model-comparison/scripts/mle_params.py -m $MODEL -f $FOLD -i $INPUT -e $EXPERIMENT)
+        webppl judge.wppl --require ../shared -- --mleString $mleString | head -n 18 >> judge-beliefs-$EXPERIMENT.csv
+    done
 done
 exit 0

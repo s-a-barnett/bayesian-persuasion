@@ -1,4 +1,4 @@
-var math = require('mathjs');
+// var math = require('mathjs');
 
 // lists ways of drawing k items with replacement
 function repeated_k_combinations(set, k) {
@@ -32,7 +32,11 @@ function repeated_k_combinations(set, k) {
   return _.flatten(combs);
 };
 
-var possibleSticks = _.map(_.range(0.0, 1.1, .1), function(v) {
+// var possibleSticks = _.map(_.range(0.0, 1.1, .1), function(v) {
+//   return _.round(v, 3);
+// });
+
+var possibleSticks = _.map(_.range(0.1, 1.0, .1), function(v) {
   return _.round(v, 3);
 });
 
@@ -46,10 +50,19 @@ var meetsTarget = function(stat, target) {
 
 // target is 'long' or 'short'
 // obs is a single stick value
-var getAAScore = function(target, obs, params) {
+var getAAAveragingScore = function(target, obs, params) {
 
   var strength = 1 / (1 + Math.exp(-params.gradient * (obs - 0.5)));
   var pLong = 0.5 + 0.5 * (strength - params.threshold);
+  var logProb = target == 'long' ? Math.log(pLong) : Math.log(1-pLong);
+  return logProb;
+};
+
+var getAAAddingScore = function(target, obs, params) {
+
+  var strength = 1 / (1 + Math.exp(-params.gradient * (obs - 0.5)));
+  var pLong = strength - 0.5 * params.threshold;
+  var pLong = Math.min(Math.max(pLong, 0.0), 1.0); // clamping to avoid out of range predictions
   var logProb = target == 'long' ? Math.log(pLong) : Math.log(1-pLong);
   return logProb;
 };
@@ -342,6 +355,6 @@ var logSumExp = function(array) {
 
 module.exports = {
   getJ0Score, getJ1Score_generator, getS1Score_generator, getS2Score_generator,
-  getJ2Score_generator, iterationTracker, isRecordedIter, getAAScore, getQuantumScore,
-  logSumExp
+  getJ2Score_generator, iterationTracker, isRecordedIter, getAAAveragingScore, getQuantumScore,
+  logSumExp, getAAAddingScore
 };

@@ -1,4 +1,5 @@
 var inferenceParams = {
+  experiment: argv.experiment,
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
@@ -30,7 +31,7 @@ var masPP = function(obs) {
     var subjectBelief = _.toNumber(datum[2]);
 
     // compute belief in idealized model
-    var mean = shared.getAAScore('long', stickLength, params) ;
+    var mean = shared.getAAAveragingScore('long', stickLength, params) ;
 
     // mu represents the mean of the normal distribution given by the logit
     //   of the model belief
@@ -38,7 +39,8 @@ var masPP = function(obs) {
 
     var noiseDist = params.level == 'noise' ?
       Uniform({a: 0., b: 1.}) :
-      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+      // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+      Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
@@ -104,7 +106,7 @@ var masPP = function(obs) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('input/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
+var obs = csv.read('input/' + argv.experiment + '_data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
-csv.writeJoint(masPP(obs), inferenceParams.out + "/mas-pp-params-posterior_" + inferenceParams.chain + ".csv");
+csv.writeJoint(masPP(obs), inferenceParams.out + "/mas-pp-params-posterior_" + argv.experiment + "_" + inferenceParams.chain + ".csv");

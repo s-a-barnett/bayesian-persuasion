@@ -1,4 +1,5 @@
 var inferenceParams = {
+  experiment: argv.experiment,
   samples: argv.samples,
   burn: argv.burn,
   lag: argv.lag,
@@ -42,7 +43,8 @@ var rsaHet = function(obs) {
 
     var noiseDist = params.level == 'noise' ?
       Uniform({a: 0., b: 1.}) :
-      LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+      // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
+      Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
@@ -108,8 +110,8 @@ var rsaHet = function(obs) {
 };
 
 // read observations from csv file (slice to skip header and empty final line)
-var obs = csv.read('input/rsa-het-data_no0.2_0.4.csv').slice(1, -1);
+var obs = csv.read('input/' + argv.experiment + '_data_no0.2_0.4.csv').slice(1, -1);
 
 // write posterior distribution to new file
 // csv.writeDistTable(rsaHet(obs), "param,val", inferenceParams.out + "/rsa-pp-speakers-params-posterior.csv");
-csv.writeJoint(rsaHet(obs), inferenceParams.out + "/rsa-pp-params-posterior_" + inferenceParams.chain + ".csv");
+csv.writeJoint(rsaHet(obs), inferenceParams.out + "/rsa-pp-params-posterior_" + argv.experiment + "_" + inferenceParams.chain + ".csv");

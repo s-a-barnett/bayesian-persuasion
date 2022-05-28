@@ -1,85 +1,79 @@
+import tqdm
 import numpy as np
 import pandas as pd
 import argparse
 from scipy.special import logsumexp
+from pathlib import Path
+import os
+import psis
 
-def compute_pwaic2(d):
-    return d[['gameid', 'score']].groupby(['gameid']).var().sum().score
+def compute_mc_stats(d):
+    num_obs = len(d.gameid.unique())
+    S = len(d) // num_obs
 
-def compute_lppd(d):
-    score = d[['gameid', 'score']].groupby(['gameid']).aggregate(logsumexp).sum().score
-    num_obs = len(d.gameid.unique()); S = len(d) // num_obs
-    return score - (num_obs * np.log(S))
+    d_numpy = np.stack(d.groupby('gameid')['score'].apply(np.asarray).to_numpy(), axis=1)
+    loo, loos, _ = psis.psisloo(d_numpy)
+    se_loo = np.sqrt(num_obs * np.var(loos))
 
-def compute_nparams(d):
-    if 'shiftMatrix' in d.columns:
-        return 401
-    if 'param' in d.columns:
-        nparams = d.param.unique().size
-    else:
-        nparams = len(d.columns) -1
-    return nparams
+    lppd_i = d.groupby('gameid').aggregate(logsumexp).to_numpy() - np.log(S)
+    pwaic2_i = d.groupby('gameid').var().to_numpy()
+    elppd_waic_i = lppd_i - pwaic2_i
 
-def compute_mlescore(d):
-    return d.groupby(d.index // 725).sum().max().to_numpy()[0]
+    lppd = np.sum(lppd_i)
+    pwaic2 = np.sum(pwaic2_i)
+    elppd_waic = -2 * (lppd - pwaic2)
+    se_elppd_waic = np.sqrt(num_obs * np.var(elppd_waic_i))
 
-def compute_elppd_waic(d):
-    lppd = compute_lppd(d)
-    pwaic2 = compute_pwaic2(d)
-    return -2 * (lppd - pwaic2)
+    out = {
+        'loo': -loo,
+        'se_loo': se_loo,
+        'lppd': lppd,
+        'pwaic2': pwaic2,
+        'elppd_waic': elppd_waic,
+        'se_elppd_waic': se_elppd_waic,
+    }
 
-def compute_elpd_aic(d_scores, d_params):
-    mlescore = compute_mlescore(d_scores)
-    nparams  = compute_nparams(d_params)
-    return -2 * (mlescore - nparams)
+    return out
 
 def main(args):
 
-    if args.type == 'waic' :
-        models = np.loadtxt("/input/model-list.csv", dtype=str, delimiter=",")
-        dfs = [pd.concat([pd.read_csv(args.input + model + "-pointScores_c{}ftrue.csv".format(i))
-                          for i in range(4)])
-               for model in models]
+    df_waic = pd.DataFrame(columns=['model', 'experiment', 'lppd', 'pwaic2', 'elppd_waic', 'se_elppd_waic', 'loo', 'se_loo'])
 
-        if args.verbose:
-            print("computing lppds...")
-            lppd=s = list(map(compute_lppd, dfs))
-            print("computing pwaic2s...")
-            pwaic2s = list(map(compute_pwaic2, dfs))
+    # models = list(pd.read_csv('./hyperparameters/hyperparameters_waic.csv').model.unique())
+    # TODO: base this off of .wppl files
+    models = [
+        'aa-hom',
+        'aa-hom-adding',
+        'mas-het-simple',
+        'mas-het-simple-adding',
+        'mas-het-speakers',
+        'mas-het-speakers-adding',
+        'mas-hom',
+        'mas-hom-adding',
+        'rsa-hom', 
+        'rsa-het-simple',
+        'rsa-het-speakers',
+        'rsa-het-speakers-hi',
+    ]
+    for model in models:
+        test_path = Path(os.path.join(args.input, f'{model}-pointScores_c0fundefinedoriginal.csv'))
+        if test_path.is_file():
+            print(f'{model = }')
+            for experiment in ['original', 'replication']:
+                num_chains = 100 if model == 'rsa-hom' else 4
+                dfs = pd.concat([pd.read_csv(os.path.join(args.input, f'{model}-pointScores_c{i}fundefined{experiment}.csv')) for i in range(num_chains)])
+                stats = compute_mc_stats(dfs)
+                stats.update({'model': model, 'experiment': experiment})
 
-        df_waic = pd.DataFrame({
-            "model": models,
-            "lppd": lppds,
-            "pwaic2": pwaic2s,
-            "elppd-waic": -2 * (np.asarray(lppds) - np.asarray(pwaic2s))
-        })
+                df_waic = df_waic.append(stats, ignore_index=True)
 
-        df_waic.to_csv(args.output + "waic-scores.csv")
-
-    elif args.type == 'aic' :
-        dfs_params = [pd.read_csv(args.input + model + "-params-posterior_1.csv") for model in models]
-        dfs_scores = [pd.concat([pd.read_csv(args.input + model + "-pointScores_{}.csv".format(i)) for i in range(4)]) for model in models]
-
-        if args.verbose:
-            print("computing mlescores...")
-            mlescores = list(map(compute_mlescore, dfs_scores))
-            print("computing nparams...")
-            nparamss = list(map(compute_nparams, dfs_params))
-
-        df_aic = pd.DataFrame({
-            "model": models,
-            "mlescore": mlescores,
-            "nparams": nparamss,
-            "elpd-aic": -2 * (np.asarray(mlescores) - np.asarray(nparamss))
-        })
-        df_aic.to_csv(args.output + "aic-scores.csv")
+    df_waic.to_csv(os.path.join(args.output, "model-criterion-scores.csv"), index=False)
 
     return 0
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", "--input", type=str, default="./output/", help="location of input files")
-    parser.add_argument("-o", "--output", type=str, default="./", help="location of output table")
-    parser.add_argument("-v", "--verbose", action="store_true", default=True)
+    parser.add_argument("--input", type=str, default="/scratch/gpfs/samuelab/bper/waic/", help="location of input files")
+    parser.add_argument("--output", type=str, default="./output/", help="location of output table")
     args = parser.parse_args()
     main(args)

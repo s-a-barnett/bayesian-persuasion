@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while getopts m:f:i:t:x: option
+while getopts m:f:i:t:x:e: option
 do
   case "${option}"
     in
@@ -9,12 +9,13 @@ do
     i) INPUT=${OPTARG};;
     t) TESTSAMPLES=${OPTARG};;
     x) MAXSCORE=${OPTARG};;
+    e) EXPERIMENT=${OPTARG};;
   esac
 done
 
-mleString=$(python scripts/mle_params.py -m $MODEL -f $FOLD -i $INPUT)
+mleString=$(python scripts/mle_params.py -m $MODEL -f $FOLD -i $INPUT -e $EXPERIMENT)
 score=$(webppl models/$MODEL.wppl --require ../shared --require webppl-csv \
-  -- --test true --mleString $mleString --fold $FOLD --testSamples $TESTSAMPLES --maxScore $MAXSCORE \
+  -- --test true --experiment $EXPERIMENT --mleString $mleString --fold $FOLD --testSamples $TESTSAMPLES --maxScore $MAXSCORE \
   | head -n 1)
 
-echo $MODEL,$FOLD,$score >> cv-scores.csv
+echo $MODEL,$FOLD,$score >> $INPUT/$EXPERIMENT-cv-scores.csv
