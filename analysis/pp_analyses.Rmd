@@ -1,0 +1,163 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Import data & packages
+
+```{r}
+library(tidyverse)
+library(tidyboot)
+# library(lme4)
+# library(lmerTest)
+library(broom.mixed)
+library(coda)
+library(here)
+```
+
+# Section 2: Model-based analyses
+
+## Derive MAP beliefs & CIs from predictives file
+
+```{r}
+estimate_mode <- function(s) {
+  d <- density(s)
+  return(d$x[which.max(d$y)])
+}
+
+HPDhi<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","upper"])
+}
+
+HPDlo<- function(s){
+  m <- HPDinterval(mcmc(s))
+  return(m["var1","lower"])
+}
+
+d_het_n24_original <- read_csv(here("models/model-comparison/input/original_data_no0.2_0.4.csv"))
+d_het_n24_replication <- read_csv(here("models/model-comparison/input/replication_data_no0.2_0.4.csv"))
+
+predictive_rsa_original <- read_csv("pp/rsa-pp-params-posterior_original.csv")
+predictive_rsa_replication <- read_csv("pp/rsa-pp-params-posterior_replication.csv")
+predictive_mas_adding_original <- read_csv("pp/mas-pp-adding-params-posterior_original.csv")
+predictive_mas_adding_replication <- read_csv("pp/mas-pp-adding-params-posterior_replication.csv")
+```
+
+summarize means for each condition
+
+```{r}
+d_rsa_pp <- predictive_rsa_original %>%
+  gather(gameid, value, -prob) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24_original) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'rsa')
+
+d_mas_adding_pp <- predictive_mas_adding_original %>%
+  gather(gameid, value, -prob) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24_original) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'mas')
+
+d_bystick <- d_het_n24_original %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(belief) %>%
+  mutate(group = 'actual')
+
+d_ppcomp <- d_bystick %>%
+  full_join(d_rsa_pp) %>%
+  full_join(d_mas_adding_pp)
+```
+
+```{r}
+pd <- position_dodge(0.4)
+
+p1 <- ggplot(d_ppcomp, aes(x=agent1stick, y=empirical_stat, colour=group)) + 
+  scale_color_manual(values=c('black', 'red', 'blue')) +
+  geom_point(position=pd) + 
+  scale_size_manual(values=c(10, 1, 1)) +
+  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7, width=0) + 
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  geom_line(data = full_join(d_rsa_pp, d_mas_adding_pp)) +
+  facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'judge stick', y = 'belief about mean') +
+  xlim(5.5, 9.5) + 
+  scale_y_continuous(breaks=seq(0, 1.1, 0.1), limits = c(0, 1))
+
+ggsave("ppcheck_original.png", plot = p1, width = 8, height = 4)
+```
+
+```{r}
+d_rsa_pp <- predictive_rsa_replication %>%
+  gather(gameid, value, -prob) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24_replication) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'rsa')
+
+d_mas_adding_pp <- predictive_mas_adding_replication %>%
+  gather(gameid, value, -prob) %>%
+  group_by(gameid) %>%
+  summarize(MAPmodel = estimate_mode(value),
+            upper_ci_model = HPDhi(value),
+            lower_ci_model = HPDlo(value)) %>%
+  left_join(d_het_n24_replication) %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(MAPmodel) %>%
+  mutate(group = 'mas')
+
+d_bystick <- d_het_n24_replication %>%
+  mutate(agent1stick = agent1stick * 10) %>%
+  mutate(firstStick = firstStick * 10) %>%
+  group_by(agent1stick, firstStick) %>%
+  tidyboot::tidyboot_mean(belief) %>%
+  mutate(group = 'actual')
+
+d_ppcomp <- d_bystick %>%
+  full_join(d_rsa_pp) %>%
+  full_join(d_mas_adding_pp)
+```
+
+```{r}
+pd <- position_dodge(0.4)
+
+p1 <- ggplot(d_ppcomp, aes(x=agent1stick, y=empirical_stat, colour=group)) + 
+  scale_color_manual(values=c('black', 'red', 'blue')) +
+  geom_point(position=pd) + 
+  scale_size_manual(values=c(10, 1, 1)) +
+  geom_errorbar(aes(ymin=ci_lower, ymax=ci_upper), position=pd, size=0.7, width=0) + 
+  geom_hline(yintercept=0.5, linetype='dotted') + 
+  geom_line(data = full_join(d_rsa_pp, d_mas_adding_pp)) +
+  facet_grid( ~ firstStick) +
+  ggthemes::theme_few() + 
+  labs(x = 'judge stick', y = 'belief about mean') +
+  xlim(5.5, 9.5) + 
+  scale_y_continuous(breaks=seq(0, 1.1, 0.1), limits = c(0, 1))
+
+ggsave("ppcheck_replication.png", plot = p1, width = 8, height = 4)
+```
