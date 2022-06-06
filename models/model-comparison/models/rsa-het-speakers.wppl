@@ -127,7 +127,11 @@ var train = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+      var logitSigma = Math.abs(sample(Cauchy({location: 0, scale: 1}), {
+        driftKernel: function(prevVal) {
+          return Gaussian({mu: prevVal, sigma: .1});
+        }
+      }))
       var sharedParams = {logitSigma};
 
       var groupParams = {

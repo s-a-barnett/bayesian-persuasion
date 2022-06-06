@@ -15,15 +15,19 @@ var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
 // prior over rsa hom model parameters
 var groupPrior = function(model) {
   var params = model == 'mas' ? {
-              gradient : exponential({a: 0.01}),
-              threshold : uniform({a: 0, b: 1}),
-            } : model == 'aa' ? {
-              gradient : exponential({a: 0.01}),
-              threshold : 0.0,
-            } : {
-              gradient: 0.01,
-              threshold: 0,
-            };
+    gradient : Math.abs(sample(Exponential({a: .1}), {driftKernel: function(prevVal) {
+      return Gaussian({mu: prevVal, sigma: .1});
+    }})),
+    threshold : uniformDrift({a: -1, b: 1}),
+  } : model == 'aa' ? {
+    gradient : Math.abs(sample(Exponential({a: .1}), {driftKernel: function(prevVal) {
+      return Gaussian({mu: prevVal, sigma: .1});
+    }})),
+    threshold : 0.0,
+  } : {
+    gradient: 0.01,
+    threshold: 0,
+  };
   return params;
 };
 
@@ -119,8 +123,12 @@ var train = function(obs, output_handle) {
                 verbose: inferenceParams.verbose,
                 model: function() {
 
-    var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1])}).data);
-    var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+   var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1])}).data);
+   var logitSigma = Math.abs(sample(Cauchy({location: 0, scale: 1}), {
+     driftKernel: function(prevVal) {
+       return Gaussian({mu: prevVal, sigma: .1});
+      }
+    }))
     var sharedParams = {groupWeight, logitSigma};
 
     var groupParams = {

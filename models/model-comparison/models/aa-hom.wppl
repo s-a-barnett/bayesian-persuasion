@@ -13,11 +13,17 @@ var inferenceParams = {
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // steepness of logistic stick-to-strength curve
-  var gradient = exponential({a: 0.01});
+  var gradient = Math.abs(sample(Exponential({a: .1}), {driftKernel: function(prevVal) {
+    return Gaussian({mu: prevVal, sigma: .1});
+  }}))
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = 0.5;
   // variance for mean noise
-  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+var logitSigma = Math.abs(sample(Cauchy({location: 0, scale: 1}), {
+    driftKernel: function(prevVal) {
+      return Gaussian({mu: prevVal, sigma: .1});
+    }
+  }))
   return {
     'gradient': gradient,
     'threshold': threshold,

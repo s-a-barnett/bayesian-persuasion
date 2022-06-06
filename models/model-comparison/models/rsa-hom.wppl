@@ -17,7 +17,11 @@ var paramsPrior = function() {
   // fixed value of judge for S1 speaker
   var agentBias = uniformDrift({a: 0, b: 10, width: 1});
   // variance for mean noise
-  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+  var logitSigma = Math.abs(sample(Cauchy({location: 0, scale: 1}), {
+    driftKernel: function(prevVal) {
+      return Gaussian({mu: prevVal, sigma: .1});
+    }
+  }))
   // determines whether population treated as J0 or J1
   var level = flip(.5) ? 'J1' : 'J0';
   return {
