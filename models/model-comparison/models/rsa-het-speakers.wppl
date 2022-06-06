@@ -59,7 +59,7 @@ var getLevels = function(means, obs) {
   var speakerSticks = map(function(o){return o[3];}, obs);
 
   var levels = map(function(stick) {
-    return categorical({ps: means[stick], vs: ['noise', 'J0', 'J1']})
+    return categorical({ps: means[stick], vs: ['J0', 'J1']}) // 'noise'
   }, speakerSticks);
 
   return levels;
@@ -83,7 +83,7 @@ var mixtureScore = function(means, sharedParams, groupParams, obs) {
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(means[speakerStick][idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['noise', 'J0', 'J1'], [0, 1, 2]);
+    }, ['J0', 'J1'], [0, 1]); 'noise',
 
     return shared.logSumExp(pointLevelScores);
   });
@@ -131,17 +131,17 @@ var train = function(obs, output_handle) {
       var sharedParams = {logitSigma};
 
       var groupParams = {
-        'noise' : groupPrior('noise'),
+        //'noise' : groupPrior('noise'),
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
 
       var means = {
-        '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-        '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+        '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+        '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+        '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+        '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+        '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
       };
 
       var levels = getLevels(means, obs);
@@ -154,23 +154,23 @@ var train = function(obs, output_handle) {
       query.add('J1nSticks', groupParams['J1'].nSticks);
       query.add('J1agentBias', groupParams['J1'].agentBias);
 
-      query.add('groupWeight-noise-0.9', means['0.9'][0]);
-      query.add('groupWeight-noise-0.8', means['0.8'][0]);
-      query.add('groupWeight-noise-0.7', means['0.7'][0]);
-      query.add('groupWeight-noise-0.4', means['0.4'][0]);
-      query.add('groupWeight-noise-0.2', means['0.2'][0]);
+      // query.add('groupWeight-noise-0.9', means['0.9'][0]);
+      // query.add('groupWeight-noise-0.8', means['0.8'][0]);
+      // query.add('groupWeight-noise-0.7', means['0.7'][0]);
+      // query.add('groupWeight-noise-0.4', means['0.4'][0]);
+      // query.add('groupWeight-noise-0.2', means['0.2'][0]);
 
-      query.add('groupWeight-J0-0.9', means['0.9'][1]);
-      query.add('groupWeight-J0-0.8', means['0.8'][1]);
-      query.add('groupWeight-J0-0.7', means['0.7'][1]);
-      query.add('groupWeight-J0-0.4', means['0.4'][1]);
-      query.add('groupWeight-J0-0.2', means['0.2'][1]);
+      query.add('groupWeight-J0-0.9', means['0.9'][0]);
+      query.add('groupWeight-J0-0.8', means['0.8'][0]);
+      query.add('groupWeight-J0-0.7', means['0.7'][0]);
+      query.add('groupWeight-J0-0.4', means['0.4'][0]);
+      query.add('groupWeight-J0-0.2', means['0.2'][0]);
 
-      query.add('groupWeight-J1-0.9', means['0.9'][2]);
-      query.add('groupWeight-J1-0.8', means['0.8'][2]);
-      query.add('groupWeight-J1-0.7', means['0.7'][2]);
-      query.add('groupWeight-J1-0.4', means['0.4'][2]);
-      query.add('groupWeight-J1-0.2', means['0.2'][2]);
+      query.add('groupWeight-J1-0.9', means['0.9'][1]);
+      query.add('groupWeight-J1-0.8', means['0.8'][1]);
+      query.add('groupWeight-J1-0.7', means['0.7'][1]);
+      query.add('groupWeight-J1-0.4', means['0.4'][1]);
+      query.add('groupWeight-J1-0.2', means['0.2'][1]);
 
       query.add('logitSigma', logitSigma);
 
@@ -188,7 +188,7 @@ if (argv.test == 'true') {
   var mleParams = JSON.parse(mleString);
 
   var groupParams = {
-    'noise': extend(mleParams.groupParams.noise, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.noise)}),
+    //'noise': extend(mleParams.groupParams.noise, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.noise)}),
     'J0': extend(mleParams.groupParams.J0, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J0)}),
     'J1': extend(mleParams.groupParams.J1, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J1)}),
   };

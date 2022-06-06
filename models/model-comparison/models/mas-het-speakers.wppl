@@ -55,7 +55,7 @@ var getLevels = function(means, obs) {
   var speakerSticks = map(function(o){return o[3];}, obs);
 
   var levels = map(function(stick) {
-    return categorical({ps: means[stick], vs: ['noise', 'aa', 'mas']})
+    return categorical({ps: means[stick], vs: ['aa', 'mas']}) // 'noise',
   }, speakerSticks);
 
   return levels;
@@ -79,7 +79,7 @@ var mixtureScore = function(means, sharedParams, groupParams, obs) {
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(means[speakerStick][idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['noise', 'aa', 'mas'], [0, 1, 2]);
+    }, ['aa', 'mas'], [0, 1]); // 'noise', 2
 
     return shared.logSumExp(pointLevelScores);
   });
@@ -126,18 +126,18 @@ var train = function(obs, output_handle) {
     var sharedParams = {logitSigma};
 
     var groupParams = {
-      'noise' : groupPrior('noise'),
+      //'noise' : groupPrior('noise'),
       'aa' : groupPrior('aa'),
       'mas' : groupPrior('mas')
     };
 
     var speakerSticks = map(function(o){return o[3];}, obs);
     var means = {
-      '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+      '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
     };
 
     var levels = getLevels(means, obs);
@@ -150,23 +150,23 @@ var train = function(obs, output_handle) {
     query.add('mas' + '_threshold', groupParams['mas'].threshold);
     query.add('aa' + '_gradient', groupParams['aa'].gradient);
 
-    query.add('groupWeight-noise-0.9', means['0.9'][0]);
-    query.add('groupWeight-noise-0.8', means['0.8'][0]);
-    query.add('groupWeight-noise-0.7', means['0.7'][0]);
-    query.add('groupWeight-noise-0.4', means['0.4'][0]);
-    query.add('groupWeight-noise-0.2', means['0.2'][0]);
+    // query.add('groupWeight-noise-0.9', means['0.9'][0]);
+    // query.add('groupWeight-noise-0.8', means['0.8'][0]);
+    // query.add('groupWeight-noise-0.7', means['0.7'][0]);
+    // query.add('groupWeight-noise-0.4', means['0.4'][0]);
+    // query.add('groupWeight-noise-0.2', means['0.2'][0]);
 
-    query.add('groupWeight-aa-0.9', means['0.9'][1]);
-    query.add('groupWeight-aa-0.8', means['0.8'][1]);
-    query.add('groupWeight-aa-0.7', means['0.7'][1]);
-    query.add('groupWeight-aa-0.4', means['0.4'][1]);
-    query.add('groupWeight-aa-0.2', means['0.2'][1]);
+    query.add('groupWeight-aa-0.9', means['0.9'][0]);
+    query.add('groupWeight-aa-0.8', means['0.8'][0]);
+    query.add('groupWeight-aa-0.7', means['0.7'][0]);
+    query.add('groupWeight-aa-0.4', means['0.4'][0]);
+    query.add('groupWeight-aa-0.2', means['0.2'][0]);
 
-    query.add('groupWeight-mas-0.9', means['0.9'][2]);
-    query.add('groupWeight-mas-0.8', means['0.8'][2]);
-    query.add('groupWeight-mas-0.7', means['0.7'][2]);
-    query.add('groupWeight-mas-0.4', means['0.4'][2]);
-    query.add('groupWeight-mas-0.2', means['0.2'][2]);
+    query.add('groupWeight-mas-0.9', means['0.9'][1]);
+    query.add('groupWeight-mas-0.8', means['0.8'][1]);
+    query.add('groupWeight-mas-0.7', means['0.7'][1]);
+    query.add('groupWeight-mas-0.4', means['0.4'][1]);
+    query.add('groupWeight-mas-0.2', means['0.2'][1]);
 
     query.add('logitSigma', logitSigma);
 
