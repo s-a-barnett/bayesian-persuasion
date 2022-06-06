@@ -21,10 +21,13 @@ library(here)
 ## Import behavioral data 
 
 ```{r}
-d_raw <- read_csv(here('data/replication.csv')) %>%
+d_raw <- read_csv(here('data/replication.csv'), show_col_types = FALSE) %>%
   select(iterationName, gameid,rt,agent1stick,agent2stick,button_pressed,
          response,stimulus_type,firstContestant,stimulus_contestant,chosenStick,responses) %>%
-  filter(!is.na(stimulus_type))
+  rename(long_stick = agent2stick, short_stick = agent1stick) %>%
+  mutate(first_observation = ifelse(firstContestant == 'short', short_stick, long_stick),
+         second_observation = ifelse(firstContestant == 'short', long_stick, short_stick)) %>%
+  filter(!is.na(stimulus_type)) 
 ```
 
 ## Implement exclusions, get descriptive stats
@@ -37,36 +40,27 @@ complete_games <- d_raw %>%
   filter(n == 2) %>%
   pull(gameid)
 
-cat('of', d_raw %>% pull(gameid) %>% unique() %>% length(), 'participants recruited\n')
-cat(length(complete_games), 'participants completed both isLong trials \n')
-```
-
-### Look more carefully at attention checks
-
-```{r}
 internally_consistent <- d_raw %>%
   filter(gameid %in% complete_games) %>%
   filter(stimulus_type %in% c('bias', 'speakerTrial', 'isLong', '2afc', 'meanSlider', 'genModel')) %>%
   unite(col = stimulus_type, stimulus_type, stimulus_contestant) %>%
   mutate(response = ifelse(is.na(response), button_pressed, response),
          stimulus_type = gsub('_NA', '', stimulus_type)) %>%
-  select(gameid, firstContestant, stimulus_type, agent1stick, agent2stick, response) %>%
+  select(gameid, firstContestant, stimulus_type, first_observation, second_observation, response) %>%
   spread(stimulus_type, response) %>%
   filter(!is.na(genModel_fifth)) %>%
-  mutate(genModel = (10*agent1stick + 10*agent2stick + `genModel_third` + `genModel_fourth` + `genModel_fifth`)/5,
-         passedBias = ifelse(firstContestant == 'long', bias_first >= 45 & bias_second <= 55, bias_first <= 45 & bias_second >= 55),
-         `2afcConsistent` = (`2afc` == 1 & meanSlider >= 45) | (`2afc` == 0 & meanSlider <= 55) ,
-         `genModelConsistent` = ( (`2afc` == 1 & meanSlider >= 45 & genModel >= 4.5) 
-                                | (`2afc` == 0 & meanSlider <= 55 & genModel <= 5.5) ),
-         allPassed = passedBias & genModelConsistent)
+  mutate(passedBias = ifelse(firstContestant == 'long', 
+                             bias_first >= 45 & bias_second <= 55, 
+                             bias_first <= 45 & bias_second >= 55))
 
 passedBiasCheck <- internally_consistent %>% filter(passedBias) %>% pull(gameid)
-passed2afc <- internally_consistent %>% filter(`2afcConsistent`) %>% pull(gameid)
-passedGenModel <- internally_consistent %>% filter(genModelConsistent) %>% pull(gameid)
-passedBoth <- intersect(passedBiasCheck, passedGenModel)
+
+cat('of', d_raw %>% filter(stimulus_type == 'speakerTrial') %>% pull(gameid) %>% unique() %>% length(), 'participants who passed the quiz\n')
+cat(length(complete_games), 'participants completed both isLong trials \n')
+cat(length(passedBiasCheck), 'participants passed bias manipulation check \n')
 
 d <- d_raw %>%
-  filter(gameid %in% passedBiasCheck)
+  filter(gameid %in% passedBiasCheck) 
 ```
 
 # Results
@@ -85,73 +79,105 @@ speaker_criterion <- d_raw %>%
 
 d_raw %>%
   filter((gameid %in% complete_games)) %>%
-  filter((gameid %in% passedBoth)) %>%
+  filter((gameid %in% passedBiasCheck)) %>%
   filter(stimulus_type == 'speakerTrial') %>%
-  select(stimulus_contestant, gameid, chosenStick) %>%
+  select(firstContestant, stimulus_contestant, gameid, chosenStick) %>%
   group_by(gameid) %>%
   spread(stimulus_contestant, chosenStick) %>%
-  group_by(first) %>%
+  group_by(firstContestant, first) %>%
   tally() %>%
-  arrange(-n)
+  arrange(firstContestant, -n)
 ```
+
 ### Full sequence of sticks (report mode)
 
 ```{r}
 d_raw %>%
   filter((gameid %in% complete_games)) %>%
-  filter((gameid %in% passedBoth)) %>%
+  filter((gameid %in% passedBiasCheck)) %>%
   filter(stimulus_type == 'speakerTrial') %>%
-  select(stimulus_contestant, gameid, chosenStick) %>%
+  select(firstContestant, stimulus_contestant, gameid, chosenStick) %>%
   group_by(gameid) %>%
   spread(stimulus_contestant, chosenStick) %>%
   unite(sequence, first, second, third, fourth) %>%
-  group_by(sequence) %>%
+  group_by(firstContestant, sequence) %>%
   tally() %>%
-  arrange(-n)
+  arrange(firstContestant,-n)
 ```
 
 ### Generate Fig. 2
 
 ```{r}
-d %>%
+fig2.d <- d %>%
   filter(stimulus_type == 'isLong') %>%
   filter(stimulus_contestant == 'first') %>%
   left_join(speaker_criterion) %>%
-  mutate(first = ifelse(first <= 2, '<=7', first + 5)) %>%
-  mutate(first = paste0('showed ', first, '" stick first')) %>%
-  group_by(agent1stick, first) %>%
+  mutate(observation = round(abs(.5 - first_observation), 2),
+         response = ifelse(firstContestant == 'short', 100-response, response),
+         first = ifelse(firstContestant == 'short', 4-first, first)) %>%
+  #filter(first %in% c(3,4)) %>%
+  mutate(first = ifelse(first < 4, 'less strong', 'strongest'),
+         first = paste0('expected ', first, ' evidence first')) 
+
+fig2.boot <- fig2.d %>%
+  group_by(observation, first) %>%
   tidyboot::tidyboot_mean(response) %>%
-  ggplot(aes(x = agent1stick, y = empirical_stat)) +
-    geom_point() +
-    geom_line() +
-    geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper), width = 0) +
+  ungroup()
+
+fig2.d %>%
+  ggplot(aes(x = observation, y = response)) + #color = firstContestant
+    geom_boxplot(aes(x = factor(observation)), outlier.shape = NA) +
+    #geom_point(aes(x = observation, y = empirical_stat), size = 2, data = fig2.boot) +
+    # geom_line(aes(x = observation, y = empirical_stat), data = fig2.boot) +
+    # geom_errorbar(aes(ymin = ci_lower, ymax = ci_upper, y =empirical_stat), width = 0, data = fig2.boot) +
+    geom_jitter(aes(x=factor(observation)), alpha = 0.075, height = 0, width = 0.2) +
     geom_hline(yintercept = 50, linetype = 'dotted') +
-    geom_abline(intercept = 0, slope = 100, linetype = 'dotted') +
+    #geom_abline(intercept = 0, slope = 100, linetype = 'dotted') +
     ggthemes::theme_few() +
-    labs(x = 'agent 1 stick length', y = 'belief about mean') +
+    labs(x = 'observation (stick length)', y = 'belief about mean') +
     facet_wrap(~ first) +
+    #scale_color_manual(values=c('#2E3192', '#EC008C')) +
+    #scale_x_continuous(breaks=c(.1,.2,.3,.4,.5,.6,.7,.8,.9), labels=c(1,2,3,4,5,6,7,8,9))+
     guides(color=FALSE) +
-    theme(aspect.ratio = 1.5) +
-    xlim(0.5,1)+
+    theme(aspect.ratio = 1) +
     ylim(0,100)
 
-ggsave('speaker_dependence.pdf', units = 'in', height = 4, width = 8)
+ggsave('speaker_dependence_option_rawdata.pdf', units = 'in', height = 4, width = 6)
 ```
 
 
 ### Statistics
 
 ```{r}
-# This seems like the most obvious way to run the regression...?
-d %>%
+m1 <- d %>%
   filter(stimulus_type == 'isLong') %>%
   filter(stimulus_contestant == 'first') %>%
   left_join(speaker_criterion) %>%
-  mutate(first = ifelse(first < 2, 2, first),
-         first = first - 3,
-         agent1stick = 10 * (agent1stick - .5)) %>%
-  lm(response ~ agent1stick * first, data = .) %>%
-  summary()
+  mutate(observation = round(abs(.5 - first_observation), 2) - .25,
+         response = ifelse(firstContestant == 'short', 100-response, response),
+         first = ifelse(firstContestant == 'short', 4-first, first),
+         first = ifelse(first < 4, 'less strong', 'strongest'),
+         first = paste0('expected ', first, ' evidence first')) %>%
+  select(response, observation, first, firstContestant) %>%
+  lm(response ~ observation * first + firstContestant, 
+     contrasts = list(first = contr.sum(2), firstContestant = contr.sum(2)), 
+     data = .) 
+
+m2 <- d %>%
+  filter(stimulus_type == 'isLong') %>%
+  filter(stimulus_contestant == 'first') %>%
+  left_join(speaker_criterion) %>%
+  mutate(observation = round(abs(.5 - first_observation), 2) - .25,
+         response = ifelse(firstContestant == 'short', 100-response, response),
+         first = ifelse(firstContestant == 'short', 4-first, first),
+         first = ifelse(first < 4, 'less strong', 'strongest'),
+         first = paste0('expected ', first, ' evidence first')) %>%
+  select(response, observation, first, firstContestant) %>%
+  lm(response ~ observation * first, 
+     contrasts = list(first = contr.sum(2)), 
+     data = .) 
+
+anova(m1,m2)
 ```
 
 # Section 2: Model-based analyses
@@ -446,17 +472,39 @@ d %>%
 ## Generate Table S1
 
 ```{r}
-cat(length(passedBiasCheck), 'participants passed bias manipulation check \n')
+stricter_checks <- internally_consistent %>%
+  filter(passedBias) %>%
+  mutate(genModel = (10*first_observation + 10*second_observation + `genModel_third` + `genModel_fourth` + `genModel_fifth`)/5,
+         `2afcConsistent` = (`2afc` == 1 & meanSlider >= 45) | (`2afc` == 0 & meanSlider <= 55) ,
+         `genModelConsistent` = ( (`2afc` == 1 & meanSlider >= 45 & genModel >= 4.5) 
+                                | (`2afc` == 0 & meanSlider <= 55 & genModel <= 5.5))) %>%
+  mutate(speakerTrial_first = ifelse(firstContestant == 'short', 4 - speakerTrial_first, speakerTrial_first)) 
+passedStrict <- stricter_checks %>% filter(genModelConsistent) %>% pull(gameid) %>% unique()
 
-internally_consistent %>%
-  group_by(group = ifelse(speakerTrial_first < 3, '<= 2', speakerTrial_first)) %>%
-  summarize(`% bias check` = mean(passedBias, na.rm = T), 
-            `n` = length(passedBias),
+stricter_checks %>%
+  group_by(group = ifelse(speakerTrial_first < 4, 'not strongest first', 'strongest')) %>%
+  summarize(`n` = length(passedBias),
             `% 2afc` = mean(`2afcConsistent`, na.rm = T),
             `% genModel` = mean(genModelConsistent, na.rm = T),
             `% all checks` = mean(allPassed, na.rm = T)) %>%
   xtable()
+```
 
+binomial proportion? 
+
+```{r}
+internally_consistent %>%
+  filter(passedBias) %>%
+  mutate(genModel = (10*first_observation + 10*second_observation + `genModel_third` + `genModel_fourth` + `genModel_fifth`)/5,
+         `2afcConsistent` = (`2afc` == 1 & meanSlider >= 45) | (`2afc` == 0 & meanSlider <= 55) ,
+         `genModelConsistent` = ( (`2afc` == 1 & meanSlider >= 45 & genModel >= 4.5) 
+                                | (`2afc` == 0 & meanSlider <= 55 & genModel <= 5.5) ),
+         allPassed = `2afcConsistent` & genModelConsistent) %>%
+  mutate(speakerTrial_first = ifelse(firstContestant == 'short', 4 - speakerTrial_first, speakerTrial_first)) %>%
+  group_by(`2afcConsistent`, genModelConsistent, group = ifelse(speakerTrial_first < 4, 'not strongest first', 'strongest')) %>%
+  tally()
+
+prop.test(c(33, 53), c(238, 485))
 ```
 
 ## Look at other direction (i.e. speaker behavior conditioned on passing or not passing)
