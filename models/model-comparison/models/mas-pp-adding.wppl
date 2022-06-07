@@ -44,7 +44,7 @@ var masPP = function(obs) {
 
     // in Gelman et al. notation, this is log(p(y_i | θ^s))
     //   for i-th observation, s-th posterior sample
-    var pointScore = noiseDist.score(subjectBelief);
+    var pointScore = _.max(Math.log(0.01), noiseDist.score(subjectBelief))
     globalStore.totalScore += pointScore;
 
     var iter = shared.iterationTracker() / obs.length;
@@ -73,20 +73,19 @@ var masPP = function(obs) {
     var sharedParams = {logitSigma};
 
     var groupParams = {
-      'noise' : groupPrior('noise'),
       'aa' : groupPrior('aa'),
       'mas' : groupPrior('mas')
     };
 
     var speakerSticks = map(function(o){return o[3];}, obs);
     var means = {
-      '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
-      '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data),
+      '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
+      '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
     };
 
     var levels = map(function(stick) {
-      return categorical({ps: means[stick], vs: ['noise', 'aa', 'mas']})
+      return categorical({ps: means[stick], vs: ['aa', 'mas']})
     }, speakerSticks);
 
     globalStore.totalScore = 0;

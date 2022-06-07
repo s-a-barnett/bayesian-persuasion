@@ -39,19 +39,11 @@ var getScore = function(datum, params) {
   // compute belief in idealized model
   var mean = shared.getAAAddingScore('long', stickLength, params);
 
-  // mu represents the mean of the normal distribution given by the logit
-  //   of the model belief
-  var mu = mean - Math.log1p(-Math.exp(mean));
-
-  var noiseDist = params.level == 'noise' ?
-    Uniform({a: 0., b: 1.}) :
-    // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
-    Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
-  var pointScore = noiseDist.score(subjectBelief);
-
+  var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
   return pointScore;
 };
 

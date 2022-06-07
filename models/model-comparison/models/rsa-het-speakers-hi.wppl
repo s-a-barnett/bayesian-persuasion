@@ -62,7 +62,7 @@ var getScore = function(datum, params) {
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
-  var pointScore = noiseDist.score(subjectBelief);
+  var pointScore = _.max(Math.log(0.01), noiseDist.score(subjectBelief))
 
   return pointScore;
 };
