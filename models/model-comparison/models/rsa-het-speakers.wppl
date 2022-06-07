@@ -83,7 +83,7 @@ var mixtureScore = function(means, sharedParams, groupParams, obs) {
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(means[speakerStick][idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['J0', 'J1'], [0, 1]); 'noise',
+    }, ['J0', 'J1'], [0, 1]); //'noise', 2
 
     return shared.logSumExp(pointLevelScores);
   });
