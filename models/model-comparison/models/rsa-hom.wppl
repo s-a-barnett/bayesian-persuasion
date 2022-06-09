@@ -13,11 +13,10 @@ var inferenceParams = {
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // number of sticks modelled by judge
-  var nSticks = uniformDraw([2, 3, 4, 5]);
+  var nSticks = uniformDraw([3, 4, 5]);
   // fixed value of judge for S1 speaker
   var agentBias = uniformDrift({a: 0, b: 10, width: 1});
-  // variance for mean noise
-  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+  var logitSigma = 0.3
   // determines whether population treated as J0 or J1
   var level = flip(.5) ? 'J1' : 'J0';
   return {
@@ -38,20 +37,10 @@ var getScore = function(datum, params) {
       params.getJ1Score('long', stickLength, params) :
       shared.getJ0Score('long', stickLength, params) ;
 
-  // mu represents the mean of the normal distribution given by the logit
-  //   of the model belief
-  var mu = mean - Math.log1p(-Math.exp(mean));
-
-  var noiseDist = params.level == 'noise' ?
-    Uniform({a: 0., b: 1.}) :
-    // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
-    Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
-
+  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
-  var pointScore = noiseDist.score(subjectBelief);
-
-  return pointScore;
+  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
 var batchScore = function(params, obs, test, output_handle) {
@@ -76,37 +65,39 @@ var batchScore = function(params, obs, test, output_handle) {
 
     return pointScore;
   });
-
+  console.log(sum(pointScores))
   return sum(pointScores);
 };
 
 var train = function(obs, output_handle) {
-  return Infer({method: 'MCMC',
-                samples: inferenceParams.samples,
-                burn: inferenceParams.burn,
-                lag: inferenceParams.lag,
-                verbose: inferenceParams.verbose,
-                model: function() {
+  return Infer({
+    method: 'MCMC',
+    samples: inferenceParams.samples,
+    burn: inferenceParams.burn,
+    lag: inferenceParams.lag,
+    verbose: inferenceParams.verbose,
+    model: function() {
 
-    var rawParams = paramsPrior();
-    var params = extend(rawParams, {
-      getJ1Score: shared.getJ1Score_generator(rawParams)
-    });
+      var rawParams = paramsPrior();
+      var params = extend(rawParams, {
+        getJ1Score: shared.getJ1Score_generator(rawParams)
+      });
+      console.log(params)
+      globalStore.totalScore = 0;
 
-    globalStore.totalScore = 0;
+      batchScore(params, obs, false, output_handle);
 
-    batchScore(params, obs, false, output_handle);
+      query.add('nSticks', rawParams.nSticks);
+      query.add('agentBias', rawParams.agentBias);
+      query.add('logitSigma', rawParams.logitSigma);
+      query.add('level', rawParams.level);
 
-    query.add('nSticks', rawParams.nSticks);
-    query.add('agentBias', rawParams.agentBias);
-    query.add('logitSigma', rawParams.logitSigma);
-    query.add('level', rawParams.level);
+      query.add('score', globalStore.totalScore);
+      query.add('params', JSON.stringify(rawParams));
 
-    query.add('score', globalStore.totalScore);
-    query.add('params', JSON.stringify(rawParams));
-
-    return query;
-  }})
+      return query;
+    }
+  })
 };
 
 if (argv.test == 'true') {

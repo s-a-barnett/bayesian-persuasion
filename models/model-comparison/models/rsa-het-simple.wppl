@@ -15,15 +15,15 @@ var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
-              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-              agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
-            } : model == 'J0' ? {
-              nSticks : uniformDraw([2, 3, 4, 5]),  // number of sticks modelled by judge
-              agentBias : 0,
-            } : {
-              nSticks: 5,
-              agentBias: 0,
-            };
+    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
+  } : model == 'J0' ? {
+    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    agentBias : 0,
+  } : {
+    nSticks: 5,
+    agentBias: 0,
+  };
   return extend(params, {getJ1Score: shared.getJ1Score_generator(params)});
 };
 
@@ -35,29 +35,20 @@ var getScore = function(datum, params) {
   // compute belief in idealized model
   var mean = params.level == 'J1' ?
       params.getJ1Score('long', stickLength, params) :
-             params.level == 'J0' ?
+      params.level == 'J0' ?
       shared.getJ0Score('long', stickLength, params) :
-      0.5;
+      console.error('unknown level', params.level);
 
-  // mu represents the mean of the normal distribution given by the logit
-  //   of the model belief
-  var mu = mean - Math.log1p(-Math.exp(mean));
-
-  var noiseDist = params.level == 'noise' ?
-    Uniform({a: 0., b: 1.}) :
-    // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
-    Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
-  var pointScore = noiseDist.score(subjectBelief);
-
-  return pointScore;
+  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
 var getLevels = function(groupWeight, obs) {
   var levels = repeat(obs.length, function() {
-    return categorical({ps: groupWeight, vs: ['noise', 'J0', 'J1']})
+    return categorical({ps: groupWeight, vs: ['J0', 'J1']})
   });
   return levels;
 };
@@ -79,7 +70,7 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(groupWeight[idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['noise', 'J0', 'J1'], [0, 1, 2]);
+    }, ['J0', 'J1'], [0, 1]);
 
     return shared.logSumExp(pointLevelScores);
   });
@@ -111,7 +102,7 @@ var batchScore = function(levels, sharedParams, groupParams, obs, test, output_h
 
     return pointScore;
   });
-
+  console.log(sum(pointScores))
   return sum(pointScores);
 };
 
@@ -123,16 +114,16 @@ var train = function(obs, output_handle) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeight = _.values(dirichletDrift({alpha: Vector([1, 1, 1])}).data);
-      var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+      var groupWeightA = uniformDrift({a: 0, b: 1, width: .1})
+      var groupWeight = [1 - groupWeightA, groupWeightA]
+      var logitSigma = 0.3
       var sharedParams = {groupWeight, logitSigma};
 
       var groupParams = {
-        'noise' : groupPrior('noise'),
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-
+      console.log(sharedParams, groupParams)
       var levels = getLevels(groupWeight, obs);
 
       globalStore.totalScore = 0;
@@ -142,9 +133,8 @@ var train = function(obs, output_handle) {
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
       query.add('J1agentBias', groupParams['J1'].agentBias);
-      query.add('groupWeight-noise', sharedParams.groupWeight[0]);
-      query.add('groupWeight-J0', sharedParams.groupWeight[1]);
-      query.add('groupWeight-J1', sharedParams.groupWeight[2]);
+      query.add('groupWeight-J0', sharedParams.groupWeight[0]);
+      query.add('groupWeight-J1', sharedParams.groupWeight[1]);
       query.add('logitSigma', logitSigma);
 
       query.add('score', globalStore.totalScore);
@@ -161,7 +151,6 @@ if (argv.test == 'true') {
   var mleParams = JSON.parse(mleString);
 
   var groupParams = {
-    'noise': extend(mleParams.groupParams.noise, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.noise)}),
     'J0': extend(mleParams.groupParams.J0, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J0)}),
     'J1': extend(mleParams.groupParams.J1, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J1)}),
   };

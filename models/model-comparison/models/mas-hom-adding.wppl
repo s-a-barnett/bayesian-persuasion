@@ -13,11 +13,11 @@ var inferenceParams = {
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // steepness of logistic stick-to-strength curve
-  var gradient = exponential({a: 0.01});
+  var gradient = uniformDrift({a: 0, b: 10, width: 1})
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
-  var threshold = uniform({a: 0, b: 1});
+  var threshold = uniformDrift({a: -1, b: 1, width: 0.1});
   // variance for mean noise
-  var logitSigma = Math.abs(cauchy({location: 0, scale: 1}));
+  var logitSigma = 0.3//Math.abs(cauchy({location: 0, scale: 1}));
   return {
     'gradient': gradient,
     'threshold': threshold,
@@ -32,21 +32,11 @@ var getScore = function(datum, params) {
 
   // compute belief in idealized model
   var mean = shared.getAAAddingScore('long', stickLength, params);
-
-  // mu represents the mean of the normal distribution given by the logit
-  //   of the model belief
-  var mu = mean - Math.log1p(-Math.exp(mean));
-
-  var noiseDist = params.level == 'noise' ?
-    Uniform({a: 0., b: 1.}) :
-    // LogitNormal({mu: mu, sigma: params.logitSigma, a: 0., b: 1.});
-    Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
-  var pointScore = noiseDist.score(subjectBelief);
-
-  return pointScore;
+  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
 var batchScore = function(params, obs, test, output_handle) {
@@ -71,33 +61,35 @@ var batchScore = function(params, obs, test, output_handle) {
 
     return pointScore;
   });
-
+  console.log(sum(pointScores))
   return sum(pointScores);
 };
 
 var train = function(obs, output_handle) {
-  return Infer({method: 'MCMC',
-                samples: inferenceParams.samples,
-                burn: inferenceParams.burn,
-                lag: inferenceParams.lag,
-                verbose: inferenceParams.verbose,
-                model: function() {
+  return Infer({
+    method: 'MCMC',
+    samples: inferenceParams.samples,
+    burn: inferenceParams.burn,
+    lag: inferenceParams.lag,
+    verbose: inferenceParams.verbose,
+    model: function() {
 
-    var params = paramsPrior();
+      var params = paramsPrior();
+      console.log(params)
+      globalStore.totalScore = 0;
 
-    globalStore.totalScore = 0;
+      batchScore(params, obs, false, output_handle);
 
-    batchScore(params, obs, false, output_handle);
+      query.add('gradient', params.gradient);
+      query.add('threshold', params.threshold);
+      query.add('logitSigma', params.logitSigma);
 
-    query.add('gradient', params.gradient);
-    query.add('threshold', params.threshold);
-    query.add('logitSigma', params.logitSigma);
+      query.add('score', globalStore.totalScore);
+      query.add('params', JSON.stringify(params));
 
-    query.add('score', globalStore.totalScore);
-    query.add('params', JSON.stringify(params));
-
-    return query;
-  }})
+      return query;
+    }
+  })
 };
 
 if (argv.test == 'true') {
