@@ -77,36 +77,23 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
   return sum(pointScores);
 };
 
-var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
+var batchScore = function(levels, sharedParams, groupParams, obs, test) {
   var pointScores = mapData({data: obs}, function(datum, i) {
     var level = levels[i].toString();
     var datumParams = extend(sharedParams, groupParams[level], {level});
     var pointScore = getScore(datum, datumParams);
 
     if (!test) {
-      query.add('p' + datum[0], level);
-      globalStore.totalScore += pointScore;
+      query.add('p' + datum[0], pointScore);
       factor(pointScore);
-
-      var iter = shared.iterationTracker() / obs.length;
-      var floor_iter = _.floor(iter);
-
-      // write pointScore into separate external file
-      if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-        csv.writeLine(datum[0] + "," + pointScore, output_handle);
-        if (floor_iter + 1 == iter + (1/obs.length)) {
-          console.log(globalStore.totalScore);
-        };
-      };
     };
 
     return pointScore;
   });
-  console.log(sum(pointScores))
   return sum(pointScores);
 };
 
-var train = function(obs, output_handle) {
+var train = function(obs) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -123,12 +110,9 @@ var train = function(obs, output_handle) {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      console.log(sharedParams, groupParams)
       var levels = getLevels(groupWeight, obs);
 
-      globalStore.totalScore = 0;
-
-      batchScore(levels, sharedParams, groupParams, obs, false, output_handle);
+      var totalScore =batchScore(levels, sharedParams, groupParams, obs, false);
 
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
@@ -137,7 +121,7 @@ var train = function(obs, output_handle) {
       query.add('groupWeight-J1', sharedParams.groupWeight[1]);
       query.add('logitSigma', logitSigma);
 
-      query.add('score', globalStore.totalScore);
+      query.add('score', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));
 
       return query;
@@ -174,10 +158,7 @@ if (argv.test == 'true') {
   var obs = csv.read('input/' + data).slice(1, -1);
   // open pointScore file
   var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-  var output_handle = csv.open(inferenceParams.out + "/" + modelName + "-pointScores_" + chainFold + ".csv");
-  csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-  csv.close(output_handle);
+  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
 };

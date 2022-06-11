@@ -39,33 +39,21 @@ var getScore = function(datum, params) {
   return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
-var batchScore = function(params, obs, test, output_handle) {
+var batchScore = function(params, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
     var pointScore = getScore(datum, params);
 
     if (!test) {
-      globalStore.totalScore += pointScore;
+      query.add('p' + datum[0], pointScore);
       factor(pointScore);
-
-      var iter = shared.iterationTracker() / obs.length;
-      var floor_iter = _.floor(iter);
-
-      // write pointScore into separate external file
-      if (shared.isRecordedIter(floor_iter, inferenceParams.burn, inferenceParams.lag)) {
-        csv.writeLine(datum[0] + "," + pointScore, output_handle);
-        if (floor_iter + 1 == iter + (1/obs.length)) {
-          console.log(globalStore.totalScore);
-        };
-      };
     };
 
     return pointScore;
   });
-  console.log(sum(pointScores))
   return sum(pointScores);
 };
 
-var train = function(obs, output_handle) {
+var train = function(obs) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -75,16 +63,13 @@ var train = function(obs, output_handle) {
     model: function() {
 
       var params = paramsPrior();
-      console.log(params)
-      globalStore.totalScore = 0;
-
-      batchScore(params, obs, false, output_handle);
+      var totalScore = batchScore(params, obs, false);
 
       query.add('gradient', params.gradient);
       query.add('threshold', params.threshold);
       query.add('logitSigma', params.logitSigma);
 
-      query.add('score', globalStore.totalScore);
+      query.add('score', totalScore);
       query.add('params', JSON.stringify(params));
 
       return query;
@@ -107,10 +92,7 @@ if (argv.test == 'true') {
   var obs = csv.read('input/' + data).slice(1, -1);
   // open pointScore file
   var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-  var output_handle = csv.open(inferenceParams.out + "/" + modelName + "-pointScores_" + chainFold + ".csv");
-  csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-  csv.close(output_handle);
+  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
 };
