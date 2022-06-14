@@ -48,45 +48,48 @@ var getLevels = function(groupWeight, obs) {
   return levels;
 };
 
-var levelDist = function(groupWeight, obs) {
-  return Infer({
-    method: 'forward',
-    samples: testSamples,
-    model: function() {
-      return getLevels(groupWeight, obs);
-    }
-  })
-};
+// var levelDist = function(groupWeight, obs) {
+//   return Infer({
+//     method: 'forward',
+//     samples: testSamples,
+//     model: function() {
+//       return getLevels(groupWeight, obs);
+//     }
+//   })
+// };
 
-var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
+var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var pointLevelScores = map2(function(level, idx) {
+    var pointScore = shared.logSumExp(map2(function(level, idx) {
       var datumParams = extend(sharedParams, groupParams[level], {level});
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(groupWeight[idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['aa', 'mas'], [0, 1]);
-
-    return shared.logSumExp(pointLevelScores);
-  });
-  return sum(pointScores);
-};
-
-var batchScore = function( levels, sharedParams, groupParams, obs, test) {
-  var pointScores = mapData({data: obs}, function(datum, i) {
-    var level = levels[i].toString();
-    var datumParams = extend(sharedParams, groupParams[level], {level});
-    var pointScore = getScore(datum, datumParams);
-
+    }, ['aa', 'mas'], [0, 1]));
     if (!test) {
       query.add('p' + datum[0], pointScore);
       factor(pointScore);
     };
-
     return pointScore;
   });
   return sum(pointScores);
 };
+
+// var batchScore = function( levels, sharedParams, groupParams, obs, test) {
+//   var pointScores = mapData({data: obs}, function(datum, i) {
+//     var level = levels[i].toString();
+//     var datumParams = extend(sharedParams, groupParams[level], {level});
+//     var pointScore = getScore(datum, datumParams);
+
+//     if (!test) {
+//       query.add('p' + datum[0], pointScore);
+//       factor(pointScore);
+//     };
+
+//     return pointScore;
+//   });
+//   return sum(pointScores);
+// };
 
 var train = function(obs) {
   return Infer({
@@ -105,8 +108,8 @@ var train = function(obs) {
         'aa' : groupPrior('aa'),
         'mas' : groupPrior('mas')
       };
-      var levels = getLevels(groupWeight, obs);
-      var totalScore = batchScore(levels, sharedParams, groupParams, obs, false);
+      // var levels = getLevels(groupWeight, obs);
+      var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs, false);
 
       query.add('mas' + '_gradient', groupParams['mas'].gradient);
       query.add('mas' + '_threshold', groupParams['mas'].threshold);

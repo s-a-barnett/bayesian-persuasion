@@ -1,3 +1,4 @@
+
 var modelName = 'mas-het-speakers-adding';
 
 var inferenceParams = {
@@ -59,28 +60,15 @@ var levelDist = function(means, obs) {
   })
 };
 
-var mixtureScore = function(means, sharedParams, groupParams, obs) {
+var mixtureScore = function(means, sharedParams, groupParams, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var speakerStick = datum[3];
-    var pointLevelScores = map2(function(level, idx) {
+    var speakerStick = datum[3] < 0.8 ? 'less' : datum[3];
+    var pointScore = shared.logSumExp(map2(function(level, idx) {
       var datumParams = extend(sharedParams, groupParams[level], {level});
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(means[speakerStick][idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['aa', 'mas'], [0, 1]);
-
-    return shared.logSumExp(pointLevelScores);
-  });
-  return sum(pointScores);
-};
-
-var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
-  var pointScores = mapData({data: obs}, function(datum, i) {
-    var level = levels[i].toString();
-    var key = (datum[3] < 0.8 ? 'less' : datum[3]);
-    var datumParams = extend(sharedParams, groupParams[level + '-' + key], {level});
-    var pointScore = getScore(datum, datumParams);
-
+    }, ['aa', 'mas'], [0, 1]));
     if (!test) {
       query.add('p' + datum[0], pointScore);
       factor(pointScore);
@@ -91,7 +79,23 @@ var batchScore = function(levels, sharedParams, groupParams, obs, test, output_h
   return sum(pointScores);
 };
 
-var train = function(obs, output_handle) {
+// var batchScore = function(levels, sharedParams, groupParams, obs, test) {
+//   var pointScores = mapData({data: obs}, function(datum, i) {
+//     var level = levels[i].toString();
+//     var datumParams = extend(sharedParams, groupParams[level], {level});
+//     var pointScore = getScore(datum, datumParams);
+
+//     if (!test) {
+//       query.add('p' + datum[0], pointScore);
+//       factor(pointScore);
+//     };
+
+//     return pointScore;
+//   });
+//   return sum(pointScores);
+// };
+
+var train = function(obs) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -103,12 +107,8 @@ var train = function(obs, output_handle) {
       var sharedParams = {logitSigma};
 
       var groupParams = {
-        'aa-0.9' : groupPrior('aa'),
-        'mas-0.9' : groupPrior('mas'),
-        'aa-0.8' : groupPrior('aa'),
-        'mas-0.8' : groupPrior('mas'),
-        'aa-less' : groupPrior('aa'),
-        'mas-less' : groupPrior('mas')
+        'aa' : groupPrior('aa'),
+        'mas' : groupPrior('mas'),
       };
 
       var speakerSticks = map(function(o){return o[3];}, obs);
@@ -116,36 +116,20 @@ var train = function(obs, output_handle) {
         '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
         '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
         'less' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
-        // '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
-        // '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
       };
-      var levels = getLevels(means, obs);
+      var totalScore = mixtureScore(means, sharedParams, groupParams, obs, false);
 
-      var totalScore = batchScore(levels, sharedParams, groupParams, obs, false, output_handle);
-
-      query.add('mas-0.9' + '_gradient', groupParams['mas-0.9'].gradient);
-      query.add('mas-0.9' + '_threshold', groupParams['mas-0.9'].threshold);
-      query.add('aa-0.9' + '_gradient', groupParams['aa-0.9'].gradient);
-
-      query.add('mas-0.8' + '_gradient', groupParams['mas-0.8'].gradient);
-      query.add('mas-0.8' + '_threshold', groupParams['mas-0.8'].threshold);
-      query.add('aa-0.8' + '_gradient', groupParams['aa-0.8'].gradient);
-
-      query.add('mas-less' + '_gradient', groupParams['mas-less'].gradient);
-      query.add('mas-less' + '_threshold', groupParams['mas-less'].threshold);
-      query.add('aa-less' + '_gradient', groupParams['aa-less'].gradient);
+      query.add('mas' + '_gradient', groupParams['mas'].gradient);
+      query.add('mas' + '_threshold', groupParams['mas'].threshold);
+      query.add('aa' + '_gradient', groupParams['aa'].gradient);
 
       query.add('groupWeight-aa-0.9', means['0.9'][0]);
       query.add('groupWeight-aa-0.8', means['0.8'][0]);
       query.add('groupWeight-aa-less', means['less'][0]);
-      // query.add('groupWeight-aa-0.4', means['0.4'][0]);
-      // query.add('groupWeight-aa-0.2', means['0.2'][0]);
 
       query.add('groupWeight-mas-0.9', means['0.9'][1]);
       query.add('groupWeight-mas-0.8', means['0.8'][1]);
       query.add('groupWeight-mas-less', means['less'][1]);
-      // query.add('groupWeight-mas-0.4', means['0.4'][1]);
-      // query.add('groupWeight-mas-0.2', means['0.2'][1]);
 
       query.add('logitSigma', logitSigma);
 
@@ -182,10 +166,7 @@ if (argv.test == 'true') {
   var obs = csv.read('input/' + data).slice(1, -1);
   // open pointScore file
   var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-  var output_handle = csv.open(inferenceParams.out + "/" + modelName + "-pointScores_" + chainFold + ".csv");
-  csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-  csv.close(output_handle);
+  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
 };

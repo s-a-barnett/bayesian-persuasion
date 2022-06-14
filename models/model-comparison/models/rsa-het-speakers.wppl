@@ -15,10 +15,10 @@ var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
-    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    nSticks : uniformDraw([5]),  // number of sticks modelled by judge
     agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
   } : model == 'J0' ? {
-    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    nSticks : uniformDraw([5]),  // number of sticks modelled by judge
     agentBias : 0,
   } : {
     nSticks: 5,
@@ -37,65 +37,48 @@ var getScore = function(datum, params) {
         params.level == 'J0' ? shared.getJ0Score('long', stickLength, params) :
         Math.log(0.5);
 
-  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.logitSigma});
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
   return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
-var getLevels = function(means, obs) {
-  var speakerSticks = map(function(o){return o[3] < 0.8 ? 'less' : o[3];}, obs);
-  var levels = map(function(stick) {
-    return categorical({ps: means[stick], vs: ['J0', 'J1']})
-  }, speakerSticks);
-
-  return levels;
-};
-
-var levelDist = function(means, obs) {
-  return Infer({
-    method: 'forward',
-    samples: testSamples,
-    model: function() {
-      return getLevels(means, obs);
-    }
-  })
-};
-
-var mixtureScore = function(means, sharedParams, groupParams, obs) {
+var mixtureScore = function(means, sharedParams, groupParams, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var speakerStick = datum[3];
-    var pointLevelScores = map2(function(level, idx) {
+    var speakerStick = datum[3] < 0.8 ? 'less' : datum[3];
+    var pointScore = shared.logSumExp(map2(function(level, idx) {
       var datumParams = extend(sharedParams, groupParams[level], {level});
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(means[speakerStick][idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['J0', 'J1'], [0, 1]);
-
-    return shared.logSumExp(pointLevelScores);
-  });
-  return sum(pointScores);
-};
-
-var batchScore = function(levels, sharedParams, groupParams, obs, test, output_handle) {
-  var pointScores = mapData({data: obs}, function(datum, i) {
-    var level = levels[i].toString();
-    var key = (datum[3] < 0.8 ? 'less' : datum[3]);
-    var datumParams = extend(sharedParams, groupParams[level + '-' + key], {level});
-    var pointScore = getScore(datum, datumParams);
-
+    }, ['J0', 'J1'], [0, 1]));
     if (!test) {
       query.add('p' + datum[0], pointScore);
       factor(pointScore);
     };
-
     return pointScore;
   });
   return sum(pointScores);
 };
 
-var train = function(obs, output_handle) {
+// var batchScore = function(levels, sharedParams, groupParams, obs, test) {
+//   var pointScores = mapData({data: obs}, function(datum, i) {
+//     var level = levels[i].toString();
+//     var datumParams = extend(sharedParams, groupParams[level], {level});
+//     var pointScore = getScore(datum, datumParams);
+
+//     if (!test) {
+//       query.add('p' + datum[0], pointScore);
+//       factor(pointScore);
+//     };
+
+//     return pointScore;
+//   });
+//   return sum(pointScores);
+// };
+
+var train = function(obs) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -104,48 +87,33 @@ var train = function(obs, output_handle) {
     verbose: inferenceParams.verbose,
     model: function() {
       var logitSigma = 0.3;
-      var sharedParams = {logitSigma};
+      var offset = uniformDrift({a: -0.5, b: 0.5, width: 0.05});
+      var sharedParams = {logitSigma, offset};
       var groupParams = {
-        'J0-0.9' : groupPrior('J0'),
-        'J1-0.9' : groupPrior('J1'),
-        'J0-0.8' : groupPrior('J0'),
-        'J1-0.8' : groupPrior('J1'),
-        'J0-less' : groupPrior('J0'),
-        'J1-less' : groupPrior('J1')
+        'J0' : groupPrior('J0'),
+        'J1' : groupPrior('J1'),
       };
 
       var means = {
         '0.9' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
         '0.8' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
         'less' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
-
-        // '0.7' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
-        // '0.4' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
-        // '0.2' : _.values(dirichletDrift({alpha: Vector([1, 1])}).data),
       };
-//      console.log(groupParams, means)
 
-      var levels = getLevels(means, obs);
-      var totalScore = batchScore(levels, sharedParams, groupParams, obs, false, output_handle);
+//      var levels = getLevels(means, obs);
+      var totalScore = mixtureScore(means, sharedParams, groupParams, obs, false);
 
-      query.add('J0-0.9nSticks', groupParams['J0-0.9'].nSticks)
-      query.add('J0-lessnSticks', groupParams['J0-less'].nSticks);
-      query.add('J1-0.9nSticks', groupParams['J1-0.9'].nSticks);
-      query.add('J1-lessnSticks', groupParams['J1-less'].nSticks);
-      query.add('J1-0.9agentBias', groupParams['J1-0.9'].agentBias);
-      query.add('J1-lessagentBias', groupParams['J1-less'].agentBias);
+      query.add('J0-nSticks', groupParams['J0'].nSticks);
+      query.add('J1-nSticks', groupParams['J1'].nSticks);
+      query.add('J1-agentBias', groupParams['J1'].agentBias);
 
       query.add('groupWeight-J0-0.9', means['0.9'][0]);
       query.add('groupWeight-J0-0.8', means['0.8'][0]);
-      query.add('groupWeight-J0-0.7', means['less'][0]);
-      // query.add('groupWeight-J0-0.4', means['0.4'][0]);
-      // query.add('groupWeight-J0-0.2', means['0.2'][0]);
+      query.add('groupWeight-J0-less', means['less'][0]);
 
       query.add('groupWeight-J1-0.9', means['0.9'][1]);
       query.add('groupWeight-J1-0.8', means['0.8'][1]);
-      query.add('groupWeight-J1-0.7', means['less'][1]);
-      // query.add('groupWeight-J1-0.4', means['0.4'][1]);
-      // query.add('groupWeight-J1-0.2', means['0.2'][1]);
+      query.add('groupWeight-J1-less', means['less'][1]);
 
       query.add('logitSigma', logitSigma);
 
@@ -187,10 +155,7 @@ if (argv.test == 'true') {
   var obs = csv.read('input/' + data).slice(1, -1);
   // open pointScore file
   var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-  var output_handle = csv.open(inferenceParams.out + "/" + modelName + "-pointScores_" + chainFold + ".csv");
-  csv.writeLine("gameid,score", output_handle);
 
   // write posterior distribution to new file
-  csv.writeDistTable(train(obs, output_handle), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-  csv.close(output_handle);
+  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
 };

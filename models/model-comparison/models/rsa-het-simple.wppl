@@ -15,10 +15,10 @@ var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
-    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    nSticks : uniformDraw([5]),  // number of sticks modelled by judge
     agentBias : uniformDrift({a: 0, b: 10, width: 1}),   // fixed value of judge for S1/S2 speaker
   } : model == 'J0' ? {
-    nSticks : uniformDraw([3, 4, 5]),  // number of sticks modelled by judge
+    nSticks : uniformDraw([5]),  // number of sticks modelled by judge
     agentBias : 0,
   } : {
     nSticks: 5,
@@ -39,56 +39,26 @@ var getScore = function(datum, params) {
       shared.getJ0Score('long', stickLength, params) :
       console.error('unknown level', params.level);
 
-  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.logitSigma});
 
   // in Gelman et al. notation, this is log(p(y_i | θ^s))
   //   for i-th observation, s-th posterior sample
   return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
-var getLevels = function(groupWeight, obs) {
-  var levels = repeat(obs.length, function() {
-    return categorical({ps: groupWeight, vs: ['J0', 'J1']})
-  });
-  return levels;
-};
-
-var levelDist = function(groupWeight, obs) {
-  return Infer({
-    method: 'forward',
-    samples: testSamples,
-    model: function() {
-      return getLevels(groupWeight, obs);
-    }
-  })
-};
-
-var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
+var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var pointLevelScores = map2(function(level, idx) {
+    var pointScore = shared.logSumExp(map2(function(level, idx) {
       var datumParams = extend(sharedParams, groupParams[level], {level});
       var pointLevelScore = getScore(datum, datumParams);
       var levelPriorScore = Math.log(groupWeight[idx]);
       return pointLevelScore + levelPriorScore;
-    }, ['J0', 'J1'], [0, 1]);
-
-    return shared.logSumExp(pointLevelScores);
-  });
-  return sum(pointScores);
-};
-
-var batchScore = function(levels, sharedParams, groupParams, obs, test) {
-  var pointScores = mapData({data: obs}, function(datum, i) {
-    var level = levels[i].toString();
-    var datumParams = extend(sharedParams, groupParams[level], {level});
-    var pointScore = getScore(datum, datumParams);
-
-    if (!test) {
+    }, ['J0', 'J1'], [0, 1]));
+    if(!test) {
       query.add('p' + datum[0], pointScore);
       factor(pointScore);
     };
-
-    return pointScore;
+    return pointScore
   });
   return sum(pointScores);
 };
@@ -104,16 +74,15 @@ var train = function(obs) {
       var groupWeightA = uniformDrift({a: 0, b: 1, width: .1})
       var groupWeight = [1 - groupWeightA, groupWeightA]
       var logitSigma = 0.3
-      var sharedParams = {groupWeight, logitSigma};
+      var offset = uniformDrift({a: -0.5, b: 0.5, width: 0.05});
+      var sharedParams = {groupWeight, logitSigma, offset};
 
       var groupParams = {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      var levels = getLevels(groupWeight, obs);
-
-      var totalScore =batchScore(levels, sharedParams, groupParams, obs, false);
-
+      var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs, false);
+      console.log(totalScore, sharedParams);
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
       query.add('J1agentBias', groupParams['J1'].agentBias);
@@ -140,18 +109,8 @@ if (argv.test == 'true') {
   };
 
   var sharedParams = mleParams.sharedParams;
-
-  if (argv.maxScore == 'true') {
-    var drawScore = function() {
-      var levels = getLevels(sharedParams.groupWeight, obs);
-      return batchScore(levels, sharedParams, groupParams, obs, true, {});
-    };
-    var maxScore = _.max(repeat(testSamples, drawScore))
-    console.log(maxScore);
-  } else {
-    var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs);
-    console.log(expectedScore);
-  };
+  var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs);
+  console.log(expectedScore);
 
 } else {
   var data = _.isFinite(argv.fold) ? argv.experiment + '_data_train_' + argv.fold + '.csv' : argv.experiment + '_data_full.csv';

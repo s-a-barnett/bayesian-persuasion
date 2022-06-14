@@ -25,26 +25,19 @@ var paramsPrior = function() {
   };
 };
 
-var getScore = function(datum, params) {
-  // read single observation from overall observations
-  var stickLength   = _.toNumber(datum[1]);
-  var subjectBelief = _.toNumber(datum[2]);
-
-  // compute belief in idealized model
-  var mean = shared.getAAAddingScore('long', stickLength, params);
-  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
-
-  // in Gelman et al. notation, this is log(p(y_i | θ^s))
-  //   for i-th observation, s-th posterior sample
-  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
-};
-
 var batchScore = function(params, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var pointScore = getScore(datum, params);
+    var stickLength   = _.toNumber(datum[1]);
+    var subjectBelief = _.toNumber(datum[2]);
+
+    // compute belief in idealized model
+    var mean = shared.getAAAddingScore('long', stickLength, params);
+    var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+    var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
 
     if (!test) {
       query.add('p' + datum[0], pointScore);
+      query.add('predictionFor' + datum[0] + '@' + stickLength + '=' + subjectBelief, Math.exp(mean));
       factor(pointScore);
     };
 

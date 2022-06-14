@@ -13,42 +13,36 @@ var inferenceParams = {
 // prior over rsa hom model parameters
 var paramsPrior = function() {
   // number of sticks modelled by judge
-  var nSticks = uniformDraw([3, 4, 5]);
+  var nSticks = uniformDraw([5]);
   // fixed value of judge for S1 speaker
   var agentBias = uniformDrift({a: 0, b: 10, width: 1});
   var logitSigma = 0.3
   // determines whether population treated as J0 or J1
-  var level = flip(.5) ? 'J1' : 'J0';
+
   return {
     'nSticks': nSticks,
     'agentBias': agentBias,
     'logitSigma': logitSigma,
-    'level': level
+    'level': 'J1'
   };
-};
-
-var getScore = function(datum, params) {
-  // read single observation from overall observations
-  var stickLength   = _.toNumber(datum[1]);
-  var subjectBelief = _.toNumber(datum[2]);
-
-  // compute belief in idealized model
-  var mean = params.level == 'J1' ?
-      params.getJ1Score('long', stickLength, params) :
-      shared.getJ0Score('long', stickLength, params) ;
-
-  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
-  // in Gelman et al. notation, this is log(p(y_i | θ^s))
-  //   for i-th observation, s-th posterior sample
-  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 };
 
 var batchScore = function(params, obs, test) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var pointScore = getScore(datum, params);
+    var stickLength   = _.toNumber(datum[1]);
+    var subjectBelief = _.toNumber(datum[2]);
+    var mean = params.level == 'J1' ?
+          params.getJ1Score('long', stickLength, params) :
+          shared.getJ0Score('long', stickLength, params) ;
+
+    var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.logitSigma});
+    // in Gelman et al. notation, this is log(p(y_i | θ^s))
+    //   for i-th observation, s-th posterior sample
+    var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 
     if (!test) {
       query.add('p' + datum[0], pointScore);
+      query.add('predictionFor' + datum[0] + '@' + stickLength + '=' + subjectBelief, Math.exp(mean));
       factor(pointScore);
     };
 
@@ -68,11 +62,12 @@ var train = function(obs) {
 
       var rawParams = paramsPrior();
       var params = extend(rawParams, {
+        offset: uniformDrift({a: -.5, b: .5, width: 0.05}),
         getJ1Score: shared.getJ1Score_generator(rawParams)
       });
-      
+      console.log(params)
       var totalScore = batchScore(params, obs, false);
-
+      console.log(totalScore)
       query.add('nSticks', rawParams.nSticks);
       query.add('agentBias', rawParams.agentBias);
       query.add('logitSigma', rawParams.logitSigma);
