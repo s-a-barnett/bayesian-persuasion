@@ -37,7 +37,6 @@ var batchScore = function(params, obs, test) {
 
     if (!test) {
       query.add('p' + datum[0], pointScore);
-      query.add('predictionFor' + datum[0] + '@' + stickLength + '=' + subjectBelief, Math.exp(mean));
       factor(pointScore);
     };
 

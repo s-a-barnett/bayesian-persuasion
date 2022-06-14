@@ -40,10 +40,7 @@ var getScore = function(datum, params) {
       console.error('unknown level', params.level);
 
   var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.logitSigma});
-
-  // in Gelman et al. notation, this is log(p(y_i | θ^s))
-  //   for i-th observation, s-th posterior sample
-  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
+  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
 };
 
 var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
@@ -58,7 +55,7 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
       query.add('p' + datum[0], pointScore);
       factor(pointScore);
     };
-    return pointScore
+    return pointScore;
   });
   return sum(pointScores);
 };
@@ -71,9 +68,9 @@ var train = function(obs) {
     lag: inferenceParams.lag,
     verbose: inferenceParams.verbose,
     model: function() {
-      var groupWeightA = uniformDrift({a: 0, b: 1, width: .1})
-      var groupWeight = [1 - groupWeightA, groupWeightA]
-      var logitSigma = 0.3
+      var groupWeightA = uniformDrift({a: 0, b: 1, width: .1});
+      var groupWeight = [1 - groupWeightA, groupWeightA];
+      var logitSigma = 0.3;
       var offset = uniformDrift({a: -0.5, b: 0.5, width: 0.05});
       var sharedParams = {groupWeight, logitSigma, offset};
 
@@ -82,13 +79,14 @@ var train = function(obs) {
         'J1' : groupPrior('J1')
       };
       var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs, false);
-      console.log(totalScore, sharedParams);
+
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
       query.add('J1agentBias', groupParams['J1'].agentBias);
       query.add('groupWeight-J0', sharedParams.groupWeight[0]);
       query.add('groupWeight-J1', sharedParams.groupWeight[1]);
       query.add('logitSigma', logitSigma);
+      query.add('offset', sharedParams.offset);
 
       query.add('score', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));

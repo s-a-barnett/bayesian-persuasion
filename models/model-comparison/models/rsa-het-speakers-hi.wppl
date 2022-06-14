@@ -116,6 +116,7 @@ var train = function(obs) {
       query.add('groupWeight-J2-less', means['less'][2]);
 
       query.add('logitSigma', logitSigma);
+      query.add('offset', offset);
 
       query.add('score', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams}, {means})));
