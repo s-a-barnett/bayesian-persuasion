@@ -10,8 +10,6 @@ var inferenceParams = {
   out: argv.out
 };
 
-var testSamples = _.isFinite(argv.testSamples) ? argv.testSamples : 10000;
-
 // prior over rsa het model parameters
 var groupPrior = function(model) {
   var params = model == 'J1' ? {
@@ -107,7 +105,7 @@ if (argv.test == 'true') {
   };
 
   var sharedParams = mleParams.sharedParams;
-  var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs);
+  var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs, true);
   console.log(expectedScore);
 
 } else {

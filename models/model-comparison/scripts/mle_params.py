@@ -16,7 +16,7 @@ def get_params_json(loc, model, fold, experiment):
     else:
         fold = fold
 
-    num_chains = 40 if model == 'rsa-hom' else 4
+    num_chains = 4
     posterior_ = [
         f'{loc}/{model}-params-posterior_c{i}f{fold}{experiment}.csv' for i in range(num_chains)
     ]
