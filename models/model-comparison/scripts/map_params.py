@@ -9,10 +9,10 @@ def main(args):
         'rsa-het-speakers',
     ]
     for model in models:
-        test_path = Path(os.path.join(args.input, f'{model}-pointScores_c0fundefinedoriginal.csv'))
+        test_path = Path(os.path.join(args.input, f'{model}-params-posterior_c0fundefinedreplication.csv'))
         if test_path.is_file():
             print(f'{model = }')
-            for experiment in ['original', 'replication']:
+            for experiment in ['replication']:
                 posterior_ = [
                     f'{args.input}/{model}-params-posterior_c{i}fundefined{experiment}.csv' for i in range(4)
                 ]

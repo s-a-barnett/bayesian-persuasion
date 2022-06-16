@@ -21,8 +21,10 @@ hyp_dict = {
         # 'rsa-het-speakers',
         # 'rsa-hom',
         'rsa-pp',
-        'mas-pp',
-        'mas-pp-adding',
+        'mas-pp-het-simple',
+        'mas-pp-hom',
+        # 'mas-pp',
+        # 'mas-pp-adding',
     ],
     'samples': [
         # 100, # rsa-hom cv or waic
@@ -30,13 +32,13 @@ hyp_dict = {
         # 250, # rsa-hom waic
         # 2500, # waic and psis-loo
     ],
-    'burn': [20000],
-    'lag': [1999],
+    'burn': [7500],
+    'lag': [100],
     'verbose': ['false'],
     'chain': list(range(4)), # 40 for rsa-hom cv, 100 for rsa-hom waic, 4 otherwise
     # 'fold': list(range(10)), # cross-validation only
     'experiment': [
-        'original', 
+        # 'original', 
         'replication',
     ],
 }

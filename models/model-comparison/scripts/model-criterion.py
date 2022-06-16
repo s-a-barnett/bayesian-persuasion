@@ -37,8 +37,6 @@ def main(args):
 
     df_waic = pd.DataFrame(columns=['model', 'experiment', 'lppd', 'pwaic2', 'elppd_waic', 'se_elppd_waic', 'loo', 'se_loo'])
 
-    # models = list(pd.read_csv('./hyperparameters/hyperparameters_waic.csv').model.unique())
-    # TODO: base this off of .wppl files
     models = [
         'aa-hom-adding',
         'mas-het-simple-adding',
@@ -53,7 +51,7 @@ def main(args):
         test_path = Path(os.path.join(args.input, f'{model}-params-posterior_c0fundefinedreplication.csv'))
         if test_path.is_file():
             print(f'model = {model}')
-            for experiment in ['original', 'replication']:
+            for experiment in ['replication']:
                 num_chains = 4
                 dfs = pd.concat([pd.read_csv(os.path.join(args.input, f'{model}-params-posterior_c{i}fundefined{experiment}.csv'),
                                              on_bad_lines = 'skip') for i in range(num_chains)])

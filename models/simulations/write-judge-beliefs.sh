@@ -3,7 +3,7 @@ MODEL=rsa-het-speakers
 INPUT=/scratch/gpfs/samuelab/bper/cv/
 for FOLD in {0..9}
 do
-    for EXPERIMENT in original replication
+    for EXPERIMENT in replication
     do
         echo $FOLD
         mleString=$(python ../model-comparison/scripts/mle_params.py -m $MODEL -f $FOLD -i $INPUT -e $EXPERIMENT)
