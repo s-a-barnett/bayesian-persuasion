@@ -37,11 +37,11 @@ var getScore = function(datum, params) {
       shared.getJ0Score('long', stickLength, params) :
       console.error('unknown level', params.level);
 
-  var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.logitSigma});
+  var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.sigma});
   return _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
 };
 
-var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
+var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
   var pointScores = mapData({data: obs}, function(datum) {
     var pointScore = shared.logSumExp(map2(function(level, idx) {
       var datumParams = extend(sharedParams, groupParams[level], {level});
@@ -49,10 +49,10 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
       var levelPriorScore = Math.log(groupWeight[idx]);
       return pointLevelScore + levelPriorScore;
     }, ['J0', 'J1'], [0, 1]));
-    if(!test) {
-      query.add('p' + datum[0], pointScore);
-      factor(pointScore);
-    };
+
+    query.add('score_' + datum[0], pointScore);
+    factor(pointScore);
+
     return pointScore;
   });
   return sum(pointScores);
@@ -68,22 +68,22 @@ var train = function(obs) {
     model: function() {
       var groupWeightA = uniformDrift({a: 0, b: 1, width: .1});
       var groupWeight = [1 - groupWeightA, groupWeightA];
-      var logitSigma = 0.3;
+      var sigma = 0.3;
       var offset = uniformDrift({a: -0.5, b: 0.5, width: 0.05});
-      var sharedParams = {groupWeight, logitSigma, offset};
+      var sharedParams = {groupWeight, sigma, offset};
 
       var groupParams = {
         'J0' : groupPrior('J0'),
         'J1' : groupPrior('J1')
       };
-      var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs, false);
+      var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs);
 
       query.add('J0nSticks', groupParams['J0'].nSticks);
       query.add('J1nSticks', groupParams['J1'].nSticks);
       query.add('J1agentBias', groupParams['J1'].agentBias);
       query.add('groupWeight-J0', sharedParams.groupWeight[0]);
       query.add('groupWeight-J1', sharedParams.groupWeight[1]);
-      query.add('logitSigma', logitSigma);
+      query.add('sigma', sigma);
       query.add('offset', sharedParams.offset);
 
       query.add('score', totalScore);
@@ -93,27 +93,8 @@ var train = function(obs) {
     }})
 };
 
-if (argv.test == 'true') {
-  var obs = csv.read('input/' + argv.experiment + '_data_test_' + argv.fold + '.csv').slice(1, -1);
+var obs = csv.read('input/' + argv.experiment + '_data_full.csv').slice(1, -1);
+var chain = "c" + inferenceParams.chain + argv.experiment;
 
-  var mleString = argv.mleString;
-  var mleParams = JSON.parse(mleString);
-
-  var groupParams = {
-    'J0': extend(mleParams.groupParams.J0, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J0)}),
-    'J1': extend(mleParams.groupParams.J1, {getJ1Score: shared.getJ1Score_generator(mleParams.groupParams.J1)}),
-  };
-
-  var sharedParams = mleParams.sharedParams;
-  var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs, true);
-  console.log(expectedScore);
-
-} else {
-  var data = _.isFinite(argv.fold) ? argv.experiment + '_data_train_' + argv.fold + '.csv' : argv.experiment + '_data_full.csv';
-  var obs = csv.read('input/' + data).slice(1, -1);
-  // open pointScore file
-  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-
-  // write posterior distribution to new file
-  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-};
+// write posterior distribution to new file
+csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chain + ".csv");

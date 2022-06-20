@@ -16,29 +16,26 @@ var paramsPrior = function() {
   var gradient = uniformDrift({a: 0, b: 10, width: 1})
   // prior threshold of confidence (fixed at 0.5 for simple A&A)
   var threshold = uniformDrift({a: -1, b: 1, width: 0.1});
-  // variance for mean noise
-  var logitSigma = 0.3//Math.abs(cauchy({location: 0, scale: 1}));
+  var sigma = 0.3
   return {
     'gradient': gradient,
     'threshold': threshold,
-    'logitSigma': logitSigma
+    'sigma': sigma
   };
 };
 
-var batchScore = function(params, obs, test) {
+var batchScore = function(params, obs) {
   var pointScores = mapData({data: obs}, function(datum) {
     var stickLength   = _.toNumber(datum[1]);
     var subjectBelief = _.toNumber(datum[2]);
 
     // compute belief in idealized model
     var mean = shared.getAAAddingScore('long', stickLength, params);
-    var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
+    var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.sigma});
     var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
 
-    if (!test) {
-      query.add('p' + datum[0], pointScore);
-      factor(pointScore);
-    };
+    query.add('score_' + datum[0], pointScore);
+    factor(pointScore);
 
     return pointScore;
   });
@@ -55,11 +52,11 @@ var train = function(obs) {
     model: function() {
 
       var params = paramsPrior();
-      var totalScore = batchScore(params, obs, false);
+      var totalScore = batchScore(params, obs);
 
       query.add('gradient', params.gradient);
       query.add('threshold', params.threshold);
-      query.add('logitSigma', params.logitSigma);
+      query.add('sigma', params.sigma);
 
       query.add('score', totalScore);
       query.add('params', JSON.stringify(params));
@@ -69,22 +66,6 @@ var train = function(obs) {
   })
 };
 
-if (argv.test == 'true') {
-  var obs = csv.read('input/' + argv.experiment + '_data_test_' + argv.fold + '.csv').slice(1, -1);
-
-  var mleString = argv.mleString;
-  var mleParams = JSON.parse(mleString);
-
-  var expectedScore = batchScore(mleParams, obs, true, {})
-
-  console.log(expectedScore);
-
-} else {
-  var data = _.isFinite(argv.fold) ? argv.experiment + '_data_train_' + argv.fold + '.csv' : argv.experiment + '_data_full.csv';
-  var obs = csv.read('input/' + data).slice(1, -1);
-  // open pointScore file
-  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-
-  // write posterior distribution to new file
-  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-};
+var obs = csv.read('input/' + argv.experiment + '_data_full.csv').slice(1, -1);
+var chain = "c" + inferenceParams.chain + argv.experiment;
+csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chain + ".csv");

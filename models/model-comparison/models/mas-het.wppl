@@ -30,29 +30,23 @@ var getScore = function(datum, params) {
   var stickLength   = _.toNumber(datum[1]);
   var subjectBelief = _.toNumber(datum[2]);
   var mean = shared.getAAAddingScore('long', stickLength, params);
-  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.logitSigma});
-  return _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
+  var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.sigma});
+  return {prediction: Math.exp(mean),
+          score: _.max([Math.log(0.01), noiseDist.score(subjectBelief)])};
 };
 
-var getLevels = function(groupWeight, obs) {
-  var levels = repeat(obs.length, function() {
-    return categorical({ps: groupWeight, vs: ['aa', 'mas']})
-  });
-  return levels;
-};
-
-var mixtureScore = function(groupWeight, sharedParams, groupParams, obs, test) {
+var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
   var pointScores = mapData({data: obs}, function(datum) {
-    var pointScore = shared.logSumExp(map2(function(level, idx) {
-      var datumParams = extend(sharedParams, groupParams[level], {level});
-      var pointLevelScore = getScore(datum, datumParams);
-      var levelPriorScore = Math.log(groupWeight[idx]);
-      return pointLevelScore + levelPriorScore;
-    }, ['aa', 'mas'], [0, 1]));
-    if (!test) {
-      query.add('p' + datum[0], pointScore);
-      factor(pointScore);
-    };
+    var aa = getScore(datum, extend(sharedParams, groupParams['aa'], {level: 'aa'}));
+    var mas = getScore(datum, extend(sharedParams, groupParams['mas'], {level: 'mas'}));
+    var pointScore = shared.logSumExp(
+      [aa.score + Math.log(groupWeight[0]), mas.score + Math.log(groupWeight[1])]
+    );
+    var prediction = aa.prediction * groupWeight[0] + mas.prediction * groupWeight[1];
+
+    query.add('score_' + datum[0], pointScore);
+    query.add('prediction_' + datum[0], prediction);
+    factor(pointScore);
     return pointScore;
   });
   return sum(pointScores);
@@ -68,14 +62,14 @@ var train = function(obs) {
     model: function() {
       var groupWeightA = uniformDrift({a: 0, b: 1, width: 0.1})
       var groupWeight = [1 - groupWeightA, groupWeightA];
-      var logitSigma = 0.3
-      var sharedParams = {groupWeight, logitSigma};
+      var sigma = 0.3
+      var sharedParams = {groupWeight, sigma};
 
       var groupParams = {
         'aa' : groupPrior('aa'),
         'mas' : groupPrior('mas')
       };
-      // var levels = getLevels(groupWeight, obs);
+
       var totalScore = mixtureScore(groupWeight, sharedParams, groupParams, obs, false);
 
       query.add('mas' + '_gradient', groupParams['mas'].gradient);
@@ -84,7 +78,7 @@ var train = function(obs) {
 
       query.add('groupWeight-aa', sharedParams.groupWeight[0]);
       query.add('groupWeight-mas', sharedParams.groupWeight[1]);
-      query.add('logitSigma', logitSigma);
+      query.add('sigma', sigma);
 
       query.add('score', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));
@@ -93,22 +87,8 @@ var train = function(obs) {
   })
 };
 
-if (argv.test == 'true') {
-  var obs = csv.read('input/' + argv.experiment + '_data_test_' + argv.fold + '.csv').slice(1, -1);
+var obs = csv.read('input/' + argv.experiment + '_data_full.csv').slice(1, -1);
+var chain = "c" + inferenceParams.chain + argv.experiment;
 
-  var mleString = argv.mleString;
-  var mleParams = JSON.parse(mleString);
-
-  var groupParams = mleParams.groupParams;
-  var sharedParams = mleParams.sharedParams;
-  var expectedScore = mixtureScore(sharedParams.groupWeight, sharedParams, groupParams, obs, true);
-  console.log(expectedScore);
-} else {
-  var data = _.isFinite(argv.fold) ? argv.experiment + '_data_train_' + argv.fold + '.csv' : argv.experiment + '_data_full.csv';
-  var obs = csv.read('input/' + data).slice(1, -1);
-  // open pointScore file
-  var chainFold = "c" + inferenceParams.chain + "f" + argv.fold + argv.experiment;
-
-  // write posterior distribution to new file
-  csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chainFold + ".csv");
-};
+// write posterior distribution to new file
+csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chain + ".csv");
