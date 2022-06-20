@@ -131,6 +131,4 @@ var train = function(obs) {
 
 var obs = csv.read('input/' + argv.experiment + '_data_full.csv').slice(1, -1);
 var chain = "c" + inferenceParams.chain + argv.experiment;
-
-// write posterior distribution to new file
 csv.writeDistTable(train(obs), "param,val", inferenceParams.out + "/" + modelName + "-params-posterior_" + chain + ".csv");

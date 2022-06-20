@@ -39,7 +39,7 @@ var batchScore = function(params, obs, test) {
   return sum(pointScores);
 };
 
-var train = function(obs) {
+var train = function(obs, output_handle) {
   return Infer({
     method: 'MCMC',
     samples: inferenceParams.samples,
@@ -51,7 +51,9 @@ var train = function(obs) {
       var params = extend(paramsPrior(),{
         getJ1Score: shared.getJ1Score_generator(rawParams)
       });
-      var totalScore = batchScore(params, obs, false);
+      globalStore.totalScore = 0;
+
+      batchScore(params, obs, false, output_handle);
 
       query.add('nSticks', params.nSticks);
       query.add('agentBias', params.agentBias);
