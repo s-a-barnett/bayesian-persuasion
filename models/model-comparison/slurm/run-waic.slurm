@@ -24,5 +24,5 @@ START=$(( $SLURM_ARRAY_TASK_ID * $ITERS_PER_JOB ))
 END=$(( $START + $(($ITERS_PER_JOB - 1)) ))
 for i in $(seq $START $END)
 do
-    srun python train.py hyperparameters/hyperparameters_waic.csv $i $out
+    srun python train.py input/hyperparameters.csv $i $out
 done
