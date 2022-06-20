@@ -145,7 +145,6 @@ if (argv.test == 'true') {
   };
 
   var sharedParams = mleParams.sharedParams;
-  console.log(sharedParams);
   var expectedScore = mixtureScore(mleParams.means, sharedParams, groupParams, obs, true);
   console.log(expectedScore);
 } else {

@@ -14,7 +14,7 @@ if idx < len(df):
     model = hyperparameters['model']
     fold = hyperparameters['fold']
     experiment = hyperparameters['experiment']
-    num_chains = 40 if model == 'rsa-hom' else 4
+    num_chains = 4
 
     paths = [
         os.path.join(out, f'{model}-params-posterior_c{i}f{fold}{experiment}.csv') for i in range(num_chains)
