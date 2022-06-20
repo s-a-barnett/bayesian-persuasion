@@ -2,33 +2,46 @@
 
 ## Instructions
 
-Run `input/splits.py` to produce different folds of the data for cross-validation.
-
-Run `train.sh` to fit model on train split:
-
-```
-sh train.sh -m rsa-het-speakers -s 1000 -b 1000 -l 1 -v false -c 1 -f 1 -o ./output/
-```
-
-Run `test.sh` to test performance on test split:
+The easiest way to run the full model comparison is to use the
+provided shell script to run different chains in parallel:
 
 ```
-sh test.sh -m rsa-het-speakers -f 1 -i ./output/
+> parallel --bar --colsep ',' "sh ./slurm/run_waic.sh {1} {2} {3} {4} {5} {6} {7}" :::: ../input/hyperparameters.csv
+```
+
+## Dependencies
+
+1. install [`webppl`](https://github.com/probmods/webppl):
+
+```
+> npm install -g webppl
+```
+
+2. install the `shared` webppl package:
+
+```
+> cd ../shared/
+> npm install
+```
+
+3. install the `webppl-csv` webppl package:
+
+```
+mkdir -p ~/.webppl
+npm install --prefix ~/.webppl webppl-csv
 ```
 
 # Guide to files
 
-* `train.sh`: The main entry-point for running MCMC chains. Produces a `pointScores.csv` file giving the score of each sample generated in the chain, and a `params-posterior.csv` file giving the posterior over the parameters.
-* `test.sh`: use MLE parameters estimated on training split to compute scores on a held-out test set.
 * `models/*.wppl`: implementations of the different models we consider.
-* `scripts/model-criterion.py`: computes the WAIC and AIC scores of each model using the `pointScores.csv` files.
+* `train.sh`: The main entry-point for running MCMC chains. Produces a `params-posterior.csv` with posterior samples.
+* `scripts/model-criterion.py`: computes the WAIC and AIC scores of each model using output
 * `scripts/map_params.py`, `scripts/mle_params.py`: computes MAP and MLE parameters from posterior csv files.
-* `scripts/mas_opt.py`: produces Appendix Fig. S1 showing fits of different directly optimized MAS models 
+* `scripts/posterior_plots.py`: creates visualizations of param posteriors and computes MAP estimates
 
 ## Slurm scripts
 
-While it is possible to manually run chains for different models using direct calls to `train.sh`, we implemented a series of scripts to run all folds for all models in parallel. Note that because of the more complex server setup, however, it will be necessary to manually change paths to match your system.
+We also included a slurm script (for bigger jobs), but note that
+because of the more complex server-side setup, it will be necessary to manually change paths to match your system.
 
-* `run-model-cv.slurm`: used to run experiments to get cross-validation scores. 
-* `run-*-pp.slurm`: used to get posterior predictive runs for best RSA and MAS models.
-* `run-model-waic.slurm`: used to run experiments to get WAIC scores of each model.
+* `run-waic.slurm`: used to run experiments to get model criterion of each model.

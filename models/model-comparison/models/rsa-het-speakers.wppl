@@ -44,18 +44,18 @@ var mixtureScore = function(means, sharedParams, groupParams, obs) {
   var pointScores = mapData({data: obs}, function(datum) {
     var speakerStick = datum[3] < 0.8 ? 'less' : datum[3];
     var mixtureWeight = means[speakerStick];
-    var J0 = observe_fn(datum, extend(sharedParams, groupParams['J0'], {level: 'J0'}));
-    var J1 = observe_fn(datum, extend(sharedParams, groupParams['J1'], {level: 'J1'}));
+    var J0 = getScore(datum, extend(sharedParams, groupParams['J0'], {level: 'J0'}));
+    var J1 = getScore(datum, extend(sharedParams, groupParams['J1'], {level: 'J1'}));
     var score = shared.logSumExp([
       J0.score + Math.log(mixtureWeight[0]),
       J1.score + Math.log(mixtureWeight[1])
     ]);
     var prediction = J0.prediction * mixtureWeight[0] + J1.prediction * mixtureWeight[1]
 
-    query.add('score_' + datum[0], score);
+    query.add('pointscore_' + datum[0], score);
     query.add('prediction_' + datum[0], prediction);
     factor(score);
-    return pointScore;
+    return score;
   });
   return sum(pointScores);
 };
@@ -99,7 +99,7 @@ var train = function(obs) {
       query.add('sigma', sigma);
       query.add('offset', sharedParams.offset);
 
-      query.add('score', totalScore);
+      query.add('likelihood', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams}, {means})));
 
       return query;

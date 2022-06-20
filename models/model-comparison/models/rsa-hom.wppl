@@ -31,7 +31,7 @@ var batchScore = function(params, obs, test) {
     var noiseDist = Gaussian({mu: Math.exp(mean) + params.offset, sigma: params.sigma});
     var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)])
 
-    query.add('score_' + datum[0], pointScore);
+    query.add('pointscore_' + datum[0], pointScore);
     factor(pointScore);
 
     return pointScore;
@@ -48,19 +48,19 @@ var train = function(obs, output_handle) {
     verbose: inferenceParams.verbose,
     model: function() {
 
-      var params = extend(paramsPrior(),{
+      var rawParams = paramsPrior();
+      var params = extend(rawParams, {
         getJ1Score: shared.getJ1Score_generator(rawParams)
       });
-      globalStore.totalScore = 0;
 
-      batchScore(params, obs, false, output_handle);
+      var totalScore = batchScore(params, obs, false, output_handle);
 
       query.add('nSticks', params.nSticks);
       query.add('agentBias', params.agentBias);
       query.add('sigma', params.sigma);
       query.add('level', params.level);
       query.add('offset', params.offset);
-      query.add('score', totalScore);
+      query.add('likelihood', totalScore);
       query.add('params', JSON.stringify(rawParams));
 
       return query;

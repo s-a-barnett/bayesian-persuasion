@@ -1,4 +1,4 @@
-var modelName = 'rsa-het-simple';
+var modelName = 'rsa-het';
 
 var inferenceParams = {
   experiment: argv.experiment,
@@ -50,7 +50,7 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
       return pointLevelScore + levelPriorScore;
     }, ['J0', 'J1'], [0, 1]));
 
-    query.add('score_' + datum[0], pointScore);
+    query.add('pointscore_' + datum[0], pointScore);
     factor(pointScore);
 
     return pointScore;
@@ -86,7 +86,7 @@ var train = function(obs) {
       query.add('sigma', sigma);
       query.add('offset', sharedParams.offset);
 
-      query.add('score', totalScore);
+      query.add('likelihood', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));
 
       return query;

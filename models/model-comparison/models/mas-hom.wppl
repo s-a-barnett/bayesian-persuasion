@@ -1,4 +1,4 @@
-var modelName = 'mas-hom-adding';
+var modelName = 'mas-hom';
 
 var inferenceParams = {
   experiment: argv.experiment,
@@ -34,7 +34,7 @@ var batchScore = function(params, obs) {
     var noiseDist = Gaussian({mu: Math.exp(mean), sigma: params.sigma});
     var pointScore = _.max([Math.log(0.01), noiseDist.score(subjectBelief)]);
 
-    query.add('score_' + datum[0], pointScore);
+    query.add('pointscore_' + datum[0], pointScore);
     factor(pointScore);
 
     return pointScore;
@@ -58,7 +58,7 @@ var train = function(obs) {
       query.add('threshold', params.threshold);
       query.add('sigma', params.sigma);
 
-      query.add('score', totalScore);
+      query.add('likelihood', totalScore);
       query.add('params', JSON.stringify(params));
 
       return query;

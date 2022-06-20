@@ -1,4 +1,4 @@
-var modelName = 'mas-het-simple-adding';
+var modelName = 'mas-het';
 
 var inferenceParams = {
   experiment: argv.experiment,
@@ -44,7 +44,7 @@ var mixtureScore = function(groupWeight, sharedParams, groupParams, obs) {
     );
     var prediction = aa.prediction * groupWeight[0] + mas.prediction * groupWeight[1];
 
-    query.add('score_' + datum[0], pointScore);
+    query.add('pointscore_' + datum[0], pointScore);
     query.add('prediction_' + datum[0], prediction);
     factor(pointScore);
     return pointScore;
@@ -80,7 +80,7 @@ var train = function(obs) {
       query.add('groupWeight-mas', sharedParams.groupWeight[1]);
       query.add('sigma', sigma);
 
-      query.add('score', totalScore);
+      query.add('likelihood', totalScore);
       query.add('params', JSON.stringify(extend({sharedParams}, {groupParams})));
       return query;
     }
