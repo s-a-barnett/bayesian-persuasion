@@ -1,7 +1,7 @@
 # A pragmatic account of the weak evidence effect
 
 Code accompanying the paper:
-[Barnett, S.A., Hawkins, R.D., & Griffiths, T.L. (2021). A pragmatic account of the weak evidence effect. __arXiv preprint arXiv: 2112.03799__.](https://arxiv.org/abs/2112.03799)
+[Barnett, S.A., Griffiths, T.L., & Hawkins, R.D. (2022). A pragmatic account of the weak evidence effect. *Open Mind*.](https://arxiv.org/abs/2112.03799)
 
 ## Guide to folders
 ### `data/`
